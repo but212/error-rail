@@ -24,7 +24,6 @@ jobs:
       matrix:
         rust: [1.68.0, stable, nightly]
         os: [ubuntu-latest, windows-latest, macos-latest]
-        features: ["", "--no-default-features"]
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
@@ -34,7 +33,7 @@ jobs:
           toolchain: ${{ matrix.rust }}
       - uses: Swatinem/rust-cache@v2
       - name: Run tests
-        run: cargo test ${{ matrix.features }} --verbose
+        run: cargo test --verbose
 
   msrv:
     name: Check MSRV
@@ -57,7 +56,7 @@ jobs:
           toolchain: ${{ steps.msrv.outputs.msrv }}
       - uses: Swatinem/rust-cache@v2
       - name: Check MSRV compatibility
-        run: cargo check --no-default-features
+        run: cargo check
 
   unused_dependencies:
     name: Check for unused dependencies
@@ -81,11 +80,15 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Install cargo-audit
-        run: cargo install cargo-audit --locked
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit
       - name: Run security audit
         run: cargo audit
       - name: Install cargo-deny
-        run: cargo install cargo-deny --locked
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny
       - name: Run cargo-deny
         run: cargo deny check
 
