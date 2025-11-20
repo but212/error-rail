@@ -69,13 +69,9 @@
 /// ```
 #[macro_export]
 macro_rules! rail {
-    ($body:block) => {{
-        let __rail_result = (|| $body)();
-        $crate::ErrorPipeline::new(__rail_result).finish()
-    }};
-    ($expr:expr $(,)?) => {{
+    ($expr:expr $(,)?) => {
         $crate::ErrorPipeline::new($expr).finish()
-    }};
+    };
 }
 
 /// Creates a lazily-evaluated error context that defers string formatting.
