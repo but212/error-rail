@@ -1,5 +1,9 @@
 # error-rail
 
+[![Crates.io Version](https://img.shields.io/crates/v/error-rail)](https://crates.io/crates/error-rail)
+[![Documentation](https://docs.rs/error-rail/badge.svg)](https://docs.rs/error-rail)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+
 Composable, metadata-friendly error utilities for Rust applications that need richer
 context than `anyhow`-style strings but lighter ceremony than full-blown tracing.
 
