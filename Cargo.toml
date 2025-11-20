@@ -6,7 +6,7 @@ edition = "2021"
 license = "Apache-2.0"
 description = "ErrorRail is a Error Handling library for the Rust language."
 repository = "https://github.com/but212/error-rail"
-keywords = ["error", "error handling"]
+keywords = ["error", "error-handling"]
 categories = ["algorithms"]
 readme = "README.md"
 
