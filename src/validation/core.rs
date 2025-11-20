@@ -2,6 +2,34 @@ use crate::types::ErrorVec;
 use serde::{Deserialize, Serialize};
 use smallvec::smallvec;
 
+/// Applicative-style validation that accumulates many errors instead of failing fast.
+///
+/// `Validation<E, A>` represents a computation that either succeeds with a value of type `A`
+/// or fails with one or more errors of type `E`. Unlike `Result`, which fails fast on the first
+/// error, `Validation` accumulates all errors, making it ideal for form validation and other
+/// scenarios where you want to collect all problems at once.
+///
+/// # Type Parameters
+///
+/// * `E` - The error type
+/// * `A` - The success value type
+///
+/// # Variants
+///
+/// * `Valid(A)` - Contains a successful value
+/// * `Invalid(ErrorVec<E>)` - Contains one or more errors
+///
+/// # Examples
+///
+/// ```
+/// use error_rail::validation::Validation;
+///
+/// let valid = Validation::<&str, i32>::valid(42);
+/// assert!(valid.is_valid());
+///
+/// let invalid = Validation::<&str, i32>::invalid("error");
+/// assert!(invalid.is_invalid());
+/// ```
 #[derive(Clone, PartialEq, PartialOrd, Eq, Ord, Debug, Hash, Serialize, Deserialize)]
 pub enum Validation<E, A> {
     Valid(A),
@@ -9,11 +37,39 @@ pub enum Validation<E, A> {
 }
 
 impl<E, A> Validation<E, A> {
+    /// Creates a valid value.
+    ///
+    /// # Arguments
+    ///
+    /// * `value` - The success value to wrap
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use error_rail::validation::Validation;
+    ///
+    /// let v = Validation::<&str, i32>::valid(42);
+    /// assert_eq!(v.into_value(), Some(42));
+    /// ```
     #[inline]
     pub fn valid(value: A) -> Self {
         Self::Valid(value)
     }
 
+    /// Creates an invalid value from a single error.
+    ///
+    /// # Arguments
+    ///
+    /// * `error` - The error to wrap
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use error_rail::validation::Validation;
+    ///
+    /// let v = Validation::<&str, ()>::invalid("missing field");
+    /// assert!(v.is_invalid());
+    /// ```
     #[inline]
     pub fn invalid(error: E) -> Self
     where
@@ -22,6 +78,21 @@ impl<E, A> Validation<E, A> {
         Self::Invalid(smallvec![error])
     }
 
+    /// Creates an invalid value from an iterator of errors.
+    ///
+    /// # Arguments
+    ///
+    /// * `errors` - An iterator of errors to collect
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use error_rail::validation::Validation;
+    ///
+    /// let v = Validation::<&str, ()>::invalid_many(["missing", "invalid"]);
+    /// assert!(v.is_invalid());
+    /// assert_eq!(v.into_errors().unwrap().len(), 2);
+    /// ```
     #[inline]
     pub fn invalid_many<I>(errors: I) -> Self
     where
@@ -30,16 +101,53 @@ impl<E, A> Validation<E, A> {
         Self::Invalid(errors.into_iter().collect())
     }
 
+    /// Returns `true` if the validation contains a value.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use error_rail::validation::Validation;
+    ///
+    /// let v = Validation::<&str, i32>::valid(42);
+    /// assert!(v.is_valid());
+    /// ```
     #[inline]
     pub fn is_valid(&self) -> bool {
         matches!(self, Self::Valid(_))
     }
 
+    /// Returns `true` if the validation contains errors.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use error_rail::validation::Validation;
+    ///
+    /// let v = Validation::<&str, i32>::invalid("error");
+    /// assert!(v.is_invalid());
+    /// ```
     #[inline]
     pub fn is_invalid(&self) -> bool {
         !self.is_valid()
     }
 
+    /// Maps the valid value using the provided function.
+    ///
+    /// If the validation is invalid, the errors are preserved unchanged.
+    ///
+    /// # Arguments
+    ///
+    /// * `f` - A function that transforms the success value from type `A` to type `B`
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use error_rail::validation::Validation;
+    ///
+    /// let v = Validation::<&str, i32>::valid(21);
+    /// let doubled = v.map(|x| x * 2);
+    /// assert_eq!(doubled.into_value(), Some(42));
+    /// ```
     #[inline]
     pub fn map<B, F>(self, f: F) -> Validation<E, B>
     where
@@ -51,6 +159,24 @@ impl<E, A> Validation<E, A> {
         }
     }
 
+    /// Maps each error while preserving the success branch.
+    ///
+    /// Transforms all accumulated errors using the provided function,
+    /// leaving valid values unchanged.
+    ///
+    /// # Arguments
+    ///
+    /// * `f` - A function that transforms errors from type `E` to type `G`
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use error_rail::validation::Validation;
+    ///
+    /// let v = Validation::<&str, i32>::invalid("error");
+    /// let mapped = v.map_err(|e| format!("Error: {}", e));
+    /// assert!(mapped.is_invalid());
+    /// ```
     #[inline]
     pub fn map_err<F, G>(self, f: F) -> Validation<G, A>
     where
@@ -63,6 +189,21 @@ impl<E, A> Validation<E, A> {
         }
     }
 
+    /// Converts into a `Result`, losing error accumulation if invalid.
+    ///
+    /// The success value becomes `Ok`, and all accumulated errors become `Err`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use error_rail::validation::Validation;
+    ///
+    /// let v = Validation::<&str, i32>::valid(42);
+    /// assert_eq!(v.to_result(), Ok(42));
+    ///
+    /// let v = Validation::<&str, i32>::invalid("error");
+    /// assert!(v.to_result().is_err());
+    /// ```
     #[inline]
     pub fn to_result(self) -> Result<A, ErrorVec<E>> {
         match self {
@@ -71,6 +212,21 @@ impl<E, A> Validation<E, A> {
         }
     }
 
+    /// Wraps a normal `Result` into a `Validation`, turning the error side into a singleton vec.
+    ///
+    /// # Arguments
+    ///
+    /// * `result` - The result to convert
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use error_rail::validation::Validation;
+    ///
+    /// let result: Result<i32, &str> = Ok(42);
+    /// let v = Validation::from_result(result);
+    /// assert!(v.is_valid());
+    /// ```
     #[inline]
     pub fn from_result(result: Result<A, E>) -> Self
     where
@@ -82,6 +238,18 @@ impl<E, A> Validation<E, A> {
         }
     }
 
+    /// Extracts the error list, if any.
+    ///
+    /// Returns `Some(errors)` if invalid, `None` if valid.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use error_rail::validation::Validation;
+    ///
+    /// let v = Validation::<&str, i32>::invalid("error");
+    /// assert_eq!(v.into_errors().unwrap().len(), 1);
+    /// ```
     #[inline]
     pub fn into_errors(self) -> Option<ErrorVec<E>> {
         match self {
@@ -90,51 +258,23 @@ impl<E, A> Validation<E, A> {
         }
     }
 
+    /// Extracts the value, if valid.
+    ///
+    /// Returns `Some(value)` if valid, `None` if invalid.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use error_rail::validation::Validation;
+    ///
+    /// let v = Validation::<&str, i32>::valid(42);
+    /// assert_eq!(v.into_value(), Some(42));
+    /// ```
     #[inline]
     pub fn into_value(self) -> Option<A> {
         match self {
             Self::Valid(value) => Some(value),
             Self::Invalid(_) => None,
-        }
-    }
-}
-
-impl<E, A> FromIterator<Result<A, E>> for Validation<E, Vec<A>> {
-    fn from_iter<T: IntoIterator<Item = Result<A, E>>>(iter: T) -> Self {
-        let mut values = Vec::new();
-        let mut errors = ErrorVec::new();
-
-        for item in iter {
-            match item {
-                Ok(v) => values.push(v),
-                Err(e) => errors.push(e),
-            }
-        }
-
-        if errors.is_empty() {
-            Validation::Valid(values)
-        } else {
-            Validation::Invalid(errors)
-        }
-    }
-}
-
-impl<E, A> FromIterator<Validation<E, A>> for Validation<E, Vec<A>> {
-    fn from_iter<T: IntoIterator<Item = Validation<E, A>>>(iter: T) -> Self {
-        let mut values = Vec::new();
-        let mut errors = ErrorVec::new();
-
-        for item in iter {
-            match item {
-                Validation::Valid(v) => values.push(v),
-                Validation::Invalid(es) => errors.extend(es),
-            }
-        }
-
-        if errors.is_empty() {
-            Validation::Valid(values)
-        } else {
-            Validation::Invalid(errors)
         }
     }
 }

@@ -1,7 +1,56 @@
+//! Conversion helpers between `Result`, `Validation`, and `ComposableError`.
+//!
+//! These adapters make it straightforward to incrementally adopt `error-rail`
+//! by wrapping legacy results or by flattening composable errors back into core
+//! types when interacting with external APIs.
+//!
+//! # Examples
+//!
+//! ```
+//! use error_rail::convert::*;
+//! use error_rail::validation::Validation;
+//!
+//! // Convert between Result and Validation
+//! let result: Result<i32, &str> = Ok(42);
+//! let validation = result_to_validation(result);
+//! assert!(validation.is_valid());
+//!
+//! // Wrap errors in ComposableError
+//! let result: Result<i32, &str> = Err("failed");
+//! let composable = wrap_in_composable_result(result);
+//! ```
+
 use crate::types::BoxedComposableResult;
 use crate::types::composable_error::ComposableError;
 use crate::validation::core::Validation;
 
+/// Converts a `Validation` to a `Result`, taking the first error if invalid.
+///
+/// # Arguments
+///
+/// * `validation` - The validation to convert
+///
+/// # Returns
+///
+/// * `Ok(value)` if validation is valid
+/// * `Err(first_error)` if validation is invalid
+///
+/// # Panics
+///
+/// Panics if the `Validation::Invalid` variant contains no errors (should never happen).
+///
+/// # Examples
+///
+/// ```
+/// use error_rail::convert::validation_to_result;
+/// use error_rail::validation::Validation;
+///
+/// let valid = Validation::<&str, i32>::Valid(42);
+/// assert_eq!(validation_to_result(valid), Ok(42));
+///
+/// let invalid = Validation::<&str, i32>::invalid("error");
+/// assert_eq!(validation_to_result(invalid), Err("error"));
+/// ```
 #[inline]
 pub fn validation_to_result<T, E>(validation: Validation<E, T>) -> Result<T, E>
 where
@@ -19,6 +68,31 @@ where
     }
 }
 
+/// Converts a `Result` to a `Validation`.
+///
+/// # Arguments
+///
+/// * `result` - The result to convert
+///
+/// # Returns
+///
+/// * `Validation::Valid(value)` if result is `Ok`
+/// * `Validation::Invalid([error])` if result is `Err`
+///
+/// # Examples
+///
+/// ```
+/// use error_rail::convert::result_to_validation;
+/// use error_rail::validation::Validation;
+///
+/// let ok_result: Result<i32, &str> = Ok(42);
+/// let validation = result_to_validation(ok_result);
+/// assert!(validation.is_valid());
+///
+/// let err_result: Result<i32, &str> = Err("failed");
+/// let validation = result_to_validation(err_result);
+/// assert!(validation.is_invalid());
+/// ```
 #[inline]
 pub fn result_to_validation<T, E>(result: Result<T, E>) -> Validation<E, T>
 where
@@ -31,32 +105,160 @@ where
     }
 }
 
+/// Extracts the core error from a `ComposableError`, discarding all context.
+///
+/// # Arguments
+///
+/// * `composable` - The composable error to unwrap
+///
+/// # Returns
+///
+/// The underlying core error value
+///
+/// # Examples
+///
+/// ```
+/// use error_rail::{ComposableError, convert::composable_to_core};
+///
+/// let composable = ComposableError::<&str, u32>::new("error")
+///     .with_context("additional context");
+/// let core = composable_to_core(composable);
+/// assert_eq!(core, "error");
+/// ```
 #[inline]
 pub fn composable_to_core<E>(composable: ComposableError<E>) -> E {
     composable.core_error
 }
 
+/// Wraps a core error in a `ComposableError` with no context.
+///
+/// # Arguments
+///
+/// * `error` - The core error to wrap
+///
+/// # Returns
+///
+/// A new `ComposableError` containing the error
+///
+/// # Examples
+///
+/// ```
+/// use error_rail::{ComposableError, convert::core_to_composable};
+///
+/// let core_error = "something failed";
+/// let composable = core_to_composable(core_error);
+/// assert_eq!(composable.core_error(), &"something failed");
+/// ```
 #[inline]
 pub fn core_to_composable<E>(error: E) -> ComposableError<E> {
     error.into()
 }
 
+/// Flattens a `Result<T, ComposableError<E>>` into `Result<T, E>`.
+///
+/// Strips all context and error codes, returning only the core error.
+///
+/// # Arguments
+///
+/// * `result` - The result with composable error to flatten
+///
+/// # Returns
+///
+/// A result containing only the core error type
+///
+/// # Examples
+///
+/// ```
+/// use error_rail::{ComposableError, convert::flatten_composable_result};
+///
+/// let composable_result: Result<i32, ComposableError<&str>> =
+///     Err(ComposableError::new("error").with_context("context"));
+/// let flattened = flatten_composable_result(composable_result);
+/// assert_eq!(flattened, Err("error"));
+/// ```
 #[inline]
 pub fn flatten_composable_result<T, E>(result: Result<T, ComposableError<E>>) -> Result<T, E> {
     result.map_err(composable_to_core)
 }
 
+/// Wraps a plain `Result<T, E>` into `Result<T, ComposableError<E>>`.
+///
+/// Converts the error variant into a `ComposableError` with no context.
+///
+/// # Arguments
+///
+/// * `result` - The plain result to wrap
+///
+/// # Returns
+///
+/// A result with composable error type
+///
+/// # Examples
+///
+/// ```
+/// use error_rail::convert::wrap_in_composable_result;
+///
+/// let plain_result: Result<i32, &str> = Err("error");
+/// let wrapped = wrap_in_composable_result(plain_result);
+/// assert!(wrapped.is_err());
+/// ```
 #[inline]
 #[allow(clippy::result_large_err)]
 pub fn wrap_in_composable_result<T, E>(result: Result<T, E>) -> Result<T, ComposableError<E>> {
     result.map_err(core_to_composable)
 }
 
+/// Wraps a plain `Result<T, E>` into a boxed `ComposableError`.
+///
+/// Similar to [`wrap_in_composable_result`] but boxes the error to reduce stack size.
+///
+/// # Arguments
+///
+/// * `result` - The plain result to wrap
+///
+/// # Returns
+///
+/// A result with boxed composable error
+///
+/// # Examples
+///
+/// ```
+/// use error_rail::convert::wrap_in_composable_result_boxed;
+///
+/// let plain_result: Result<i32, &str> = Err("error");
+/// let boxed = wrap_in_composable_result_boxed(plain_result);
+/// assert!(boxed.is_err());
+/// ```
 #[inline]
 pub fn wrap_in_composable_result_boxed<T, E>(result: Result<T, E>) -> BoxedComposableResult<T, E> {
     result.map_err(|e| Box::new(core_to_composable(e)))
 }
 
+/// Collects multiple errors into a single `Validation`.
+///
+/// # Arguments
+///
+/// * `errors` - An iterator of errors to collect
+///
+/// # Returns
+///
+/// * `Validation::Valid(())` if no errors
+/// * `Validation::Invalid(errors)` if any errors present
+///
+/// # Examples
+///
+/// ```
+/// use error_rail::convert::collect_errors;
+/// use error_rail::validation::Validation;
+///
+/// let errors = vec!["error1", "error2"];
+/// let validation = collect_errors(errors);
+/// assert!(validation.is_invalid());
+///
+/// let no_errors: Vec<&str> = vec![];
+/// let validation = collect_errors(no_errors);
+/// assert!(validation.is_valid());
+/// ```
 #[inline]
 pub fn collect_errors<E, I>(errors: I) -> Validation<E, ()>
 where
@@ -71,6 +273,31 @@ where
     }
 }
 
+/// Splits a `Validation` into individual `Result` values.
+///
+/// # Arguments
+///
+/// * `validation` - The validation to split
+///
+/// # Returns
+///
+/// * `vec![Ok(value)]` if validation is valid
+/// * A vector of `Err(e)` for each error if invalid
+///
+/// # Examples
+///
+/// ```
+/// use error_rail::convert::split_validation_errors;
+/// use error_rail::validation::Validation;
+///
+/// let valid = Validation::<&str, i32>::Valid(42);
+/// let results = split_validation_errors(valid);
+/// assert_eq!(results, vec![Ok(42)]);
+///
+/// let invalid = Validation::<&str, i32>::invalid_many(vec!["err1", "err2"]);
+/// let results = split_validation_errors(invalid);
+/// assert_eq!(results, vec![Err("err1"), Err("err2")]);
+/// ```
 pub fn split_validation_errors<T, E>(validation: Validation<E, T>) -> Vec<Result<T, E>>
 where
     T: Clone,
