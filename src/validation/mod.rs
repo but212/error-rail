@@ -26,5 +26,5 @@ pub mod core;
 pub mod iter;
 pub mod traits;
 
-pub use core::*;
-pub use iter::*;
+pub use self::core::*;
+pub use self::iter::*;
