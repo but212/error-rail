@@ -2,6 +2,8 @@
 //!
 //! These macros provide convenient shortcuts for attaching rich metadata to errors:
 //!
+//! - [`macro@crate::rail`] - Wraps a `Result`-producing block and converts it into a
+//!   [`BoxedComposableResult`](crate::types::BoxedComposableResult) via `ErrorPipeline::finish`.
 //! - [`macro@crate::context`] - Defers formatting until the context is consumed, avoiding
 //!   unnecessary allocations on the success path.
 //! - [`macro@crate::location`] - Automatically captures the current file path and line number
@@ -12,7 +14,7 @@
 //! # Examples
 //!
 //! ```
-//! use error_rail::{context, location, tag, metadata, ErrorPipeline};
+//! use error_rail::{context, location, rail, tag, metadata, ErrorPipeline};
 //!
 //! let result: Result<(), &str> = Err("failed");
 //! let pipeline = ErrorPipeline::new(result)
@@ -21,7 +23,56 @@
 //!     .with_context(tag!("auth"))
 //!     .with_context(metadata!("retry_count", "3"))
 //!     .finish();
+//!
+//! // Equivalent rail! shorthand that also returns a boxed composable result
+//! let _ = rail!({
+//!     Err::<(), &str>("failed")
+//!         .map_err(|err| err)
+//! });
 //! ```
+
+/// Wraps a `Result`-producing expression or block and converts it into a
+/// [`BoxedComposableResult`](crate::types::BoxedComposableResult).
+///
+/// This macro provides a convenient shorthand for creating an [`ErrorPipeline`](crate::ErrorPipeline)
+/// and immediately calling `finish()` to box the result. It accepts either a single expression
+/// or a block of code that produces a `Result`.
+///
+/// # Syntax
+///
+/// - `rail!(expr)` - Wraps a single `Result`-producing expression
+/// - `rail!({ ... })` - Wraps a block that produces a `Result`
+///
+/// # Returns
+///
+/// A [`BoxedComposableResult<T, E>`](crate::types::BoxedComposableResult) where the error type
+/// is wrapped in a [`ComposableError`](crate::types::ComposableError).
+///
+/// # Examples
+///
+/// ```
+/// use error_rail::{rail, ErrorContext};
+///
+/// // Simple expression
+/// let result = rail!(Err::<(), &str>("failed"));
+/// assert!(result.is_err());
+///
+/// // Block syntax with multiple statements
+/// let result = rail!({
+///     let value = std::fs::read_to_string("config.txt");
+///     value
+/// });
+///
+/// // Chaining with context after rail!
+/// let result = rail!(Err::<(), &str>("io error"))
+///     .map_err(|e| e.with_context(ErrorContext::tag("disk")));
+/// ```
+#[macro_export]
+macro_rules! rail {
+    ($expr:expr $(,)?) => {
+        $crate::ErrorPipeline::new($expr).finish()
+    };
+}
 
 /// Creates a lazily-evaluated error context that defers string formatting.
 ///
