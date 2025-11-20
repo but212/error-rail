@@ -1,0 +1,34 @@
+disallowed-methods = []
+too-many-arguments-threshold = 7
+type-complexity-threshold = 250
+enum-variant-size-threshold = 150
+
+# Cognitive complexity tuned for maintainability
+cognitive-complexity-threshold = 20
+
+# Reasonable defaults for type and array sizes
+array-size-threshold = 8
+large-error-threshold = 100
+verbose-bit-mask-threshold = 1
+
+# Restrict nesting for clarity
+excessive-nesting-threshold = 6
+
+# Disallowed types that should never be used in this codebase
+disallowed-types = [
+    # Add types that should never be used in the codebase
+]
+
+# Disallowed names to avoid in code
+disallowed-names = [
+    # Add names that should be avoided
+]
+
+# Custom configuration for checking private items
+check-private-items = true
+
+# Additional documentation enforcement
+missing-docs-in-crate-items = true
+
+# Stricter lines threshold for readability
+too-many-lines-threshold = 200
