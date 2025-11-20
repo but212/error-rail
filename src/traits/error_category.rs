@@ -28,7 +28,7 @@ use crate::traits::*;
 /// ```
 pub trait ErrorCategory<E> {
     /// The functor type that wraps values with error handling capability.
-    type ErrorFunctor<T: Clone>: WithError<E>;
+    type ErrorFunctor<T>: WithError<E>;
 
     /// Lifts a pure value into the error functor context.
     ///
@@ -44,7 +44,7 @@ pub trait ErrorCategory<E> {
     /// let result: Result<i32, &str> = <Result<(), &str>>::lift(42);
     /// assert_eq!(result, Ok(42));
     /// ```
-    fn lift<T: Clone>(value: T) -> Self::ErrorFunctor<T>;
+    fn lift<T>(value: T) -> Self::ErrorFunctor<T>;
 
     /// Constructs an error case from an error value.
     ///
@@ -60,7 +60,7 @@ pub trait ErrorCategory<E> {
     /// let result: Result<i32, &str> = <Result<(), &str>>::handle_error("failed");
     /// assert_eq!(result, Err("failed"));
     /// ```
-    fn handle_error<T: Clone>(error: E) -> Self::ErrorFunctor<T>;
+    fn handle_error<T>(error: E) -> Self::ErrorFunctor<T>;
 }
 
 /// Implementation of `ErrorCategory` for `Result` types.
@@ -81,7 +81,7 @@ pub trait ErrorCategory<E> {
 /// assert_eq!(err_value, Err("error".to_string()));
 /// ```
 impl<E: Clone> ErrorCategory<E> for Result<(), E> {
-    type ErrorFunctor<T: Clone> = Result<T, E>;
+    type ErrorFunctor<T> = Result<T, E>;
 
     #[inline]
     fn lift<T>(value: T) -> Result<T, E> {

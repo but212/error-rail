@@ -52,16 +52,13 @@ use crate::validation::core::Validation;
 /// assert_eq!(validation_to_result(invalid), Err("error"));
 /// ```
 #[inline]
-pub fn validation_to_result<T, E>(validation: Validation<E, T>) -> Result<T, E> {
+pub fn validation_to_result<T, E>(validation: Validation<E, T>) -> Result<T, E>
+where
+    E: Default,
+{
     match validation {
         Validation::Valid(value) => Ok(value),
-        Validation::Invalid(errors) => {
-            // Take the first error, or create a default if somehow empty
-            Err(errors
-                .into_iter()
-                .next()
-                .expect("Validation::Invalid should contain at least one error"))
-        }
+        Validation::Invalid(mut errors) => Err(errors.pop().unwrap_or_else(E::default)),
     }
 }
 
@@ -91,10 +88,7 @@ pub fn validation_to_result<T, E>(validation: Validation<E, T>) -> Result<T, E> 
 /// assert!(validation.is_invalid());
 /// ```
 #[inline]
-pub fn result_to_validation<T, E>(result: Result<T, E>) -> Validation<E, T>
-where
-    E: Clone,
-{
+pub fn result_to_validation<T, E>(result: Result<T, E>) -> Validation<E, T> {
     match result {
         Ok(value) => Validation::Valid(value),
         Err(error) => Validation::invalid(error),

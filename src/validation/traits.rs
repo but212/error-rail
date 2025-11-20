@@ -21,15 +21,15 @@ use crate::validation::core::Validation;
 /// assert!(invalid.is_invalid());
 /// ```
 impl<E: Clone> ErrorCategory<E> for Validation<E, ()> {
-    type ErrorFunctor<T: Clone> = Validation<E, T>;
+    type ErrorFunctor<T> = Validation<E, T>;
 
     #[inline]
-    fn lift<T: Clone>(value: T) -> Validation<E, T> {
+    fn lift<T>(value: T) -> Validation<E, T> {
         Validation::Valid(value)
     }
 
     #[inline]
-    fn handle_error<T: Clone>(error: E) -> Validation<E, T> {
+    fn handle_error<T>(error: E) -> Validation<E, T> {
         Validation::invalid(error)
     }
 }
@@ -53,7 +53,7 @@ impl<E: Clone> ErrorCategory<E> for Validation<E, ()> {
 /// let result = valid.to_result();
 /// assert_eq!(result, Ok(42));
 /// ```
-impl<T: Clone, E: Clone> WithError<E> for Validation<E, T> {
+impl<T, E: Clone> WithError<E> for Validation<E, T> {
     type Success = T;
     type ErrorOutput<G> = Validation<G, T>;
 

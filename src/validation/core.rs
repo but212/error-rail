@@ -71,10 +71,7 @@ impl<E, A> Validation<E, A> {
     /// assert!(v.is_invalid());
     /// ```
     #[inline]
-    pub fn invalid(error: E) -> Self
-    where
-        E: Clone,
-    {
+    pub fn invalid(error: E) -> Self {
         Self::Invalid(smallvec![error])
     }
 
