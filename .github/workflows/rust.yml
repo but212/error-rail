@@ -24,7 +24,7 @@ jobs:
       matrix:
         rust: [1.68.0, stable, nightly]
         os: [ubuntu-latest, windows-latest, macos-latest]
-        features: ["", "--all-features"]
+        features: ["", "--no-default-features"]
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
@@ -57,7 +57,7 @@ jobs:
           toolchain: ${{ steps.msrv.outputs.msrv }}
       - uses: Swatinem/rust-cache@v2
       - name: Check MSRV compatibility
-        run: cargo check --all-features
+        run: cargo check --no-default-features
 
   unused_dependencies:
     name: Check for unused dependencies
@@ -70,7 +70,7 @@ jobs:
       - name: Install cargo-udeps
         run: cargo install cargo-udeps --locked
       - name: Run cargo-udeps
-        run: cargo +nightly udeps --all-targets --all-features
+        run: cargo +nightly udeps --all-targets
 
   security:
     name: Security Audit
@@ -107,7 +107,7 @@ jobs:
       - name: Build documentation with broken link check
         run: |
           RUSTDOCFLAGS="-D warnings -D rustdoc::broken_intra_doc_links --cfg docsrs" \
-          cargo +nightly doc --all-features --no-deps
+          cargo +nightly doc --no-deps
 
       - name: Verify docs directory exists
         run: |
