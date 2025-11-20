@@ -1,7 +1,6 @@
 use crate::traits::IntoErrorContext;
 use crate::types::composable_error::ComposableError;
-use crate::types::{BoxedComposableResult, ComposableResult};
-use smallvec::SmallVec;
+use crate::types::{BoxedComposableResult, ComposableResult, ErrorContext, ErrorVec};
 use std::fmt::Display;
 
 #[inline]
@@ -30,7 +29,7 @@ where
 
 pub struct ErrorPipeline<T, E> {
     result: Result<T, E>,
-    pending_contexts: SmallVec<[String; 4]>,
+    pending_contexts: ErrorVec<ErrorContext>,
 }
 
 impl<T, E> ErrorPipeline<T, E> {
@@ -38,7 +37,7 @@ impl<T, E> ErrorPipeline<T, E> {
     pub fn new(result: Result<T, E>) -> Self {
         Self {
             result,
-            pending_contexts: SmallVec::new(),
+            pending_contexts: ErrorVec::new(),
         }
     }
 
@@ -51,8 +50,8 @@ impl<T, E> ErrorPipeline<T, E> {
             return self;
         }
 
-        let ctx_str = context.into_error_context().message().to_string();
-        self.pending_contexts.push(ctx_str);
+        let ctx = context.into_error_context();
+        self.pending_contexts.push(ctx);
         self
     }
 
@@ -134,12 +133,12 @@ where
     I: IntoIterator<Item = C>,
     C: IntoErrorContext,
 {
-    let context_strings: Vec<String> = contexts
+    let context_vec: Vec<ErrorContext> = contexts
         .into_iter()
-        .map(|c| c.into_error_context().message().to_string())
+        .map(|c| c.into_error_context())
         .collect();
 
-    ComposableError::new(error).with_contexts(context_strings)
+    ComposableError::new(error).with_contexts(context_vec)
 }
 
 pub fn context_accumulator<E, I, C>(contexts: I) -> impl Fn(E) -> ComposableError<E>
@@ -157,6 +156,6 @@ where
     error.error_chain()
 }
 
-pub fn extract_context<E>(error: &ComposableError<E>) -> Vec<String> {
+pub fn extract_context<E>(error: &ComposableError<E>) -> Vec<ErrorContext> {
     error.context()
 }

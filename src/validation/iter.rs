@@ -1,5 +1,8 @@
 use crate::validation::core::Validation;
+use std::slice::{Iter as SliceIter, IterMut as SliceIterMut};
 
+/// Iterator over the valid value of a Validation.
+/// Yields 0 or 1 item.
 pub struct Iter<'a, A> {
     inner: Option<&'a A>,
 }
@@ -12,6 +15,8 @@ impl<'a, A> Iterator for Iter<'a, A> {
     }
 }
 
+/// Mutable iterator over the valid value of a Validation.
+/// Yields 0 or 1 item.
 pub struct IterMut<'a, A> {
     inner: Option<&'a mut A>,
 }
@@ -24,9 +29,10 @@ impl<'a, A> Iterator for IterMut<'a, A> {
     }
 }
 
+/// Iterator over the errors of a Validation.
 pub enum ErrorsIter<'a, E> {
     Empty,
-    Multi(smallvec::alloc::slice::Iter<'a, E>),
+    Multi(SliceIter<'a, E>),
 }
 
 impl<'a, E> Iterator for ErrorsIter<'a, E> {
@@ -40,9 +46,10 @@ impl<'a, E> Iterator for ErrorsIter<'a, E> {
     }
 }
 
+/// Mutable iterator over the errors of a Validation.
 pub enum ErrorsIterMut<'a, E> {
     Empty,
-    Multi(smallvec::alloc::slice::IterMut<'a, E>),
+    Multi(SliceIterMut<'a, E>),
 }
 
 impl<'a, E> Iterator for ErrorsIterMut<'a, E> {
@@ -68,6 +75,7 @@ impl<E, A> IntoIterator for Validation<E, A> {
     }
 }
 
+/// Owning iterator over the valid value of a Validation.
 pub struct IntoIter<A> {
     inner: Option<A>,
 }
@@ -99,6 +107,19 @@ impl<'a, E, A> IntoIterator for &'a mut Validation<E, A> {
 }
 
 impl<E, A> Validation<E, A> {
+    /// Returns an iterator over the valid value.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use error_rail::validation::Validation;
+    ///
+    /// let valid: Validation<String, i32> = Validation::Valid(5);
+    /// assert_eq!(valid.iter().next(), Some(&5));
+    ///
+    /// let invalid: Validation<String, i32> = Validation::invalid("error".to_string());
+    /// assert_eq!(invalid.iter().next(), None);
+    /// ```
     pub fn iter(&self) -> Iter<'_, A> {
         match self {
             Validation::Valid(a) => Iter { inner: Some(a) },
@@ -106,6 +127,7 @@ impl<E, A> Validation<E, A> {
         }
     }
 
+    /// Returns a mutable iterator over the valid value.
     pub fn iter_mut(&mut self) -> IterMut<'_, A> {
         match self {
             Validation::Valid(a) => IterMut { inner: Some(a) },
@@ -113,13 +135,27 @@ impl<E, A> Validation<E, A> {
         }
     }
 
-    pub fn iter_errors(&self) -> impl Iterator<Item = &E> {
+    /// Returns an iterator over the errors.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use error_rail::validation::Validation;
+    ///
+    /// let valid: Validation<String, i32> = Validation::Valid(5);
+    /// assert_eq!(valid.iter_errors().next(), None);
+    ///
+    /// let invalid: Validation<String, i32> = Validation::invalid("error".to_string());
+    /// assert_eq!(invalid.iter_errors().next(), Some(&"error".to_string()));
+    /// ```
+    pub fn iter_errors(&self) -> ErrorsIter<'_, E> {
         match self {
-            Self::Valid(_) => [].iter(),
-            Self::Invalid(errors) => errors.iter(),
+            Self::Valid(_) => ErrorsIter::Empty,
+            Self::Invalid(errors) => ErrorsIter::Multi(errors.iter()),
         }
     }
 
+    /// Returns a mutable iterator over the errors.
     pub fn iter_errors_mut(&mut self) -> ErrorsIterMut<'_, E> {
         match self {
             Validation::Invalid(es) => ErrorsIterMut::Multi(es.iter_mut()),

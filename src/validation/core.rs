@@ -98,3 +98,43 @@ impl<E, A> Validation<E, A> {
         }
     }
 }
+
+impl<E, A> FromIterator<Result<A, E>> for Validation<E, Vec<A>> {
+    fn from_iter<T: IntoIterator<Item = Result<A, E>>>(iter: T) -> Self {
+        let mut values = Vec::new();
+        let mut errors = ErrorVec::new();
+
+        for item in iter {
+            match item {
+                Ok(v) => values.push(v),
+                Err(e) => errors.push(e),
+            }
+        }
+
+        if errors.is_empty() {
+            Validation::Valid(values)
+        } else {
+            Validation::Invalid(errors)
+        }
+    }
+}
+
+impl<E, A> FromIterator<Validation<E, A>> for Validation<E, Vec<A>> {
+    fn from_iter<T: IntoIterator<Item = Validation<E, A>>>(iter: T) -> Self {
+        let mut values = Vec::new();
+        let mut errors = ErrorVec::new();
+
+        for item in iter {
+            match item {
+                Validation::Valid(v) => values.push(v),
+                Validation::Invalid(es) => errors.extend(es),
+            }
+        }
+
+        if errors.is_empty() {
+            Validation::Valid(values)
+        } else {
+            Validation::Invalid(errors)
+        }
+    }
+}

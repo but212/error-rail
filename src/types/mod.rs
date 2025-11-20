@@ -9,6 +9,6 @@ pub use error_context::*;
 pub use lazy_context::*;
 
 pub type ErrorVec<E> = SmallVec<[E; 8]>;
-pub type ComposableResult<T, E> = Result<T, ComposableError<E>>;
-pub type BoxedComposableError<E> = Box<ComposableError<E>>;
-pub type BoxedComposableResult<T, E> = Result<T, BoxedComposableError<E>>;
+pub type ComposableResult<T, E, C = u32> = Result<T, ComposableError<E, C>>;
+pub type BoxedComposableError<E, C = u32> = Box<ComposableError<E, C>>;
+pub type BoxedComposableResult<T, E, C = u32> = Result<T, BoxedComposableError<E, C>>;

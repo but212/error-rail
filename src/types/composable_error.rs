@@ -1,16 +1,16 @@
 use std::fmt::{Debug, Display};
 
 use crate::traits::IntoErrorContext;
-use crate::types::ErrorVec;
+use crate::types::{ErrorContext, ErrorVec};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ComposableError<E> {
+pub struct ComposableError<E, C = u32> {
     pub core_error: E,
-    context: ErrorVec<String>,
-    pub error_code: Option<u32>,
+    context: ErrorVec<ErrorContext>,
+    pub error_code: Option<C>,
 }
 
-impl<E> ComposableError<E> {
+impl<E, C> ComposableError<E, C> {
     #[inline]
     pub fn new(error: E) -> Self {
         Self {
@@ -21,7 +21,7 @@ impl<E> ComposableError<E> {
     }
 
     #[inline]
-    pub fn with_code(error: E, code: u32) -> Self {
+    pub fn with_code(error: E, code: C) -> Self {
         Self {
             core_error: error,
             context: ErrorVec::new(),
@@ -30,21 +30,20 @@ impl<E> ComposableError<E> {
     }
 
     #[inline]
-    pub fn with_context<C>(mut self, ctx: C) -> Self
+    pub fn with_context<Ctx>(mut self, ctx: Ctx) -> Self
     where
-        C: IntoErrorContext,
+        Ctx: IntoErrorContext,
     {
-        self.context
-            .push(ctx.into_error_context().message().to_string());
+        self.context.push(ctx.into_error_context());
         self
     }
 
     #[inline]
     pub fn with_contexts<I>(mut self, contexts: I) -> Self
     where
-        I: IntoIterator<Item = String>,
+        I: IntoIterator<Item = ErrorContext>,
     {
-        self.context.extend(contexts); // O(1) per element
+        self.context.extend(contexts);
         self
     }
 
@@ -54,28 +53,28 @@ impl<E> ComposableError<E> {
     }
 
     #[inline]
-    pub fn context(&self) -> Vec<String> {
+    pub fn context(&self) -> Vec<ErrorContext> {
         self.context.iter().rev().cloned().collect()
     }
 
     #[inline]
-    pub fn context_iter(&self) -> std::iter::Rev<std::slice::Iter<'_, String>> {
+    pub fn context_iter(&self) -> std::iter::Rev<std::slice::Iter<'_, ErrorContext>> {
         self.context.iter().rev()
     }
 
     #[inline]
-    pub fn error_code(&self) -> Option<u32> {
-        self.error_code
+    pub fn error_code(&self) -> Option<&C> {
+        self.error_code.as_ref()
     }
 
     #[inline]
-    pub fn set_code(mut self, code: u32) -> Self {
+    pub fn set_code(mut self, code: C) -> Self {
         self.error_code = Some(code);
         self
     }
 
     #[inline]
-    pub fn map_core<F, T>(self, f: F) -> ComposableError<T>
+    pub fn map_core<F, T>(self, f: F) -> ComposableError<T, C>
     where
         F: FnOnce(E) -> T,
     {
@@ -89,6 +88,7 @@ impl<E> ComposableError<E> {
     pub fn error_chain(&self) -> String
     where
         E: Display,
+        C: Display,
     {
         let mut chain = String::new();
 
@@ -97,7 +97,7 @@ impl<E> ComposableError<E> {
             if i > 0 {
                 chain.push_str(" -> ");
             }
-            chain.push_str(ctx);
+            chain.push_str(&ctx.message());
         }
 
         if !self.context.is_empty() {
@@ -106,7 +106,7 @@ impl<E> ComposableError<E> {
 
         chain.push_str(&format!("{}", self.core_error));
 
-        if let Some(code) = self.error_code {
+        if let Some(code) = &self.error_code {
             chain.push_str(&format!(" (code: {})", code));
         }
 
@@ -114,15 +114,15 @@ impl<E> ComposableError<E> {
     }
 }
 
-impl<E: Display> Display for ComposableError<E> {
+impl<E: Display, C: Display> Display for ComposableError<E, C> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.error_chain())
     }
 }
 
-impl<E: Debug + Display> std::error::Error for ComposableError<E> {}
+impl<E: Debug + Display, C: Debug + Display> std::error::Error for ComposableError<E, C> {}
 
-impl<E> From<E> for ComposableError<E> {
+impl<E, C> From<E> for ComposableError<E, C> {
     #[inline]
     fn from(error: E) -> Self {
         Self::new(error)
