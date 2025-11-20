@@ -1,0 +1,43 @@
+/target
+Cargo.lock
+
+# Build artifacts
+*.rlib
+*.d
+*.exe
+*.exe.*
+*.out
+*.out.*
+*.so
+*.dylib
+*.dll
+
+# IDE and editor related files
+.idea/
+.vscode/
+*.swp
+*.swo
+*.swn
+*.bak
+*.tmp
+
+/node_modules
+
+# Log files
+*.log
+
+# System files
+.DS_Store
+Thumbs.db
+
+# doctest files
+input.txt
+output.txt
+
+# Miscellaneous
+*.rs.bk
+
+# hooks
+.hooks
+
+.pytest_cache/
