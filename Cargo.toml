@@ -1,8 +1,14 @@
 [package]
 name = "error-rail"
 version = "0.1.0"
+authors = ["jeong-il suk <wjddlf211@naver.com>"]
 edition = "2021"
 license = "Apache-2.0"
+description = "ErrorRail is a Error Handling library for the Rust language."
+repository = "https://github.com/but212/error-rail"
+keywords = ["error", "error handling"]
+categories = ["error-handling"]
+readme = "README.md"
 
 [package.metadata]
 msrv = "1.68.0"
