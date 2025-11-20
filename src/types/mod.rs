@@ -39,17 +39,19 @@ use smallvec::SmallVec;
 
 pub mod composable_error;
 pub mod error_context;
+pub mod error_pipeline;
 pub mod lazy_context;
 
 pub use composable_error::*;
 pub use error_context::*;
+pub use error_pipeline::*;
 pub use lazy_context::*;
 
 /// SmallVec-backed collection used for accumulating contexts/errors.
 ///
-/// Uses inline storage for up to 8 elements to avoid heap allocations
+/// Uses inline storage for up to 4 elements to avoid heap allocations
 /// in common cases where only a few contexts are attached.
-pub type ErrorVec<E> = SmallVec<[E; 8]>;
+pub type ErrorVec<E> = SmallVec<[E; 4]>;
 
 /// Result alias that wraps failures in [`ComposableError`].
 ///
