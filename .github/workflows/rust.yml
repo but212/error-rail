@@ -1,0 +1,206 @@
+name: Rust CI
+
+on:
+  push:
+    branches: [main, develop]
+    tags:
+      - "v*"
+  schedule:
+    - cron: "0 0 * * 0" # Weekly dependency check
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-D warnings --allow deprecated"
+  CARGO_INCREMENTAL: 0
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test ${{ matrix.rust }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        rust: [1.68.0, stable, nightly]
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        features: ["", "--all-features"]
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust ${{ matrix.rust }}
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
+      - uses: Swatinem/rust-cache@v2
+      - name: Run tests
+        run: cargo test ${{ matrix.features }} --verbose
+
+  msrv:
+    name: Check MSRV
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract MSRV
+        id: msrv
+        run: |
+          MSRV=$(grep -A 1 "\[package.metadata\]" Cargo.toml | grep -m 1 "msrv" | cut -d '"' -f 2)
+          if [ -z "$MSRV" ]; then
+            MSRV="1.88.0"
+          fi
+          echo "msrv=$MSRV" >> $GITHUB_OUTPUT
+          echo "Using MSRV: $MSRV"
+
+      - name: Install Rust ${{ steps.msrv.outputs.msrv }}
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ steps.msrv.outputs.msrv }}
+      - uses: Swatinem/rust-cache@v2
+      - name: Check MSRV compatibility
+        run: cargo check --all-features
+
+  unused_dependencies:
+    name: Check for unused dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust nightly
+        uses: dtolnay/rust-toolchain@nightly
+      - uses: Swatinem/rust-cache@v2
+      - name: Install cargo-udeps
+        run: cargo install cargo-udeps --locked
+      - name: Run cargo-udeps
+        run: cargo +nightly udeps --all-targets --all-features
+
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+      - name: Run security audit
+        run: cargo audit
+      - name: Install cargo-deny
+        run: cargo install cargo-deny --locked
+      - name: Run cargo-deny
+        run: cargo deny check
+
+  docs:
+    name: Build Docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install nightly toolchain
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rust-docs
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build documentation with broken link check
+        run: |
+          RUSTDOCFLAGS="-D warnings -D rustdoc::broken_intra_doc_links --cfg docsrs" \
+          cargo +nightly doc --all-features --no-deps
+
+      - name: Verify docs directory exists
+        run: |
+          if [ ! -d "./target/doc" ]; then
+            echo "::error::Documentation build failed: target/doc directory not found"
+            exit 1
+          fi
+
+  publish:
+    name: Publish to crates.io
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [test, msrv, security, docs]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Check version match
+        run: |
+          TAG_VERSION=${GITHUB_REF#refs/tags/v}
+          CARGO_VERSION=$(grep -m 1 '^version =' Cargo.toml | cut -d'"' -f2)
+          if [ "$TAG_VERSION" != "$CARGO_VERSION" ]; then
+            echo "::error::Version mismatch: Tag version ($TAG_VERSION) does not match Cargo.toml version ($CARGO_VERSION)"
+            exit 1
+          fi
+
+      - name: Check changelog update
+        run: |
+          CARGO_VERSION=$(grep -m 1 '^version =' Cargo.toml | cut -d'"' -f2)
+          grep -q "$CARGO_VERSION" CHANGELOG.md || (echo "::error::No entry for version $CARGO_VERSION in CHANGELOG.md" && exit 1)
+
+      - name: Verify Edition 2021 in Cargo.toml
+        run: |
+          grep -q 'edition = "2021"' Cargo.toml || (echo "::error::Edition 2021 not found in Cargo.toml" && exit 1)
+
+      - name: Publish to crates.io
+        uses: katyo/publish-crates@v2
+        with:
+          registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          args: --no-verify
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+  release:
+    name: Create GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [publish]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Get version from tag
+        id: get_version
+        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Extract version section from CHANGELOG.md
+        id: extract_changelog
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          SECTION=$(awk -v version="$VERSION" '
+            /^## \[.*\]/ { 
+              if (found) exit;
+              if ($0 ~ "^## \\[" version "\\]") found=1;
+            } 
+            found {print}
+          ' CHANGELOG.md)
+          BODY=$(echo "$SECTION" | tail -n +2 | sed -e "/^## \[/{N;d;}" -e 's/^/\n/')
+          if [ -z "$BODY" ]; then
+            BODY="No changelog entry found for version $VERSION"
+          fi
+          echo "body<<EOF" >> $GITHUB_OUTPUT
+          echo "$BODY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.get_version.outputs.version }}
+          name: Release v${{ steps.get_version.outputs.version }}
+          body: ${{ steps.extract_changelog.outputs.body }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
