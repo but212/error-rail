@@ -1,6 +1,6 @@
 use error_rail::{
-    context, context_accumulator, context_fn, error_pipeline, with_context, with_context_result,
-    ErrorContext, ErrorPipeline,
+    context, context_accumulator, context_fn, error_pipeline, rail, with_context,
+    with_context_result, ErrorContext, ErrorPipeline,
 };
 
 #[test]
@@ -11,6 +11,31 @@ fn with_context_attaches_single_context() {
     assert_eq!(contexts.len(), 1);
     assert_eq!(contexts[0], ErrorContext::tag("disk"));
     assert_eq!(err.core_error(), &"io failed");
+}
+
+#[test]
+fn rail_macro_wraps_expression_results() {
+    let err = rail!(Err::<(), &str>("boom"))
+        .unwrap_err()
+        .with_context(ErrorContext::tag("comparison"));
+
+    let manual = ErrorPipeline::new(Err::<(), &str>("boom"))
+        .finish()
+        .unwrap_err()
+        .with_context(ErrorContext::tag("comparison"));
+
+    assert_eq!(err.context(), manual.context());
+    assert_eq!(err.core_error(), manual.core_error());
+}
+
+#[test]
+fn rail_macro_accepts_block_syntax() {
+    let result = rail!({
+        let value = Err::<u8, &str>("fail");
+        value
+    });
+
+    assert!(result.is_err());
 }
 
 #[test]
