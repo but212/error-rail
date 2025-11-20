@@ -50,6 +50,20 @@ use crate::types::{ErrorContext, ErrorVec};
 /// assert_eq!(err.error_code(), Some(&500));
 /// assert!(err.error_chain().contains("database error"));
 /// ```
+///
+/// # Interoperability
+///
+/// When the wrapped error implements [`std::error::Error`], the composable error
+/// exposes it through [`std::error::Error::source`], preserving compatibility with
+/// libraries that inspect chained errors.
+///
+/// ```
+/// use error_rail::ComposableError;
+/// use std::{error::Error as StdError, io};
+///
+/// let err = ComposableError::<io::Error, u32>::new(io::Error::new(io::ErrorKind::Other, "boom"));
+/// assert!(StdError::source(&err).is_some());
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ComposableError<E, C = u32> {
     core_error: E,
@@ -367,7 +381,15 @@ impl<E: Display, C: Display> Display for ComposableError<E, C> {
     }
 }
 
-impl<E: Debug + Display, C: Debug + Display> std::error::Error for ComposableError<E, C> {}
+impl<E, C> std::error::Error for ComposableError<E, C>
+where
+    E: std::error::Error + 'static,
+    C: Debug + Display,
+{
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        Some(self.core_error())
+    }
+}
 
 impl<E, C> From<E> for ComposableError<E, C> {
     #[inline]
