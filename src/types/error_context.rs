@@ -167,12 +167,14 @@ impl ErrorContext {
     /// assert_eq!(ctx.message(), "at main.rs:10");
     /// ```
     #[inline]
-    pub fn message(&self) -> String {
+    pub fn message(&self) -> std::borrow::Cow<'_, str> {
         match self {
-            Self::Message(s) => s.clone(),
-            Self::Location { file, line } => format!("at {}:{}", file, line),
-            Self::Tag(t) => format!("[{}]", t),
-            Self::Metadata { key, value } => format!("{}={}", key, value),
+            Self::Message(s) => std::borrow::Cow::Borrowed(s.as_str()),
+            Self::Location { file, line } => {
+                std::borrow::Cow::Owned(format!("at {}:{}", file, line))
+            }
+            Self::Tag(t) => std::borrow::Cow::Owned(format!("[{}]", t)),
+            Self::Metadata { key, value } => std::borrow::Cow::Owned(format!("{}={}", key, value)),
         }
     }
 }

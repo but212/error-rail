@@ -16,6 +16,25 @@
 //! println!("{}", err.error_chain());
 //! // Output: [db] -> main.rs:42 -> database connection failed (code: 500)
 //! ```
+//!
+//! ## Choosing an error code type
+//!
+//! `ComposableError<E, C>` defaults `C` to `u32`, but you can pin any
+//! type that implements your domain rules. Use the provided aliases as
+//! starting points or create project-specific ones:
+//!
+//! ```
+//! use error_rail::{
+//!     ErrorContext,
+//!     SimpleComposableError,
+//!     TaggedComposableError,
+//!     ComposableError,
+//! };
+//!
+//! let http_error: SimpleComposableError<&str> = ComposableError::new("oops").set_code(500);
+//! let tagged: TaggedComposableError<&str> =
+//!     ComposableError::new("missing feature").set_code("feature_disabled");
+//! ```
 use smallvec::SmallVec;
 
 pub mod composable_error;
@@ -40,6 +59,12 @@ pub type ErrorVec<E> = SmallVec<[E; 8]>;
 /// * `E` - The core error type
 /// * `C` - The error code type (defaults to `u32`)
 pub type ComposableResult<T, E, C = u32> = Result<T, ComposableError<E, C>>;
+
+/// Convenience alias for `ComposableError` with the default numeric code type.
+pub type SimpleComposableError<E> = ComposableError<E, u32>;
+
+/// Convenience alias for `ComposableError` with static string codes.
+pub type TaggedComposableError<E> = ComposableError<E, &'static str>;
 
 /// Boxed [`ComposableError`] for reduced stack size.
 ///

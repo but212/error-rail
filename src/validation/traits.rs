@@ -60,8 +60,6 @@ impl<T: Clone, E: Clone> WithError<E> for Validation<E, T> {
     fn fmap_error<F, G>(self, f: F) -> Self::ErrorOutput<G>
     where
         F: Fn(E) -> G,
-        G: Clone,
-        T: Clone,
     {
         match self {
             Validation::Valid(t) => Validation::Valid(t),

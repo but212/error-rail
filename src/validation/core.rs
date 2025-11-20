@@ -159,6 +159,45 @@ impl<E, A> Validation<E, A> {
         }
     }
 
+    /// Chains computations that may produce additional validation errors.
+    ///
+    /// Behaves like [`Result::and_then`], propagating invalid states while
+    /// invoking `f` only when the current validation is valid.
+    ///
+    /// # Arguments
+    ///
+    /// * `f` - Function producing the next validation step
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use error_rail::validation::Validation;
+    ///
+    /// fn parse_even(input: i32) -> Validation<&'static str, i32> {
+    ///     if input % 2 == 0 {
+    ///         Validation::valid(input)
+    ///     } else {
+    ///         Validation::invalid("not even")
+    ///     }
+    /// }
+    ///
+    /// let result = Validation::valid(4).and_then(parse_even);
+    /// assert_eq!(result.into_value(), Some(4));
+    ///
+    /// let invalid = Validation::valid(3).and_then(parse_even);
+    /// assert!(invalid.is_invalid());
+    /// ```
+    #[inline]
+    pub fn and_then<B, F>(self, f: F) -> Validation<E, B>
+    where
+        F: FnOnce(A) -> Validation<E, B>,
+    {
+        match self {
+            Self::Valid(value) => f(value),
+            Self::Invalid(errors) => Validation::Invalid(errors),
+        }
+    }
+
     /// Maps each error while preserving the success branch.
     ///
     /// Transforms all accumulated errors using the provided function,
@@ -181,7 +220,6 @@ impl<E, A> Validation<E, A> {
     pub fn map_err<F, G>(self, f: F) -> Validation<G, A>
     where
         F: Fn(E) -> G,
-        A: Clone,
     {
         match self {
             Self::Valid(value) => Validation::Valid(value),

@@ -45,8 +45,7 @@ pub trait WithError<E> {
     /// ```
     fn fmap_error<F, G>(self, f: F) -> Self::ErrorOutput<G>
     where
-        F: Fn(E) -> G,
-        G: Clone;
+        F: Fn(E) -> G;
 
     /// Converts the container into a `Result`.
     ///

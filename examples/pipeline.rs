@@ -1,4 +1,4 @@
-use error_rail::{ErrorPipeline, context, location, tag};
+use error_rail::{context, location, tag, ErrorPipeline};
 
 fn do_http_call() -> Result<&'static str, &'static str> {
     Err("timeout")

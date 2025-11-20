@@ -52,9 +52,9 @@ use crate::types::{ErrorContext, ErrorVec};
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ComposableError<E, C = u32> {
-    pub core_error: E,
+    core_error: E,
     context: ErrorVec<ErrorContext>,
-    pub error_code: Option<C>,
+    error_code: Option<C>,
 }
 
 impl<E, C> ComposableError<E, C> {
@@ -184,6 +184,12 @@ impl<E, C> ComposableError<E, C> {
     #[inline]
     pub fn core_error(&self) -> &E {
         &self.core_error
+    }
+
+    /// Consumes the composable error, returning the underlying core error.
+    #[inline]
+    pub fn into_core(self) -> E {
+        self.core_error
     }
 
     /// Returns contexts in LIFO order (most recent first).

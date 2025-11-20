@@ -1,4 +1,4 @@
-use crate::{ErrorVec, validation::core::Validation};
+use crate::{validation::core::Validation, ErrorVec};
 use std::slice::{Iter as SliceIter, IterMut as SliceIterMut};
 
 /// Iterator over the valid value of a [`Validation`].

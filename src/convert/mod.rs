@@ -20,8 +20,8 @@
 //! let composable = wrap_in_composable_result(result);
 //! ```
 
-use crate::types::BoxedComposableResult;
 use crate::types::composable_error::ComposableError;
+use crate::types::BoxedComposableResult;
 use crate::validation::core::Validation;
 
 /// Converts a `Validation` to a `Result`, taking the first error if invalid.
@@ -52,10 +52,7 @@ use crate::validation::core::Validation;
 /// assert_eq!(validation_to_result(invalid), Err("error"));
 /// ```
 #[inline]
-pub fn validation_to_result<T, E>(validation: Validation<E, T>) -> Result<T, E>
-where
-    E: Clone,
-{
+pub fn validation_to_result<T, E>(validation: Validation<E, T>) -> Result<T, E> {
     match validation {
         Validation::Valid(value) => Ok(value),
         Validation::Invalid(errors) => {
@@ -97,7 +94,6 @@ where
 pub fn result_to_validation<T, E>(result: Result<T, E>) -> Validation<E, T>
 where
     E: Clone,
-    T: Clone,
 {
     match result {
         Ok(value) => Validation::Valid(value),
@@ -127,7 +123,7 @@ where
 /// ```
 #[inline]
 pub fn composable_to_core<E>(composable: ComposableError<E>) -> E {
-    composable.core_error
+    composable.into_core()
 }
 
 /// Wraps a core error in a `ComposableError` with no context.
@@ -262,7 +258,6 @@ pub fn wrap_in_composable_result_boxed<T, E>(result: Result<T, E>) -> BoxedCompo
 #[inline]
 pub fn collect_errors<E, I>(errors: I) -> Validation<E, ()>
 where
-    E: Clone,
     I: IntoIterator<Item = E>,
 {
     let error_vec: Vec<E> = errors.into_iter().collect();
@@ -298,11 +293,7 @@ where
 /// let results = split_validation_errors(invalid);
 /// assert_eq!(results, vec![Err("err1"), Err("err2")]);
 /// ```
-pub fn split_validation_errors<T, E>(validation: Validation<E, T>) -> Vec<Result<T, E>>
-where
-    T: Clone,
-    E: Clone,
-{
+pub fn split_validation_errors<T, E>(validation: Validation<E, T>) -> Vec<Result<T, E>> {
     match validation {
         Validation::Valid(value) => vec![Ok(value)],
         Validation::Invalid(errors) => errors.into_iter().map(|e| Err(e)).collect(),

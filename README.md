@@ -75,9 +75,23 @@ Conversions live in [`convert`](src/convert/mod.rs):
 
 ## Examples & doctests
 
-- `cargo run --example pipeline` – shows `ErrorPipeline` + context macros building a chain.
-- `cargo run --example validation_collect` – demonstrates collecting multiple `Validation`s.
-- `cargo test --doc` – executes all doc-commented snippets (see `ErrorContext`, `ErrorPipeline`, `Validation`).
+Run the bundled examples directly from the crate root:
+
+```sh
+cargo run --example pipeline
+cargo run --example validation_collect
+```
+
+This exercises the error pipeline and validation collectors end-to-end. To ensure
+documentation stays accurate, execute all doctests whenever you touch public
+APIs:
+
+```sh
+cargo test --doc
+```
+
+Consider wiring these commands into CI so regressions in docs or examples are
+caught automatically.
 
 ## License
 
