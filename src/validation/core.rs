@@ -195,6 +195,34 @@ impl<E, A> Validation<E, A> {
         }
     }
 
+    /// Calls `op` if the validation is invalid, otherwise returns the `Valid` value.
+    ///
+    /// This function can be used for control flow based on validation results.
+    ///
+    /// # Arguments
+    ///
+    /// * `op` - The function to call if the validation is invalid.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use error_rail::validation::Validation;
+    ///
+    /// let v = Validation::<&str, i32>::invalid("error");
+    /// let res = v.or_else(|_errs| Validation::valid(42));
+    /// assert_eq!(res.into_value(), Some(42));
+    /// ```
+    #[inline]
+    pub fn or_else<F>(self, op: F) -> Validation<E, A>
+    where
+        F: FnOnce(ErrorVec<E>) -> Validation<E, A>,
+    {
+        match self {
+            Self::Valid(value) => Validation::Valid(value),
+            Self::Invalid(errors) => op(errors),
+        }
+    }
+
     /// Maps each error while preserving the success branch.
     ///
     /// Transforms all accumulated errors using the provided function,

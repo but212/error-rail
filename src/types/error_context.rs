@@ -6,10 +6,8 @@
 //!
 //! # Variants
 //!
-//! - **`Message`**: Free-form text describing what was happening when the error occurred.
-//! - **`Location`**: File path and line number, typically captured via `file!()` and `line!()`.
-//! - **`Tag`**: A short label for categorizing errors (e.g., `"auth"`, `"db"`).
-//! - **`Metadata`**: Arbitrary key-value pairs for structured logging or filtering.
+//! - **`Simple`**: Free-form text describing what was happening when the error occurred.
+//! - **`Group`**: A rich context containing location, tags, metadata, and an optional message.
 //!
 //! # Usage
 //!
@@ -38,10 +36,8 @@ use std::fmt::Display;
 ///
 /// # Variants
 ///
-/// - `Message(String)`: A plain text message describing the error context.
-/// - `Location { file: String, line: u32 }`: Source file and line number where the error occurred.
-/// - `Tag(String)`: A short categorization tag (e.g., `"auth"`, `"cache"`).
-/// - `Metadata { key: String, value: String }`: Arbitrary key-value pair for structured logging.
+/// - `Simple(String)`: A plain text message describing the error context.
+/// - `Group(GroupContext)`: A rich context containing multiple pieces of information.
 ///
 /// # Examples
 ///
@@ -55,10 +51,24 @@ use std::fmt::Display;
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ErrorContext {
-    Message(String),
-    Location { file: String, line: u32 },
-    Tag(String),
-    Metadata { key: String, value: String },
+    Simple(String),
+    Group(GroupContext),
+}
+
+/// A rich context containing multiple pieces of information.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+pub struct GroupContext {
+    pub message: Option<String>,
+    pub location: Option<Location>,
+    pub tags: Vec<String>,
+    pub metadata: Vec<(String, String)>,
+}
+
+/// Source file and line number where the error occurred.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct Location {
+    pub file: String,
+    pub line: u32,
 }
 
 impl ErrorContext {
@@ -79,7 +89,7 @@ impl ErrorContext {
     /// ```
     #[inline]
     pub fn new<S: Into<String>>(message: S) -> Self {
-        Self::Message(message.into())
+        Self::Simple(message.into())
     }
 
     /// Captures the file/line pair where an error occurred.
@@ -100,10 +110,13 @@ impl ErrorContext {
     /// ```
     #[inline]
     pub fn location(file: &str, line: u32) -> Self {
-        Self::Location {
-            file: file.to_string(),
-            line,
-        }
+        Self::Group(GroupContext {
+            location: Some(Location {
+                file: file.to_string(),
+                line,
+            }),
+            ..Default::default()
+        })
     }
 
     /// Annotates the error with a short tag (e.g. `auth`, `cache`).
@@ -123,7 +136,10 @@ impl ErrorContext {
     /// ```
     #[inline]
     pub fn tag<S: Into<String>>(tag: S) -> Self {
-        Self::Tag(tag.into())
+        Self::Group(GroupContext {
+            tags: vec![tag.into()],
+            ..Default::default()
+        })
     }
 
     /// Adds arbitrary key/value metadata for downstream logging/filters.
@@ -145,19 +161,17 @@ impl ErrorContext {
     /// ```
     #[inline]
     pub fn metadata<K: Into<String>, V: Into<String>>(key: K, value: V) -> Self {
-        Self::Metadata {
-            key: key.into(),
-            value: value.into(),
-        }
+        Self::Group(GroupContext {
+            metadata: vec![(key.into(), value.into())],
+            ..Default::default()
+        })
     }
 
     /// Renders the context as a human-friendly string.
     ///
     /// Each variant is formatted differently:
-    /// - `Message`: Returns the message as-is.
-    /// - `Location`: Formats as `"at <file>:<line>"`.
-    /// - `Tag`: Formats as `"[<tag>]"`.
-    /// - `Metadata`: Formats as `"<key>=<value>"`.
+    /// - `Simple`: Returns the message as-is.
+    /// - `Group`: Formats the content based on what's available.
     ///
     /// # Examples
     /// ```
@@ -169,12 +183,33 @@ impl ErrorContext {
     #[inline]
     pub fn message(&self) -> std::borrow::Cow<'_, str> {
         match self {
-            Self::Message(s) => std::borrow::Cow::Borrowed(s.as_str()),
-            Self::Location { file, line } => {
-                std::borrow::Cow::Owned(format!("at {}:{}", file, line))
+            Self::Simple(s) => std::borrow::Cow::Borrowed(s.as_str()),
+            Self::Group(g) => {
+                if let Some(msg) = &g.message {
+                    return std::borrow::Cow::Borrowed(msg.as_str());
+                }
+                if let Some(loc) = &g.location {
+                    return std::borrow::Cow::Owned(format!("at {}:{}", loc.file, loc.line));
+                }
+                if !g.tags.is_empty() {
+                    // Join tags with comma if multiple? Or just show first?
+                    // Previous behavior was single tag -> "[tag]".
+                    // Let's format as "[tag1, tag2]"
+                    return std::borrow::Cow::Owned(format!("[{}]", g.tags.join(", ")));
+                }
+                if !g.metadata.is_empty() {
+                    // Previous behavior was single key-value -> "key=value".
+                    // Let's format as "key1=value1, key2=value2"
+                    let meta_str = g
+                        .metadata
+                        .iter()
+                        .map(|(k, v)| format!("{}={}", k, v))
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    return std::borrow::Cow::Owned(meta_str);
+                }
+                std::borrow::Cow::Borrowed("")
             }
-            Self::Tag(t) => std::borrow::Cow::Owned(format!("[{}]", t)),
-            Self::Metadata { key, value } => std::borrow::Cow::Owned(format!("{}={}", key, value)),
         }
     }
 }

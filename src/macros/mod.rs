@@ -102,7 +102,7 @@ macro_rules! context {
 
 /// Captures the current source file and line number as error context.
 ///
-/// This macro creates an [`ErrorContext::Location`](crate::types::ErrorContext::Location)
+/// This macro creates an [`ErrorContext::location`](crate::types::ErrorContext::location)
 /// using the `file!()` and `line!()` built-in macros, providing precise source location
 /// information for debugging.
 ///
@@ -123,7 +123,7 @@ macro_rules! location {
 
 /// Creates a categorical tag for error classification.
 ///
-/// This macro creates an [`ErrorContext::Tag`](crate::types::ErrorContext::Tag) that can be
+/// This macro creates an [`ErrorContext::tag`](crate::types::ErrorContext::tag) that can be
 /// used to categorize and filter errors by domain (e.g., "db", "auth", "network").
 ///
 /// # Arguments
@@ -147,7 +147,7 @@ macro_rules! tag {
 
 /// Creates a key-value metadata pair for structured error context.
 ///
-/// This macro creates an [`ErrorContext::Metadata`](crate::types::ErrorContext::Metadata)
+/// This macro creates an [`ErrorContext::metadata`](crate::types::ErrorContext::metadata)
 /// entry that can be used for structured logging, filtering, or monitoring.
 ///
 /// # Arguments
