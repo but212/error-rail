@@ -9,6 +9,7 @@ repository = "https://github.com/but212/error-rail"
 keywords = ["error", "error-handling"]
 categories = ["algorithms"]
 readme = "README.md"
+rust-version = "1.81.0"
 
 [package.metadata]
 msrv = "1.81.0"
