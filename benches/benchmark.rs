@@ -2,15 +2,18 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 use error_rail::traits::ErrorOps;
 use error_rail::{ComposableError, ErrorContext};
+use std::hint::black_box;
 
 // 1. Construction benchmark
 fn bench_composable_error_creation(c: &mut Criterion) {
     c.bench_function("composable_error_creation", |b| {
         b.iter(|| {
-            ComposableError::new("failure")
-                .with_context(ErrorContext::tag("db"))
-                .with_context(ErrorContext::metadata("host", "db-primary-01"))
-                .set_code(503)
+            black_box(
+                ComposableError::new("failure")
+                    .with_context(ErrorContext::tag("db"))
+                    .with_context(ErrorContext::metadata("host", "db-primary-01"))
+                    .set_code(503),
+            )
         })
     });
 }
@@ -22,20 +25,20 @@ fn bench_composable_error_serialization(c: &mut Criterion) {
         .with_context(ErrorContext::metadata("host", "db-primary-01"))
         .set_code(503);
     c.bench_function("composable_error_serialization", |b| {
-        b.iter(|| serde_json::to_string(&err).unwrap())
+        b.iter(|| black_box(serde_json::to_string(&err).unwrap()))
     });
 }
 
 // 3. ErrorOps benchmark (recover & bimap)
 fn bench_error_ops_recover(c: &mut Criterion) {
     c.bench_function("error_ops_recover", |b| {
-        b.iter(|| Err::<i32, &str>("missing").recover(|_| Ok(42)))
+        b.iter(|| black_box(Err::<i32, &str>("missing").recover(|_| Ok(42))))
     });
 }
 
 fn bench_error_ops_bimap(c: &mut Criterion) {
     c.bench_function("error_ops_bimap", |b| {
-        b.iter(|| Ok::<i32, &str>(21).bimap_result(|x| x * 2, |e| e.to_uppercase()))
+        b.iter(|| black_box(Ok::<i32, &str>(21).bimap_result(|x| x * 2, |e| e.to_uppercase())))
     });
 }
 
