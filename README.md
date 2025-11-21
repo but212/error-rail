@@ -3,6 +3,7 @@
 [![Crates.io Version](https://img.shields.io/crates/v/error-rail)](https://crates.io/crates/error-rail)
 [![Documentation](https://docs.rs/error-rail/badge.svg)](https://docs.rs/error-rail)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/but212/error-rail)
 
 **Composable, metadata-friendly error utilities for Rust.**
 
@@ -25,6 +26,10 @@ let err = ComposableError::<&str, u32>::new("db error")
     .with_context(tag!("database"))
     .with_context(location!())
     .with_context(context!("failed to connect"));
+
+// Print the full error chain
+println!("{}", err.error_chain());
+// Output: failed to connect -> at src/main.rs:10 -> [database] -> db error
 ```
 
 ### 2. Validation Accumulation
