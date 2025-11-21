@@ -53,16 +53,13 @@ Use lazy context evaluation to avoid expensive string formatting on the success 
 ```rust
 use error_rail::{ErrorPipeline, context};
 
-fn expensive_debug() -> String {
-    format!("computed: {:?}", large_struct) // Only runs if error occurs
-}
-
 let result = ErrorPipeline::new(risky_operation())
-    .with_context(context!("{}", expensive_debug()))
+    .with_context(context!("computed: {:?}", large_struct)) // Only runs if error occurs
     .finish();
 ```
 
-> **Note**: The `context!` macro uses `LazyContext` internally, deferring evaluation until an error actually occurs.
+> **Note**: The `context!` macro uses `LazyContext` internally.
+> This means the `format!` call and its arguments are evaluated only if an error actually occurs.
 
 ### 4. Error Pipeline
 
