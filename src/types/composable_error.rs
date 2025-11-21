@@ -22,6 +22,7 @@ use std::fmt::{Debug, Display};
 
 use crate::traits::IntoErrorContext;
 use crate::types::{ErrorContext, ErrorVec};
+use serde::{Deserialize, Serialize};
 
 /// Error wrapper that stores the original error plus structured contexts and an optional code `C`.
 ///
@@ -64,7 +65,7 @@ use crate::types::{ErrorContext, ErrorVec};
 /// let err = ComposableError::<io::Error, u32>::new(io::Error::new(io::ErrorKind::Other, "boom"));
 /// assert!(StdError::source(&err).is_some());
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ComposableError<E, C = u32> {
     core_error: E,
     context: ErrorVec<ErrorContext>,
