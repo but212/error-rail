@@ -1,6 +1,6 @@
 [package]
 name = "error-rail"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["jeong-il suk <wjddlf211@naver.com>"]
 edition = "2021"
 license = "Apache-2.0"
@@ -9,9 +9,10 @@ repository = "https://github.com/but212/error-rail"
 keywords = ["error", "error-handling"]
 categories = ["algorithms"]
 readme = "README.md"
+rust-version = "1.81.0"
 
 [package.metadata]
-msrv = "1.68.0"
+msrv = "1.81.0"
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
@@ -19,3 +20,8 @@ smallvec = { version = "1.15.1", features = ["serde"] }
 
 [dev-dependencies]
 serde_json = "1.0.145"
+criterion = "0.7.0"
+
+[[bench]]
+name = "benchmark"
+harness = false

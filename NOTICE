@@ -20,21 +20,10 @@ THIRD-PARTY SOFTWARE NOTICES
 
 MIT OR Apache-2.0:
 
-- serde, serde_derive, serde_core
+- serde
 - smallvec
-- quote
-- syn
-- itoa
-- proc-macro2
-- unicode-ident
-
-Unlicense or MIT:
-
-- memchr
-
-Apache-2.0 or BSL-1.0:
-
-- ryu
+- serde_json
+- criterion
 
 For convenience, the MIT license text is reproduced below. The Apache-2.0
 terms covering these crates are already provided in the LICENSE file.
@@ -42,8 +31,8 @@ terms covering these crates are already provided in the LICENSE file.
 smallvec:
 Copyright (c) 2018 The Servo Project Developers
 
-memchr:
-Copyright (c) 2015 Andrew Gallant
+criterion:
+Copyright (c) 2014 Jorge Aparicio
 
 MIT License
 
