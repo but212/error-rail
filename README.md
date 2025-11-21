@@ -4,21 +4,57 @@
 [![Documentation](https://docs.rs/error-rail/badge.svg)](https://docs.rs/error-rail)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-Composable, metadata-friendly error utilities for Rust applications that need richer
-context than `anyhow`-style strings but lighter ceremony than full-blown tracing.
+**Composable, metadata-friendly error utilities for Rust.**
 
-## Notice
+`error-rail` provides a middle ground between simple string errors and full-blown tracing systems. It allows you to attach rich, structured context to errors and collect multiple validation failures without early returns.
 
-This library is an improved version that separates and refines the error module and Validated module from my Rustica library, which I created to study category theory and functional programming.
+## Quick Start
 
-## Features
+> **New to error-rail?** Check out the [Quick Start Guide](QUICK_START.md) for a beginner-friendly introduction.
 
-1. **Structured context** – attach messages, file/line locations, tags, and key/value
-   metadata to any error.
-2. **Composable collectors** – aggregate successes and failures through `Validation`
-   and convert seamlessly between `Result`, `Validation`, and `ComposableError`.
-3. **Ergonomic helpers** – macros (`context!`, `location!`, `tag!`, `metadata!`) and
-   traits (`IntoErrorContext`, `WithError`) keep boilerplate low.
+## Key Features
+
+### 1. Structured Context
+
+Wrap any error in `ComposableError` and attach layered metadata like messages, file locations, and tags.
+
+```rust
+use error_rail::{ComposableError, context, location, tag};
+
+let err = ComposableError::<&str, u32>::new("db error")
+    .with_context(tag!("database"))
+    .with_context(location!())
+    .with_context(context!("failed to connect"));
+```
+
+### 2. Validation Accumulation
+
+Collect multiple errors instead of failing fast. Ideal for form validation or batch processing.
+
+```rust
+use error_rail::validation::Validation;
+
+let v1 = Validation::<&str, i32>::valid(10);
+let v2 = Validation::<&str, i32>::invalid("too small");
+let combined: Validation<&str, Vec<i32>> = vec![v1, v2].into_iter().collect();
+
+assert!(combined.is_invalid());
+```
+
+### 3. Ergonomic Traits
+
+- **`IntoErrorContext`**: Convert your own types into error context.
+- **`WithError`**: Transform error types while preserving success values.
+- **`ErrorOps`**: Unified operations for recovery and mapping.
+
+## Module Overview
+
+- **`context`**: Core context types and pipeline builders.
+- **`convert`**: Helpers to switch between `Result`, `Validation`, and `ComposableError`.
+- **`macros`**: `context!`, `location!`, `tag!`, `metadata!` for easy context creation.
+- **`traits`**: Foundational traits (`ErrorCategory`, `ErrorOps`, etc.).
+- **`types`**: `ComposableError` and related type aliases.
+- **`validation`**: The `Validation` enum and accumulators.
 
 ## Installation
 
@@ -26,76 +62,14 @@ This library is an improved version that separates and refines the error module 
 cargo add error-rail
 ```
 
-_No default features are required; the crate depends only on `serde` and `smallvec`._
+## Examples
 
-## Quick start
-
-```rust
-use error_rail::{context, location, tag, with_context_result, ComposableError};
-
-fn read_user_config() -> Result<String, std::io::Error> {
-    std::fs::read_to_string("/etc/myapp/config.toml")
-}
-
-fn load_config() -> Result<String, Box<ComposableError<std::io::Error>>> {
-    with_context_result(read_user_config(), context!("loading config"))
-        .map_err(|err| err.with_context(location!()).with_context(tag!("config")))
-}
-```
-
-## Structured context
-
-`ComposableError<E>` wraps the original error `E`, a stack of `ErrorContext` values, and
-an optional error code `C` (default `u32`). Context helpers:
-
-| Helper                                           | Purpose                           |
-| ------------------------------------------------ | --------------------------------- |
-| `context!("format {}", arg)`                     | Lazily format human-readable text |
-| `location!()`                                    | Capture `file!()` + `line!()`     |
-| `tag!("auth")`                                   | Mark errors for later filtering   |
-| `metadata!("user_id", user_id.to_string())`      | Store arbitrary key/value pairs   |
-
-Use [`ErrorPipeline`](src/context/mod.rs) to chain operations and accumulate contexts
-before finalizing into a `ComposableError`.
-
-## Validation & conversion
-
-`Validation<E, A>` collects every error instead of failing fast. Key APIs include:
-
-- `Validation::invalid_many`, `iter_errors`, and iterator adapters (`Iter`, `ErrorsIter`).
-- `FromIterator` impls for collecting iterators of `Result` or `Validation`.
-
-Conversions live in [`convert`](src/convert/mod.rs):
-
-- `validation_to_result`, `result_to_validation`
-- `wrap_in_composable_result` / `_boxed`
-- `flatten_composable_result`
-
-## Macros & traits
-
-- `context!`, `location!`, `tag!`, `metadata!`
-- `IntoErrorContext` for plugging custom types into the context stack.
-- `WithError` for transforming error types while preserving success values.
-
-## Examples & doctests
-
-Run the bundled examples directly from the crate root:
+Run the bundled examples to see `error-rail` in action:
 
 ```sh
 cargo run --example pipeline
 cargo run --example validation_collect
 ```
-
-This exercises the error pipeline and validation collectors end-to-end. To ensure
-documentation stays accurate, execute all doctests whenever you touch public
-APIs:
-
-```sh
-cargo test --doc
-```
-
-Consider wiring these commands into CI so regressions in docs or examples are
-caught automatically.
 
 ## License
 
