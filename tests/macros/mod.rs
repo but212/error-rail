@@ -14,12 +14,16 @@ fn location_macro_captures_file_and_line() {
     let ctx = location!();
 
     match ctx {
-        ErrorContext::Location { file, line } => {
-            let normalized = file.replace('\\', "/");
-            assert!(normalized.ends_with("tests/macros/mod.rs"));
-            assert_eq!(line, expected_line);
+        ErrorContext::Group(group) => {
+            if let Some(loc) = group.location {
+                let normalized = loc.file.replace('\\', "/");
+                assert!(normalized.ends_with("tests/macros/mod.rs"));
+                assert_eq!(loc.line, expected_line);
+            } else {
+                panic!("location! should produce Group variant with location");
+            }
         }
-        _ => panic!("location! should produce Location variant"),
+        _ => panic!("location! should produce Group variant"),
     }
 }
 
