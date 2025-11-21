@@ -383,9 +383,33 @@ impl<E, C> ComposableError<E, C> {
     }
 }
 
-/// Helper struct for customizing error formatting.
+/// Formatter for customizing error display output.
 ///
-/// Created via [`ComposableError::fmt`].
+/// This struct provides fine-grained control over how [`ComposableError`] instances
+/// are formatted as strings, including separator style, context ordering, and
+/// whether to display error codes.
+///
+/// Created via [`ComposableError::fmt`], it follows the builder pattern for
+/// configuring output options.
+///
+/// # Examples
+///
+/// ```
+/// use error_rail::{ComposableError, ErrorContext};
+///
+/// let err = ComposableError::new("connection failed")
+///     .with_context(ErrorContext::tag("network"))
+///     .with_context("retry exhausted")
+///     .set_code(503);
+///
+/// // Customize formatting
+/// let formatted = err.fmt()
+///     .with_separator(" | ")
+///     .show_code(false)
+///     .to_string();
+///
+/// assert_eq!(formatted, "retry exhausted | [network] | connection failed");
+/// ```
 pub struct ErrorFormatter<'a, E, C> {
     error: &'a ComposableError<E, C>,
     separator: &'a str,

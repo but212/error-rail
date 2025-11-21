@@ -24,6 +24,9 @@ fn perform_task() -> Result<(), Box<ComposableError<std::io::Error>>> {
     // Box the error if your return type requires it
     res.map_err(Box::new)
 }
+
+// You can also format the entire error chain for logging:
+// println!("Error: {}", err.error_chain());
 ```
 
 ## 2. Using Macros
@@ -33,6 +36,9 @@ fn perform_task() -> Result<(), Box<ComposableError<std::io::Error>>> {
 - `context!`: Adds a human-readable message.
 - `location!`: Adds the file and line number.
 - `tag!`: Adds a tag for filtering or categorization.
+
+> **Performance Tip**: The `context!` macro uses lazy evaluation (`LazyContext`), so the string
+> formatting only happens if an error occurs. This makes it zero-cost on the success path.
 
 ```rust
 use error_rail::{context, location, tag, ComposableError};

@@ -46,7 +46,40 @@ let combined: Validation<&str, Vec<i32>> = vec![v1, v2].into_iter().collect();
 assert!(combined.is_invalid());
 ```
 
-### 3. Ergonomic Traits
+### 3. Performance Optimization
+
+Use lazy context evaluation to avoid expensive string formatting on the success path.
+
+```rust
+use error_rail::{ErrorPipeline, context};
+
+fn expensive_debug() -> String {
+    format!("computed: {:?}", large_struct) // Only runs if error occurs
+}
+
+let result = ErrorPipeline::new(risky_operation())
+    .with_context(context!("{}", expensive_debug()))
+    .finish();
+```
+
+> **Note**: The `context!` macro uses `LazyContext` internally, deferring evaluation until an error actually occurs.
+
+### 4. Error Pipeline
+
+Chain context and transformations in a fluent interface.
+
+```rust
+use error_rail::{ErrorPipeline, context, tag};
+
+let result = ErrorPipeline::new(database_query())
+    .with_context(tag!("database"))
+    .with_context(context!("user_id: {}", user_id))
+    .map_err(|e| format!("Query failed: {}", e))
+    .with_context(context!("operation: fetch_profile"))
+    .finish();
+```
+
+### 5. Ergonomic Traits
 
 - **`IntoErrorContext`**: Convert your own types into error context.
 - **`WithError`**: Transform error types while preserving success values.
@@ -54,12 +87,36 @@ assert!(combined.is_invalid());
 
 ## Module Overview
 
-- **`context`**: Core context types and pipeline builders.
-- **`convert`**: Helpers to switch between `Result`, `Validation`, and `ComposableError`.
-- **`macros`**: `context!`, `location!`, `tag!`, `metadata!`, `rail` for easy context creation.
-- **`traits`**: Foundational traits (`ErrorCategory`, `ErrorOps`, etc.).
-- **`types`**: `ComposableError` and related type aliases.
-- **`validation`**: The `Validation` enum and accumulators.
+- **`context`**: Functions for wrapping errors with context:
+  - `with_context` / `with_context_result` - Add context to errors
+  - `accumulate_context` - Attach multiple contexts at once
+  - `error_pipeline` - Create error processing pipelines
+  - `format_error_chain` - Format errors as human-readable chains
+
+- **`convert`**: Convert between `Result`, `Validation`, and `ComposableError`.
+
+- **`macros`**: Ergonomic shortcuts for context creation:
+  - `context!` - Lazy string formatting (deferred until error occurs)
+  - `location!` - Capture source file/line automatically  
+  - `tag!` - Add categorical tags
+  - `metadata!` - Attach key-value pairs
+  - `rail!` - Shorthand for `ErrorPipeline::new(...).finish()`
+
+- **`traits`**: Core traits for error handling:
+  - `IntoErrorContext` - Convert types to error context
+  - `ErrorOps` - Recovery and mapping operations
+  - `WithError` - Remap error types
+  - `ErrorCategory` - Categorical abstraction (internal)
+
+- **`types`**: Error structures and utilities:
+  - `ComposableError<E, C>` - Main error wrapper with context stack
+  - `ErrorContext` - Structured metadata (messages, locations, tags, metadata)
+  - `ErrorPipeline<T, E>` - Builder for chaining context and transformations
+  - `LazyContext<F>` - Deferred context evaluation for performance
+
+- **`validation`**: Accumulating validation results:
+  - `Validation<E, A>` - Either valid value or accumulated errors
+  - Iterators and collectors for aggregating multiple validations
 
 ## Installation
 
