@@ -3,6 +3,8 @@ use error_rail::{
     extract_context, format_error_chain, ComposableError, ErrorContext, ErrorPipeline, LazyContext,
 };
 
+mod formatting;
+
 #[test]
 fn composable_error_accumulates_contexts_and_code() {
     let err = ComposableError::new("read failure")

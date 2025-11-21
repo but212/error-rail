@@ -328,6 +328,33 @@ impl<E, C> ComposableError<E, C> {
         }
     }
 
+    /// Returns a builder for customizing the error formatting.
+    ///
+    /// This allows you to change the separator, order, and visibility of components
+    /// without allocating a new string immediately.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use error_rail::{ComposableError, ErrorContext};
+    ///
+    /// let err = ComposableError::<&str, u32>::new("error")
+    ///     .with_context("ctx1")
+    ///     .set_code(500);
+    ///
+    /// println!("{}", err.fmt().with_separator(" | ").show_code(false));
+    /// // Output: ctx1 | error
+    /// ```
+    #[inline]
+    pub fn fmt(&self) -> ErrorFormatter<'_, E, C> {
+        ErrorFormatter {
+            error: self,
+            separator: " -> ",
+            reverse_context: false,
+            show_code: true,
+        }
+    }
+
     /// Formats the error chain as `ctx1 -> ctx2 -> core_error (code: ...)`.
     ///
     /// Contexts are displayed in LIFO order (most recent first), followed by the core error.
@@ -351,33 +378,91 @@ impl<E, C> ComposableError<E, C> {
         E: Display,
         C: Display,
     {
-        let mut chain = String::new();
+        self.fmt().to_string()
+    }
+}
 
-        // Iterate in reverse order (most recent first)
-        for (i, ctx) in self.context.iter().rev().enumerate() {
-            if i > 0 {
-                chain.push_str(" -> ");
+/// Helper struct for customizing error formatting.
+///
+/// Created via [`ComposableError::fmt`].
+pub struct ErrorFormatter<'a, E, C> {
+    error: &'a ComposableError<E, C>,
+    separator: &'a str,
+    reverse_context: bool,
+    show_code: bool,
+}
+
+impl<'a, E, C> ErrorFormatter<'a, E, C> {
+    /// Sets the separator between context elements (default: " -> ").
+    pub fn with_separator(mut self, separator: &'a str) -> Self {
+        self.separator = separator;
+        self
+    }
+
+    /// If true, displays contexts in FIFO order (oldest first) instead of LIFO.
+    pub fn reverse_context(mut self, reverse: bool) -> Self {
+        self.reverse_context = reverse;
+        self
+    }
+
+    /// Whether to include the error code in the output (default: true).
+    pub fn show_code(mut self, show: bool) -> Self {
+        self.show_code = show;
+        self
+    }
+}
+
+impl<'a, E, C> Display for ErrorFormatter<'a, E, C>
+where
+    E: Display,
+    C: Display,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let contexts = &self.error.context;
+        let mut first = true;
+
+        // Helper to write separator
+        let mut write_sep = |f: &mut std::fmt::Formatter<'_>| -> std::fmt::Result {
+            if !first {
+                write!(f, "{}", self.separator)?;
             }
-            chain.push_str(&ctx.message());
+            first = false;
+            Ok(())
+        };
+
+        // Write contexts
+        if self.reverse_context {
+            // FIFO order (oldest first)
+            for ctx in contexts.iter() {
+                write_sep(f)?;
+                write!(f, "{}", ctx.message())?;
+            }
+        } else {
+            // LIFO order (newest first) - default
+            for ctx in contexts.iter().rev() {
+                write_sep(f)?;
+                write!(f, "{}", ctx.message())?;
+            }
         }
 
-        if !self.context.is_empty() {
-            chain.push_str(" -> ");
+        // Write core error
+        write_sep(f)?;
+        write!(f, "{}", self.error.core_error)?;
+
+        // Write error code
+        if self.show_code {
+            if let Some(code) = &self.error.error_code {
+                write!(f, " (code: {})", code)?;
+            }
         }
 
-        chain.push_str(&format!("{}", self.core_error));
-
-        if let Some(code) = &self.error_code {
-            chain.push_str(&format!(" (code: {})", code));
-        }
-
-        chain
+        Ok(())
     }
 }
 
 impl<E: Display, C: Display> Display for ComposableError<E, C> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.error_chain())
+        Display::fmt(&self.fmt(), f)
     }
 }
 
