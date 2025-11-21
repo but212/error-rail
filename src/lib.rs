@@ -45,6 +45,11 @@
 //!     .with_context(context!("operation: load_config"))
 //!     .with_context(context!("user_id: 42"))
 //!     .finish();
+//!
+//! if let Err(err) = result {
+//!     eprintln!("{}", err.error_chain());
+//!     // Output: user_id: 42 -> operation: load_config -> failed
+//! }
 //! ```
 
 /// Error context management and accumulation

@@ -58,16 +58,22 @@ pub enum ErrorContext {
 /// A rich context containing multiple pieces of information.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 pub struct GroupContext {
+    /// Optional message describing this context
     pub message: Option<String>,
+    /// Optional source location where the error occurred
     pub location: Option<Location>,
+    /// Tags for categorizing and filtering errors
     pub tags: Vec<String>,
+    /// Arbitrary key-value metadata pairs
     pub metadata: Vec<(String, String)>,
 }
 
 /// Source file and line number where the error occurred.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Location {
+    /// Source file path
     pub file: String,
+    /// Line number in the source file
     pub line: u32,
 }
 

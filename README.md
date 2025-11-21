@@ -3,6 +3,7 @@
 [![Crates.io Version](https://img.shields.io/crates/v/error-rail)](https://crates.io/crates/error-rail)
 [![Documentation](https://docs.rs/error-rail/badge.svg)](https://docs.rs/error-rail)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/but212/error-rail)
 
 **Composable, metadata-friendly error utilities for Rust.**
 
@@ -25,6 +26,10 @@ let err = ComposableError::<&str, u32>::new("db error")
     .with_context(tag!("database"))
     .with_context(location!())
     .with_context(context!("failed to connect"));
+
+// Print the full error chain
+println!("{}", err.error_chain());
+// Output: failed to connect -> at src/main.rs:10 -> [database] -> db error
 ```
 
 ### 2. Validation Accumulation
@@ -41,7 +46,37 @@ let combined: Validation<&str, Vec<i32>> = vec![v1, v2].into_iter().collect();
 assert!(combined.is_invalid());
 ```
 
-### 3. Ergonomic Traits
+### 3. Performance Optimization
+
+Use lazy context evaluation to avoid expensive string formatting on the success path.
+
+```rust
+use error_rail::{ErrorPipeline, context};
+
+let result = ErrorPipeline::new(risky_operation())
+    .with_context(context!("computed: {:?}", large_struct)) // Only runs if error occurs
+    .finish();
+```
+
+> **Note**: The `context!` macro uses `LazyContext` internally.
+> This means the `format!` call and its arguments are evaluated only if an error actually occurs.
+
+### 4. Error Pipeline
+
+Chain context and transformations in a fluent interface.
+
+```rust
+use error_rail::{ErrorPipeline, context, tag};
+
+let result = ErrorPipeline::new(database_query())
+    .with_context(tag!("database"))
+    .with_context(context!("user_id: {}", user_id))
+    .map_err(|e| format!("Query failed: {}", e))
+    .with_context(context!("operation: fetch_profile"))
+    .finish();
+```
+
+### 5. Ergonomic Traits
 
 - **`IntoErrorContext`**: Convert your own types into error context.
 - **`WithError`**: Transform error types while preserving success values.
@@ -49,12 +84,36 @@ assert!(combined.is_invalid());
 
 ## Module Overview
 
-- **`context`**: Core context types and pipeline builders.
-- **`convert`**: Helpers to switch between `Result`, `Validation`, and `ComposableError`.
-- **`macros`**: `context!`, `location!`, `tag!`, `metadata!`, `rail` for easy context creation.
-- **`traits`**: Foundational traits (`ErrorCategory`, `ErrorOps`, etc.).
-- **`types`**: `ComposableError` and related type aliases.
-- **`validation`**: The `Validation` enum and accumulators.
+- **`context`**: Functions for wrapping errors with context:
+  - `with_context` / `with_context_result` - Add context to errors
+  - `accumulate_context` - Attach multiple contexts at once
+  - `error_pipeline` - Create error processing pipelines
+  - `format_error_chain` - Format errors as human-readable chains
+
+- **`convert`**: Convert between `Result`, `Validation`, and `ComposableError`.
+
+- **`macros`**: Ergonomic shortcuts for context creation:
+  - `context!` - Lazy string formatting (deferred until error occurs)
+  - `location!` - Capture source file/line automatically  
+  - `tag!` - Add categorical tags
+  - `metadata!` - Attach key-value pairs
+  - `rail!` - Shorthand for `ErrorPipeline::new(...).finish()`
+
+- **`traits`**: Core traits for error handling:
+  - `IntoErrorContext` - Convert types to error context
+  - `ErrorOps` - Recovery and mapping operations
+  - `WithError` - Remap error types
+  - `ErrorCategory` - Categorical abstraction (internal)
+
+- **`types`**: Error structures and utilities:
+  - `ComposableError<E, C>` - Main error wrapper with context stack
+  - `ErrorContext` - Structured metadata (messages, locations, tags, metadata)
+  - `ErrorPipeline<T, E>` - Builder for chaining context and transformations
+  - `LazyContext<F>` - Deferred context evaluation for performance
+
+- **`validation`**: Accumulating validation results:
+  - `Validation<E, A>` - Either valid value or accumulated errors
+  - Iterators and collectors for aggregating multiple validations
 
 ## Installation
 
