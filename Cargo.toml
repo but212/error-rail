@@ -21,6 +21,6 @@ smallvec = { version = "1.15.1", features = ["serde"] }
 serde_json = "1.0.145"
 criterion = "0.7.0"
 
-[[bench]]
-name = "benchmark"
-harness = false
+# [[bench]]
+# name = "benchmark"
+# harness = false
