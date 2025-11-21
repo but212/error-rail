@@ -2,6 +2,9 @@
 
 Welcome to `error-rail`! This guide will help you get started with composable error handling in Rust without getting bogged down in complex traits.
 
+> **Runnable Code**: The code in this guide is available as a runnable example. Try it with:
+> `cargo run --example quick_start`
+
 ## 1. Basic Error Context
 
 The core of `error-rail` is `ComposableError`. It allows you to wrap any error and add structured context.
@@ -11,13 +14,13 @@ use error_rail::{ComposableError, ErrorContext, context};
 
 fn perform_task() -> Result<(), Box<ComposableError<std::io::Error>>> {
     // Wrap a standard error
-    let result = std::fs::read_to_string("config.toml")
-        .map_err(|e| ComposableError::new(e));
+    let result = std::fs::read_to_string("config.toml").map_err(|e| ComposableError::new(e));
 
     // Add context
-    let res = result.map_err(|e| e.with_context(context!("loading configuration")))
+    let res = result
+        .map_err(|e| e.with_context(context!("loading configuration")))
         .map(|_| ());
-    
+
     // Box the error if your return type requires it
     res.map_err(Box::new)
 }
@@ -66,10 +69,7 @@ fn validate_input(input: &str) -> Validation<String, ()> {
 fn main() {
     let inputs = vec!["", "valid", ""];
     // Collects into Validation<String, Vec<()>>
-    let results: Validation<String, Vec<()>> = inputs
-        .into_iter()
-        .map(validate_input)
-        .collect();
+    let results: Validation<String, Vec<()>> = inputs.into_iter().map(validate_input).collect();
 
     if let Validation::Invalid(errors) = results {
         println!("Found {} errors:", errors.len());

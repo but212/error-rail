@@ -51,7 +51,7 @@ assert!(combined.is_invalid());
 
 - **`context`**: Core context types and pipeline builders.
 - **`convert`**: Helpers to switch between `Result`, `Validation`, and `ComposableError`.
-- **`macros`**: `context!`, `location!`, `tag!`, `metadata!` for easy context creation.
+- **`macros`**: `context!`, `location!`, `tag!`, `metadata!`, `rail` for easy context creation.
 - **`traits`**: Foundational traits (`ErrorCategory`, `ErrorOps`, etc.).
 - **`types`**: `ComposableError` and related type aliases.
 - **`validation`**: The `Validation` enum and accumulators.
@@ -67,6 +67,8 @@ cargo add error-rail
 Run the bundled examples to see `error-rail` in action:
 
 ```sh
+cargo run --example quick_start
+cargo run --example readme_features
 cargo run --example pipeline
 cargo run --example validation_collect
 ```
