@@ -22,7 +22,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        rust: [1.68.0, stable, nightly]
+        rust: [1.80.0, stable, nightly]
         os: [ubuntu-latest, windows-latest, macos-latest]
       fail-fast: false
     steps:
@@ -45,7 +45,7 @@ jobs:
         run: |
           MSRV=$(grep -A 1 "\[package.metadata\]" Cargo.toml | grep -m 1 "msrv" | cut -d '"' -f 2)
           if [ -z "$MSRV" ]; then
-            MSRV="1.68.0"
+            MSRV="1.80.0"
           fi
           echo "msrv=$MSRV" >> $GITHUB_OUTPUT
           echo "Using MSRV: $MSRV"
