@@ -94,4 +94,4 @@ Once you are comfortable with these basics, you can explore:
 - **Custom Contexts**: Implement `IntoErrorContext` for your own types.
 - **Traits**: `ErrorOps` and `WithError` for deeper integration.
 
-See the [README](README.md) and [API Documentation](https://docs.rs/error-rail) for more details.
+See the [README](../README.md) and [API Documentation](https://docs.rs/error-rail) for more details.
