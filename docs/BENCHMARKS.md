@@ -123,15 +123,15 @@ This document summarizes micro-benchmarks for `error-rail` on a local machine.
 ### Results (approximate medians) - C1
 
 - **All valid**
-  - `validation_collect_all_valid`   → ~232 ns/iter
-  - `manual_collect_all_valid`       → ~3.09 µs/iter
+  - `validation_collect_all_valid`   → ~235 ns/iter
+  - `manual_collect_all_valid`       → ~234 ns/iter
 
 - **Half invalid**
-  - `validation_collect_half_invalid`→ ~234 ns/iter
-  - `manual_collect_half_invalid`    → ~315 ns/iter
+  - `validation_collect_half_invalid`→ ~236 ns/iter
+  - `manual_collect_half_invalid`    → ~312 ns/iter
 
 - **All invalid**
-  - `validation_collect_all_invalid` → ~173 ns/iter
+  - `validation_collect_all_invalid` → ~171 ns/iter
   - `manual_collect_all_invalid`     → ~248 ns/iter
 
 ### Interpretation - C1
