@@ -55,60 +55,6 @@ fn from_result_converts_single_error() {
     assert_eq!(err.into_errors().unwrap()[0], "boom");
 }
 
-#[test]
-fn iterators_over_errors_and_values_work() {
-    let mut valid = Validation::<&str, i32>::valid(3);
-    if let Some(value) = valid.iter_mut().next() {
-        *value = 4;
-    }
-    assert_eq!(valid.into_value(), Some(4));
-
-    let validation: Validation<&str, i32> = Validation::invalid_many(["x", "y"]);
-    let collected: Vec<_> = validation.iter_errors().cloned().collect();
-    assert_eq!(collected, vec!["x", "y"]);
-}
-
-#[test]
-fn collecting_results_into_validation_accumulates_errors() {
-    let inputs = vec![Ok(1), Err("err1"), Err("err2")];
-    let collected: Validation<&str, Vec<i32>> = inputs.into_iter().collect();
-
-    assert!(collected.is_invalid());
-    assert_eq!(collected.into_errors().unwrap().len(), 2);
-}
-
-#[test]
-fn collecting_validations_preserves_all_errors() {
-    let items = vec![
-        Validation::valid(10),
-        Validation::invalid("bad"),
-        Validation::invalid("worse"),
-    ];
-
-    let collected: Validation<&str, Vec<i32>> = items.into_iter().collect();
-    assert!(collected.is_invalid());
-    assert_eq!(collected.into_errors().unwrap().len(), 2);
-}
-
-#[test]
-fn collecting_into_custom_collection_type() {
-    use smallvec::SmallVec;
-
-    let inputs = vec![Ok(1), Err("err1"), Ok(2)];
-    let collected: Validation<&str, SmallVec<[i32; 4]>> = inputs.into_iter().collect();
-
-    assert!(collected.is_invalid());
-    assert_eq!(collected.into_errors().unwrap().len(), 1);
-}
-
-#[test]
-fn collecting_into_custom_collection_type_success() {
-    use smallvec::{smallvec, SmallVec};
-
-    let inputs = vec![Ok(1), Ok(2)];
-    let collected: Validation<&str, SmallVec<[i32; 4]>> = inputs.into_iter().collect();
-
-    assert!(collected.is_valid());
-    let expected: SmallVec<[i32; 4]> = smallvec![1, 2];
-    assert_eq!(collected.into_value().unwrap(), expected);
-}
+pub mod core;
+pub mod iter;
+pub mod traits;

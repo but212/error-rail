@@ -50,3 +50,6 @@ fn context_macro_integrates_with_composable_error() {
     assert_eq!(contexts.len(), 1);
     assert!(contexts[0].message().contains("step: 2"));
 }
+
+pub mod error_ops;
+pub mod with_error;
