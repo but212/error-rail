@@ -39,20 +39,20 @@ This document summarizes micro-benchmarks for `error-rail` on a local machine.
 ### Results (approximate medians) - A1
 
 - **Success path (`Ok`)**
-  - `context_baseline_success`  → ~3.87 ns/iter
-  - `context_lazy_success`      → ~3.92 ns/iter
-  - `context_eager_success`     → ~6.92 µs/iter
+  - `context_baseline_success`  → ~3.57 ns/iter
+  - `context_lazy_success`      → ~4.34 ns/iter
+  - `context_eager_success`     → ~6.87 µs/iter
 
 - **Error path (`Err`)**
-  - `context_baseline_error`    → ~95.7 ns/iter
-  - `context_lazy_error`        → ~7.25 µs/iter
-  - `context_eager_error`       → ~7.20 µs/iter
+  - `context_baseline_error`    → ~97.7 ns/iter
+  - `context_lazy_error`        → ~7.13 µs/iter
+  - `context_eager_error`       → ~7.10 µs/iter
 
 ### Interpretation - A1
 
 - On the **success path**, lazy context is effectively free:
   - Baseline vs lazy differ by only a few percent, within noise.
-  - Eager formatting is ~1,800× slower for the same payload.
+  - Eager formatting is ~1,580× slower for the same payload.
 - On the **error path**, lazy and eager are similar:
   - Both must call `format!`, so they have comparable cost.
 

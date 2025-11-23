@@ -89,3 +89,14 @@ fn collecting_validations_preserves_all_errors() {
     assert!(collected.is_invalid());
     assert_eq!(collected.into_errors().unwrap().len(), 2);
 }
+
+#[test]
+fn collecting_into_custom_collection_type() {
+    use smallvec::SmallVec;
+
+    let inputs = vec![Ok(1), Err("err1"), Ok(2)];
+    let collected: Validation<&str, SmallVec<[i32; 4]>> = inputs.into_iter().collect();
+
+    assert!(collected.is_invalid());
+    assert_eq!(collected.into_errors().unwrap().len(), 1);
+}
