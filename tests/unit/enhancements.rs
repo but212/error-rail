@@ -69,6 +69,20 @@ fn test_pipeline_recover_safe_clears_context() {
     );
 }
 
+#[test]
+fn test_fallback_on_ok_is_noop() {
+    let pipeline_ok = ErrorPipeline::<i32, &str>::new(Ok(10)).fallback(42);
+    let result_ok = pipeline_ok.finish().unwrap();
+    assert_eq!(result_ok, 10);
+}
+
+#[test]
+fn test_recover_safe_on_ok_is_noop() {
+    let pipeline_ok = ErrorPipeline::<i32, &str>::new(Ok(10)).recover_safe(|_| 42);
+    let result_ok = pipeline_ok.finish().unwrap();
+    assert_eq!(result_ok, 10);
+}
+
 // --- Test Validation Serde support ---
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
