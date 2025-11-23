@@ -173,7 +173,7 @@ macro_rules! metadata {
 /// Implements `IntoErrorContext` for a custom type.
 ///
 /// This macro simplifies the implementation of the [`IntoErrorContext`](crate::traits::IntoErrorContext)
-/// trait for user-defined types. It converts the type into an [`ErrorContext::Message`](crate::types::ErrorContext::Message)
+/// trait for user-defined types. It converts the type into an [`ErrorContext`](crate::types::ErrorContext)
 /// using its `Display` implementation.
 ///
 /// # Arguments
