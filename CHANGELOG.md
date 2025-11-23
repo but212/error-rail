@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [0.2.1]
+
+### Added - 0.2.1
+
+- Implemented `std::error::Error` for `ComposableError` when the core error implements `Error`, improving interoperability with `anyhow`/`eyre`.
+- Enhanced `Display` implementation to support alternate formatting (`{:#}`) for multi-line, structured error output.
+
 ## [0.2.0]
 
 ### Added - 0.2.0

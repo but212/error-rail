@@ -487,7 +487,35 @@ where
 
 impl<E: Display, C: Display> Display for ComposableError<E, C> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        Display::fmt(&self.fmt(), f)
+        if f.alternate() {
+            // Multi-line format
+            // Error: core error (code: 500)
+            // Context:
+            //   - ctx1
+            //   - ctx2
+            write!(f, "Error: {}", self.core_error)?;
+            if let Some(code) = &self.error_code {
+                write!(f, " (code: {})", code)?;
+            }
+
+            if !self.context.is_empty() {
+                writeln!(f)?;
+                writeln!(f, "Context:")?;
+                for ctx in self.context.iter().rev() {
+                    let msg = ctx.message();
+                    let mut lines = msg.lines();
+                    if let Some(first_line) = lines.next() {
+                        writeln!(f, "  - {}", first_line)?;
+                    }
+                    for line in lines {
+                        writeln!(f, "    {}", line)?;
+                    }
+                }
+            }
+            Ok(())
+        } else {
+            Display::fmt(&self.fmt(), f)
+        }
     }
 }
 
