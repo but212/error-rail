@@ -502,7 +502,14 @@ impl<E: Display, C: Display> Display for ComposableError<E, C> {
                 writeln!(f)?;
                 writeln!(f, "Context:")?;
                 for ctx in self.context.iter().rev() {
-                    writeln!(f, "  - {}", ctx.message())?;
+                    let msg = ctx.message();
+                    let mut lines = msg.lines();
+                    if let Some(first_line) = lines.next() {
+                        writeln!(f, "  - {}", first_line)?;
+                    }
+                    for line in lines {
+                        writeln!(f, "    {}", line)?;
+                    }
                 }
             }
             Ok(())

@@ -25,10 +25,8 @@ fn test_display_format() {
 
     // Alternate display
     let alternate = format!("{:#}", err);
-    assert!(alternate.contains("Error: core error (code: 500)"));
-    assert!(alternate.contains("Context:"));
-    assert!(alternate.contains("  - ctx2"));
-    assert!(alternate.contains("  - ctx1"));
+    let expected = "Error: core error (code: 500)\nContext:\n  - ctx2\n  - ctx1\n";
+    assert_eq!(alternate, expected);
 }
 
 #[test]
@@ -40,6 +38,5 @@ fn test_display_format_no_context() {
 
     // Alternate
     let alternate = format!("{:#}", err);
-    assert!(alternate.contains("Error: core error"));
-    assert!(!alternate.contains("Context:"));
+    assert_eq!(alternate, "Error: core error");
 }
