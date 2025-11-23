@@ -14,7 +14,7 @@ fn main() {
         .with_context(location!())
         .with_context(tag!("http"))
         .and_then(parse_payload)
-        .finish();
+        .finish_boxed();
 
     match result {
         Ok(body) => println!("success: {body}"),

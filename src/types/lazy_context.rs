@@ -18,7 +18,7 @@
 //! let result: Result<(), &str> = Err("failed");
 //! let pipeline = ErrorPipeline::new(result)
 //!     .with_context(LazyContext::new(expensive_debug_info))
-//!     .finish();
+//!     .finish_boxed();
 //! ```
 use crate::{traits::IntoErrorContext, types::error_context::ErrorContext};
 

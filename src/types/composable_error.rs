@@ -2,7 +2,7 @@
 //!
 //! This module provides [`ComposableError`], a wrapper that enriches any error type with:
 //! - Multiple [`ErrorContext`] entries for structured metadata
-//! - Optional error codes of any type (defaults to `u32`)
+//! - Optional error codes (defaults to `u32`)
 //! - Builder pattern for incremental context accumulation
 //!
 //! # Examples
@@ -24,11 +24,11 @@ use crate::traits::IntoErrorContext;
 use crate::types::{ErrorContext, ErrorVec};
 use serde::{Deserialize, Serialize};
 
-/// Error wrapper that stores the original error plus structured contexts and an optional code `C`.
+/// Error wrapper that stores the original error plus structured contexts and an optional code.
 ///
 /// `ComposableError` wraps any error type `E` and allows you to attach:
 /// - Multiple [`ErrorContext`] entries (file location, tags, metadata, messages)
-/// - An optional error code of type `C` (defaults to `u32`)
+/// - An optional error code (currently fixed to `u32`)
 ///
 /// Contexts are stored in a stack (LIFO) so the most recently added context appears first
 /// when formatting or iterating.
@@ -36,7 +36,6 @@ use serde::{Deserialize, Serialize};
 /// # Type Parameters
 ///
 /// * `E` - The underlying error type being wrapped
-/// * `C` - The error code type (defaults to `u32`)
 ///
 /// # Examples
 ///
@@ -48,7 +47,7 @@ use serde::{Deserialize, Serialize};
 ///     .with_context(ErrorContext::location(file!(), line!()))
 ///     .set_code(500);
 ///
-/// assert_eq!(err.error_code(), Some(&500));
+/// assert_eq!(err.error_code(), Some(500));
 /// assert!(err.error_chain().contains("database error"));
 /// ```
 ///
@@ -62,17 +61,18 @@ use serde::{Deserialize, Serialize};
 /// use error_rail::ComposableError;
 /// use std::{error::Error as StdError, io};
 ///
-/// let err = ComposableError::<io::Error, u32>::new(io::Error::new(io::ErrorKind::Other, "boom"));
+/// let err = ComposableError::new(io::Error::new(io::ErrorKind::Other, "boom"));
 /// assert!(StdError::source(&err).is_some());
 /// ```
+#[must_use]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ComposableError<E, C = u32> {
+pub struct ComposableError<E> {
     core_error: E,
     context: ErrorVec<ErrorContext>,
-    error_code: Option<C>,
+    error_code: Option<u32>,
 }
 
-impl<E, C> ComposableError<E, C> {
+impl<E> ComposableError<E> {
     /// Creates a composable error without context or code.
     ///
     /// This is the simplest constructor - it wraps the error without any additional metadata.
@@ -86,7 +86,7 @@ impl<E, C> ComposableError<E, C> {
     /// ```
     /// use error_rail::ComposableError;
     ///
-    /// let err = ComposableError::<&str, u32>::new("something failed");
+    /// let err = ComposableError::new("something failed");
     /// assert_eq!(err.core_error(), &"something failed");
     /// assert!(err.context().is_empty());
     /// ```
@@ -114,10 +114,10 @@ impl<E, C> ComposableError<E, C> {
     /// use error_rail::ComposableError;
     ///
     /// let err = ComposableError::with_code("not found", 404);
-    /// assert_eq!(err.error_code(), Some(&404));
+    /// assert_eq!(err.error_code(), Some(404));
     /// ```
     #[inline]
-    pub fn with_code(error: E, code: C) -> Self {
+    pub fn with_code(error: E, code: u32) -> Self {
         Self {
             core_error: error,
             context: ErrorVec::new(),
@@ -139,12 +139,13 @@ impl<E, C> ComposableError<E, C> {
     /// ```
     /// use error_rail::{ComposableError, ErrorContext};
     ///
-    /// let err = ComposableError::<&str, u32>::new("io error")
+    /// let err = ComposableError::new("io error")
     ///     .with_context(ErrorContext::tag("filesystem"))
     ///     .with_context("reading config file");
     ///
     /// assert_eq!(err.context().len(), 2);
     /// ```
+    #[must_use]
     #[inline]
     pub fn with_context<Ctx>(mut self, ctx: Ctx) -> Self
     where
@@ -172,11 +173,12 @@ impl<E, C> ComposableError<E, C> {
     ///     ErrorContext::new("token expired"),
     /// ];
     ///
-    /// let err = ComposableError::<&str, u32>::new("unauthorized")
+    /// let err = ComposableError::new("unauthorized")
     ///     .with_contexts(contexts);
     ///
     /// assert_eq!(err.context().len(), 2);
     /// ```
+    #[must_use]
     #[inline]
     pub fn with_contexts<I>(mut self, contexts: I) -> Self
     where
@@ -193,7 +195,7 @@ impl<E, C> ComposableError<E, C> {
     /// ```
     /// use error_rail::ComposableError;
     ///
-    /// let err = ComposableError::<&str, u32>::new("network timeout");
+    /// let err = ComposableError::new("network timeout");
     /// assert_eq!(err.core_error(), &"network timeout");
     /// ```
     #[inline]
@@ -217,7 +219,7 @@ impl<E, C> ComposableError<E, C> {
     /// ```
     /// use error_rail::{ComposableError, ErrorContext};
     ///
-    /// let err = ComposableError::<&str, u32>::new("error")
+    /// let err = ComposableError::new("error")
     ///     .with_context("first")
     ///     .with_context("second");
     ///
@@ -239,7 +241,7 @@ impl<E, C> ComposableError<E, C> {
     /// ```
     /// use error_rail::{ComposableError, ErrorContext};
     ///
-    /// let err = ComposableError::<&str, u32>::new("error")
+    /// let err = ComposableError::new("error")
     ///     .with_context("ctx1")
     ///     .with_context("ctx2");
     ///
@@ -252,22 +254,22 @@ impl<E, C> ComposableError<E, C> {
         self.context.iter().rev()
     }
 
-    /// Returns the optional error code reference.
+    /// Returns the optional error code.
     ///
     /// # Examples
     ///
     /// ```
     /// use error_rail::ComposableError;
     ///
-    /// let err = ComposableError::<&str, u32>::with_code("forbidden", 403);
-    /// assert_eq!(err.error_code(), Some(&403));
+    /// let err = ComposableError::with_code("forbidden", 403);
+    /// assert_eq!(err.error_code(), Some(403));
     ///
-    /// let err2 = ComposableError::<&str, u32>::new("no code");
+    /// let err2 = ComposableError::new("no code");
     /// assert_eq!(err2.error_code(), None);
     /// ```
     #[inline]
-    pub fn error_code(&self) -> Option<&C> {
-        self.error_code.as_ref()
+    pub fn error_code(&self) -> Option<u32> {
+        self.error_code
     }
 
     /// Sets (or overrides) the error code.
@@ -283,13 +285,14 @@ impl<E, C> ComposableError<E, C> {
     /// ```
     /// use error_rail::ComposableError;
     ///
-    /// let err = ComposableError::<&str, u32>::new("server error")
+    /// let err = ComposableError::new("server error")
     ///     .set_code(500);
     ///
-    /// assert_eq!(err.error_code(), Some(&500));
+    /// assert_eq!(err.error_code(), Some(500));
     /// ```
+    #[must_use]
     #[inline]
-    pub fn set_code(mut self, code: C) -> Self {
+    pub fn set_code(mut self, code: u32) -> Self {
         self.error_code = Some(code);
         self
     }
@@ -307,18 +310,19 @@ impl<E, C> ComposableError<E, C> {
     /// ```
     /// use error_rail::{ComposableError, ErrorContext};
     ///
-    /// let err = ComposableError::<&str, u32>::new("io error")
+    /// let err = ComposableError::new("io error")
     ///     .with_context(ErrorContext::tag("fs"))
     ///     .set_code(500);
     ///
     /// let mapped = err.map_core(|e| format!("wrapped: {}", e));
     ///
     /// assert_eq!(mapped.core_error(), "wrapped: io error");
-    /// assert_eq!(mapped.error_code(), Some(&500));
+    /// assert_eq!(mapped.error_code(), Some(500));
     /// assert_eq!(mapped.context().len(), 1);
     /// ```
+    #[must_use]
     #[inline]
-    pub fn map_core<F, T>(self, f: F) -> ComposableError<T, C>
+    pub fn map_core<F, T>(self, f: F) -> ComposableError<T>
     where
         F: FnOnce(E) -> T,
     {
@@ -339,15 +343,16 @@ impl<E, C> ComposableError<E, C> {
     /// ```
     /// use error_rail::{ComposableError, ErrorContext};
     ///
-    /// let err = ComposableError::<&str, u32>::new("error")
+    /// let err = ComposableError::new("error")
     ///     .with_context("ctx1")
     ///     .set_code(500);
     ///
     /// println!("{}", err.fmt().with_separator(" | ").show_code(false));
     /// // Output: ctx1 | error
     /// ```
+    #[must_use]
     #[inline]
-    pub fn fmt(&self) -> ErrorFormatter<'_, E, C> {
+    pub fn fmt(&self) -> ErrorFormatter<'_, E> {
         ErrorFormatter {
             error: self,
             separator: " -> ",
@@ -366,7 +371,7 @@ impl<E, C> ComposableError<E, C> {
     /// ```
     /// use error_rail::{ComposableError, ErrorContext};
     ///
-    /// let err = ComposableError::<&str, u32>::new("database error")
+    /// let err = ComposableError::new("database error")
     ///     .with_context("fetching user")
     ///     .with_context(ErrorContext::tag("db"))
     ///     .set_code(500);
@@ -374,10 +379,10 @@ impl<E, C> ComposableError<E, C> {
     /// let chain = err.error_chain();
     /// assert!(chain.contains("[db] -> fetching user -> database error (code: 500)"));
     /// ```
+    #[must_use]
     pub fn error_chain(&self) -> String
     where
         E: Display,
-        C: Display,
     {
         self.fmt().to_string()
     }
@@ -410,14 +415,14 @@ impl<E, C> ComposableError<E, C> {
 ///
 /// assert_eq!(formatted, "retry exhausted | [network] | connection failed");
 /// ```
-pub struct ErrorFormatter<'a, E, C> {
-    error: &'a ComposableError<E, C>,
+pub struct ErrorFormatter<'a, E> {
+    error: &'a ComposableError<E>,
     separator: &'a str,
     reverse_context: bool,
     show_code: bool,
 }
 
-impl<'a, E, C> ErrorFormatter<'a, E, C> {
+impl<'a, E> ErrorFormatter<'a, E> {
     /// Sets the separator between context elements (default: " -> ").
     pub fn with_separator(mut self, separator: &'a str) -> Self {
         self.separator = separator;
@@ -437,10 +442,9 @@ impl<'a, E, C> ErrorFormatter<'a, E, C> {
     }
 }
 
-impl<'a, E, C> Display for ErrorFormatter<'a, E, C>
+impl<'a, E> Display for ErrorFormatter<'a, E>
 where
     E: Display,
-    C: Display,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let contexts = &self.error.context;
@@ -485,7 +489,7 @@ where
     }
 }
 
-impl<E: Display, C: Display> Display for ComposableError<E, C> {
+impl<E: Display> Display for ComposableError<E> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if f.alternate() {
             // Multi-line format
@@ -519,17 +523,16 @@ impl<E: Display, C: Display> Display for ComposableError<E, C> {
     }
 }
 
-impl<E, C> std::error::Error for ComposableError<E, C>
+impl<E> std::error::Error for ComposableError<E>
 where
     E: std::error::Error + 'static,
-    C: Debug + Display,
 {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         Some(self.core_error())
     }
 }
 
-impl<E, C> From<E> for ComposableError<E, C> {
+impl<E> From<E> for ComposableError<E> {
     #[inline]
     fn from(error: E) -> Self {
         Self::new(error)

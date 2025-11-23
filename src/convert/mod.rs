@@ -52,13 +52,15 @@ use crate::validation::core::Validation;
 /// assert_eq!(validation_to_result(invalid), Err("error"));
 /// ```
 #[inline]
-pub fn validation_to_result<T, E>(validation: Validation<E, T>) -> Result<T, E>
-where
-    E: Default,
-{
+pub fn validation_to_result<T, E>(validation: Validation<E, T>) -> Result<T, E> {
     match validation {
         Validation::Valid(value) => Ok(value),
-        Validation::Invalid(mut errors) => Err(errors.pop().unwrap_or_else(E::default)),
+        Validation::Invalid(mut errors) => {
+            let error = errors
+                .pop()
+                .expect("Validation::Invalid must contain at least one error");
+            Err(error)
+        }
     }
 }
 
@@ -110,7 +112,7 @@ pub fn result_to_validation<T, E>(result: Result<T, E>) -> Validation<E, T> {
 /// ```
 /// use error_rail::{ComposableError, convert::composable_to_core};
 ///
-/// let composable = ComposableError::<&str, u32>::new("error")
+/// let composable = ComposableError::<&str>::new("error")
 ///     .with_context("additional context");
 /// let core = composable_to_core(composable);
 /// assert_eq!(core, "error");

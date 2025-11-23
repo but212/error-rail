@@ -16,25 +16,6 @@
 //! println!("{}", err.error_chain());
 //! // Output: [db] -> main.rs:42 -> database connection failed (code: 500)
 //! ```
-//!
-//! ## Choosing an error code type
-//!
-//! `ComposableError<E, C>` defaults `C` to `u32`, but you can pin any
-//! type that implements your domain rules. Use the provided aliases as
-//! starting points or create project-specific ones:
-//!
-//! ```
-//! use error_rail::{
-//!     ErrorContext,
-//!     SimpleComposableError,
-//!     TaggedComposableError,
-//!     ComposableError,
-//! };
-//!
-//! let http_error: SimpleComposableError<&str> = ComposableError::new("oops").set_code(500);
-//! let tagged: TaggedComposableError<&str> =
-//!     ComposableError::new("missing feature").set_code("feature_disabled");
-//! ```
 use smallvec::SmallVec;
 
 pub mod composable_error;
@@ -59,22 +40,25 @@ pub type ErrorVec<E> = SmallVec<[E; 4]>;
 ///
 /// * `T` - The success value type
 /// * `E` - The core error type
-/// * `C` - The error code type (defaults to `u32`)
-pub type ComposableResult<T, E, C = u32> = Result<T, ComposableError<E, C>>;
+pub type ComposableResult<T, E> = Result<T, ComposableError<E>>;
 
-/// Convenience alias for `ComposableError` with the default numeric code type.
-pub type SimpleComposableError<E> = ComposableError<E, u32>;
+/// Convenience alias for `ComposableError`.
+///
+/// Kept for backward compatibility.
+pub type SimpleComposableError<E> = ComposableError<E>;
 
-/// Convenience alias for `ComposableError` with static string codes.
-pub type TaggedComposableError<E> = ComposableError<E, &'static str>;
+/// Convenience alias for `ComposableError`.
+///
+/// Kept for backward compatibility. Note that string codes are no longer supported via generic C.
+/// Use `ErrorContext::tag` instead.
+pub type TaggedComposableError<E> = ComposableError<E>;
 
 /// Boxed [`ComposableError`] for reduced stack size.
 ///
 /// # Type Parameters
 ///
 /// * `E` - The core error type
-/// * `C` - The error code type (defaults to `u32`)
-pub type BoxedComposableError<E, C = u32> = Box<ComposableError<E, C>>;
+pub type BoxedComposableError<E> = Box<ComposableError<E>>;
 
 /// Result alias with boxed [`ComposableError`] for reduced stack size.
 ///
@@ -82,5 +66,4 @@ pub type BoxedComposableError<E, C = u32> = Box<ComposableError<E, C>>;
 ///
 /// * `T` - The success value type
 /// * `E` - The core error type
-/// * `C` - The error code type (defaults to `u32`)
-pub type BoxedComposableResult<T, E, C = u32> = Result<T, BoxedComposableError<E, C>>;
+pub type BoxedComposableResult<T, E> = Result<T, BoxedComposableError<E>>;

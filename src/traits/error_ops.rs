@@ -88,7 +88,7 @@ pub trait ErrorOps<E>: WithError<E> {
         Self: Sized;
 }
 
-impl<T, E: Clone> ErrorOps<E> for Result<T, E> {
+impl<T, E> ErrorOps<E> for Result<T, E> {
     #[inline]
     fn recover<F>(self, recovery: F) -> Self
     where

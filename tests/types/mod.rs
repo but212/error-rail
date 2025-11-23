@@ -12,7 +12,7 @@ fn composable_error_accumulates_contexts_and_code() {
         .with_context(ErrorContext::location("lib.rs", 10))
         .set_code(404);
 
-    assert_eq!(err.error_code(), Some(&404));
+    assert_eq!(err.error_code(), Some(404));
     let contexts = err.context();
     assert_eq!(contexts.len(), 2);
     assert_eq!(contexts[0], ErrorContext::location("lib.rs", 10));
@@ -54,7 +54,7 @@ fn lazy_context_evaluates_on_use() {
 fn error_pipeline_finish_without_box_returns_composable_error() {
     let error = ErrorPipeline::<(), &str>::new(Err("fail"))
         .with_context(ErrorContext::tag("ops"))
-        .finish_without_box()
+        .finish()
         .unwrap_err();
 
     assert_eq!(error.context().len(), 1);
@@ -63,7 +63,7 @@ fn error_pipeline_finish_without_box_returns_composable_error() {
 
 #[test]
 fn composable_error_map_core_preserves_context() {
-    let err = ComposableError::<&str, u32>::new("fail")
+    let err = ComposableError::<&str>::new("fail")
         .with_context(ErrorContext::tag("map"))
         .map_core(|msg| format!("wrapped: {msg}"));
 
@@ -73,4 +73,5 @@ fn composable_error_map_core_preserves_context() {
 
 pub mod composable_error;
 pub mod error_context;
+pub mod error_context_builder;
 pub mod error_pipeline;

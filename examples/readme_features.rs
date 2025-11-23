@@ -3,7 +3,7 @@ use error_rail::{context, location, tag, ComposableError};
 
 fn structured_context_example() {
     println!("--- Structured Context ---");
-    let err = ComposableError::<&str, u32>::new("db error")
+    let err = ComposableError::<&str>::new("db error")
         .with_context(tag!("database"))
         .with_context(location!())
         .with_context(context!("failed to connect"));

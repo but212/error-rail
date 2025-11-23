@@ -27,7 +27,7 @@ fn main() {
     };
 
     // 2. Wrap it in ComposableError and add rich context
-    let error = ComposableError::<MyError, u32>::new(base_error)
+    let error = ComposableError::<MyError>::new(base_error)
         .with_context(ErrorContext::tag("database"))
         .with_context(ErrorContext::metadata("host", "db-primary-01"))
         .with_context(ErrorContext::metadata("retry_count", "3"))

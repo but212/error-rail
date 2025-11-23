@@ -25,8 +25,9 @@ use crate::{
 /// let result = ErrorPipeline::<u32, &str>::new(Err("failed"))
 ///     .with_context(context!("step 1"))
 ///     .with_context(context!("step 2"))
-///     .finish();
+///     .finish_boxed();
 /// ```
+#[must_use]
 pub struct ErrorPipeline<T, E> {
     result: Result<T, E>,
     pending_contexts: ErrorVec<ErrorContext>,
@@ -50,12 +51,12 @@ impl<T, E> ErrorPipeline<T, E> {
     ///
     /// let err = ErrorPipeline::new(flaky())
     ///     .with_context(context!("calling flaky"))
-    ///     .finish()
+    ///     .finish_boxed()
     ///     .unwrap_err();
     ///
     /// assert!(err.error_chain().contains("calling flaky"));
     /// ```
-    #[inline]
+    #[inline(always)]
     pub fn new(result: Result<T, E>) -> Self {
         Self {
             result,
@@ -80,6 +81,7 @@ impl<T, E> ErrorPipeline<T, E> {
     /// let pipeline: ErrorPipeline<&str, &str> = ErrorPipeline::new(Err("error"))
     ///     .with_context(ErrorContext::tag("db"));
     /// ```
+    #[must_use]
     #[inline]
     pub fn with_context<C>(mut self, context: C) -> Self
     where
@@ -110,7 +112,8 @@ impl<T, E> ErrorPipeline<T, E> {
     /// let pipeline = ErrorPipeline::<&str, &str>::new(Err("text error"))
     ///     .map_error(|e| e.len());
     /// ```
-    #[inline]
+    #[must_use]
+    #[inline(always)]
     pub fn map_error<F, NewE>(self, f: F) -> ErrorPipeline<T, NewE>
     where
         F: FnOnce(E) -> NewE,
@@ -138,7 +141,8 @@ impl<T, E> ErrorPipeline<T, E> {
     /// let pipeline = ErrorPipeline::new(Err("error"))
     ///     .recover(|_| Ok(42));
     /// ```
-    #[inline]
+    #[must_use]
+    #[inline(always)]
     pub fn recover<F>(self, recovery: F) -> ErrorPipeline<T, E>
     where
         F: FnOnce(E) -> Result<T, E>,
@@ -166,7 +170,8 @@ impl<T, E> ErrorPipeline<T, E> {
     /// let pipeline = ErrorPipeline::<i32, &str>::new(Err("error"))
     ///     .fallback(42);
     /// ```
-    #[inline]
+    #[must_use]
+    #[inline(always)]
     pub fn fallback(self, value: T) -> ErrorPipeline<T, E> {
         match self.result {
             Ok(v) => ErrorPipeline {
@@ -197,7 +202,8 @@ impl<T, E> ErrorPipeline<T, E> {
     /// let pipeline = ErrorPipeline::<i32, &str>::new(Err("error"))
     ///     .recover_safe(|_| 42);
     /// ```
-    #[inline]
+    #[must_use]
+    #[inline(always)]
     pub fn recover_safe<F>(self, f: F) -> ErrorPipeline<T, E>
     where
         F: FnOnce(E) -> T,
@@ -231,7 +237,8 @@ impl<T, E> ErrorPipeline<T, E> {
     /// let pipeline = ErrorPipeline::<i32, &str>::new(Ok(5))
     ///     .and_then(|x| Ok(x * 2));
     /// ```
-    #[inline]
+    #[must_use]
+    #[inline(always)]
     pub fn and_then<U, F>(self, f: F) -> ErrorPipeline<U, E>
     where
         F: FnOnce(T) -> Result<U, E>,
@@ -259,7 +266,8 @@ impl<T, E> ErrorPipeline<T, E> {
     /// let pipeline = ErrorPipeline::<i32, &str>::new(Ok(5))
     ///     .map(|x| x * 2);
     /// ```
-    #[inline]
+    #[must_use]
+    #[inline(always)]
     pub fn map<U, F>(self, f: F) -> ErrorPipeline<U, E>
     where
         F: FnOnce(T) -> U,
@@ -282,10 +290,11 @@ impl<T, E> ErrorPipeline<T, E> {
     ///
     /// let result = ErrorPipeline::<u32, &str>::new(Err("failed"))
     ///     .with_context(context!("operation failed"))
-    ///     .finish();
+    ///     .finish_boxed();
     /// ```
-    #[inline]
-    pub fn finish(self) -> BoxedComposableResult<T, E> {
+    #[must_use]
+    #[inline(always)]
+    pub fn finish_boxed(self) -> BoxedComposableResult<T, E> {
         match self.result {
             Ok(v) => Ok(v),
             Err(e) => {
@@ -297,7 +306,7 @@ impl<T, E> ErrorPipeline<T, E> {
 
     /// Finalizes the pipeline into an unboxed [`ComposableResult`].
     ///
-    /// Similar to `finish`, but returns the error directly without boxing.
+    /// Similar to `finish_boxed`, but returns the error directly without boxing.
     /// Use this when you need to avoid heap allocation.
     ///
     /// # Examples
@@ -307,11 +316,12 @@ impl<T, E> ErrorPipeline<T, E> {
     ///
     /// let result = ErrorPipeline::<u32, &str>::new(Err("failed"))
     ///     .with_context(context!("operation failed"))
-    ///     .finish_without_box();
+    ///     .finish();
     /// ```
-    #[inline]
+    #[must_use]
+    #[inline(always)]
     #[allow(clippy::result_large_err)]
-    pub fn finish_without_box(self) -> ComposableResult<T, E> {
+    pub fn finish(self) -> ComposableResult<T, E> {
         match self.result {
             Ok(v) => Ok(v),
             Err(e) => {

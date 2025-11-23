@@ -32,3 +32,23 @@ fn test_error_context_group_message_and_empty_group() {
     let ctx_empty = ErrorContext::Group(GroupContext::default());
     assert_eq!(ctx_empty.message(), "");
 }
+
+#[test]
+fn test_error_context_tag_and_metadata() {
+    let ctx_tag = ErrorContext::tag("tag1");
+    assert_eq!(ctx_tag.message(), "[tag1]");
+
+    let ctx_meta = ErrorContext::metadata("key", "val");
+    assert_eq!(ctx_meta.message(), "key=val");
+}
+
+#[test]
+fn test_error_context_builder() {
+    let ctx = ErrorContext::builder()
+        .message("msg")
+        .location("file.rs", 10)
+        .tag("tag1")
+        .metadata("key", "val")
+        .build();
+    assert_eq!(ctx.message(), "msg");
+}

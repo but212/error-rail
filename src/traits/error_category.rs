@@ -80,7 +80,7 @@ pub trait ErrorCategory<E> {
 /// let err_value: Result<i32, String> = <Result<(), String>>::handle_error("error".to_string());
 /// assert_eq!(err_value, Err("error".to_string()));
 /// ```
-impl<E: Clone> ErrorCategory<E> for Result<(), E> {
+impl<E> ErrorCategory<E> for Result<(), E> {
     type ErrorFunctor<T> = Result<T, E>;
 
     #[inline]

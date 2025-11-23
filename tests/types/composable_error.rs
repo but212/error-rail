@@ -6,12 +6,12 @@ use std::io;
 fn test_composable_error_with_code() {
     let err = ComposableError::with_code("error", 500);
     assert_eq!(err.core_error(), &"error");
-    assert_eq!(err.error_code(), Some(&500));
+    assert_eq!(err.error_code(), Some(500));
 }
 
 #[test]
 fn test_composable_error_context_iter() {
-    let err = ComposableError::<&str, u32>::new("error")
+    let err = ComposableError::<&str>::new("error")
         .with_context("ctx1")
         .with_context("ctx2");
 
@@ -23,7 +23,7 @@ fn test_composable_error_context_iter() {
 
 #[test]
 fn test_composable_error_display_multiline() {
-    let err = ComposableError::<&str, u32>::new("error")
+    let err = ComposableError::<&str>::new("error")
         .with_context("ctx1\nmultiline")
         .set_code(500);
 
@@ -38,7 +38,7 @@ fn test_composable_error_display_multiline() {
 fn test_error_trait_impl() {
     // Verify ComposableError<io::Error> implements std::error::Error
     let io_err = io::Error::new(io::ErrorKind::Other, "root cause");
-    let err = ComposableError::<io::Error, u32>::new(io_err).with_context("context");
+    let err = ComposableError::<io::Error>::new(io_err).with_context("context");
 
     assert!(err.source().is_some());
     let source = err.source().unwrap();
@@ -47,7 +47,7 @@ fn test_error_trait_impl() {
 
 #[test]
 fn test_display_format() {
-    let err = ComposableError::<&str, u32>::new("core error")
+    let err = ComposableError::<&str>::new("core error")
         .with_context("ctx1")
         .with_context("ctx2")
         .set_code(500);
@@ -63,7 +63,7 @@ fn test_display_format() {
 
 #[test]
 fn test_display_format_no_context() {
-    let err = ComposableError::<&str, u32>::new("core error");
+    let err = ComposableError::<&str>::new("core error");
 
     // Standard
     assert_eq!(format!("{}", err), "core error");

@@ -55,7 +55,7 @@ use error_rail::{ErrorPipeline, context};
 
 let result = ErrorPipeline::new(risky_operation())
     .with_context(context!("computed: {:?}", large_struct)) // Only runs if error occurs
-    .finish();
+    .finish_boxed();
 ```
 
 > **Note**: The `context!` macro uses `LazyContext` internally.
@@ -78,7 +78,7 @@ let result = ErrorPipeline::new(database_query())
     .with_context(context!("user_id: {}", user_id))
     .map_err(|e| format!("Query failed: {}", e))
     .with_context(context!("operation: fetch_profile"))
-    .finish();
+    .finish_boxed();
 ```
 
 ### 5. Ergonomic Traits
@@ -102,7 +102,7 @@ let result = ErrorPipeline::new(database_query())
   - `location!` - Capture source file/line automatically  
   - `tag!` - Add categorical tags
   - `metadata!` - Attach key-value pairs
-  - `rail!` - Shorthand for `ErrorPipeline::new(...).finish()`
+  - `rail!` - Shorthand for `ErrorPipeline::new(...).finish_boxed()`
 
 - **`traits`**: Core traits for error handling:
   - `IntoErrorContext` - Convert types to error context

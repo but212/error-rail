@@ -44,7 +44,7 @@ fn into_error_context_supports_str_string_and_existing_context() {
 
 #[test]
 fn context_macro_integrates_with_composable_error() {
-    let err = ComposableError::<&str, u32>::new("failed").with_context(context!("step: {}", 2));
+    let err = ComposableError::<&str>::new("failed").with_context(context!("step: {}", 2));
     let contexts = err.context();
 
     assert_eq!(contexts.len(), 1);
