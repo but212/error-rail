@@ -64,6 +64,7 @@ use serde::{Deserialize, Serialize};
 /// let err = ComposableError::new(io::Error::new(io::ErrorKind::Other, "boom"));
 /// assert!(StdError::source(&err).is_some());
 /// ```
+#[must_use]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ComposableError<E> {
     core_error: E,
@@ -144,6 +145,7 @@ impl<E> ComposableError<E> {
     ///
     /// assert_eq!(err.context().len(), 2);
     /// ```
+    #[must_use]
     #[inline]
     pub fn with_context<Ctx>(mut self, ctx: Ctx) -> Self
     where
@@ -176,6 +178,7 @@ impl<E> ComposableError<E> {
     ///
     /// assert_eq!(err.context().len(), 2);
     /// ```
+    #[must_use]
     #[inline]
     pub fn with_contexts<I>(mut self, contexts: I) -> Self
     where
@@ -287,6 +290,7 @@ impl<E> ComposableError<E> {
     ///
     /// assert_eq!(err.error_code(), Some(500));
     /// ```
+    #[must_use]
     #[inline]
     pub fn set_code(mut self, code: u32) -> Self {
         self.error_code = Some(code);
@@ -316,6 +320,7 @@ impl<E> ComposableError<E> {
     /// assert_eq!(mapped.error_code(), Some(500));
     /// assert_eq!(mapped.context().len(), 1);
     /// ```
+    #[must_use]
     #[inline]
     pub fn map_core<F, T>(self, f: F) -> ComposableError<T>
     where
@@ -345,6 +350,7 @@ impl<E> ComposableError<E> {
     /// println!("{}", err.fmt().with_separator(" | ").show_code(false));
     /// // Output: ctx1 | error
     /// ```
+    #[must_use]
     #[inline]
     pub fn fmt(&self) -> ErrorFormatter<'_, E> {
         ErrorFormatter {
@@ -373,6 +379,7 @@ impl<E> ComposableError<E> {
     /// let chain = err.error_chain();
     /// assert!(chain.contains("[db] -> fetching user -> database error (code: 500)"));
     /// ```
+    #[must_use]
     pub fn error_chain(&self) -> String
     where
         E: Display,

@@ -151,28 +151,28 @@ fn bench_context_depth(c: &mut Criterion) {
     c.bench_function("context_depth_1", |b| {
         b.iter(|| {
             let err = build_error_with_depth(1);
-            black_box(err);
+            let _ = black_box(err);
         })
     });
 
     c.bench_function("context_depth_3", |b| {
         b.iter(|| {
             let err = build_error_with_depth(3);
-            black_box(err);
+            let _ = black_box(err);
         })
     });
 
     c.bench_function("context_depth_10", |b| {
         b.iter(|| {
             let err = build_error_with_depth(10);
-            black_box(err);
+            let _ = black_box(err);
         })
     });
 
     c.bench_function("context_depth_30", |b| {
         b.iter(|| {
             let err = build_error_with_depth(30);
-            black_box(err);
+            let _ = black_box(err);
         })
     });
 }

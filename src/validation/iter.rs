@@ -1,4 +1,5 @@
 use crate::{validation::core::Validation, ErrorVec};
+use std::iter::FusedIterator;
 use std::slice::{Iter as SliceIter, IterMut as SliceIterMut};
 
 /// Iterator over the valid value of a [`Validation`].
@@ -34,6 +35,8 @@ impl<'a, A> ExactSizeIterator for Iter<'a, A> {
     }
 }
 
+impl<'a, A> FusedIterator for Iter<'a, A> {}
+
 /// Mutable iterator over the valid value of a [`Validation`].
 ///
 /// This iterator yields at most one mutable reference to the valid value if present.
@@ -67,6 +70,8 @@ impl<'a, A> ExactSizeIterator for IterMut<'a, A> {
         self.inner.is_some() as usize
     }
 }
+
+impl<'a, A> FusedIterator for IterMut<'a, A> {}
 
 /// Iterator over the errors of a [`Validation`].
 ///
@@ -115,6 +120,8 @@ impl<'a, E> ExactSizeIterator for ErrorsIter<'a, E> {
         }
     }
 }
+
+impl<'a, E> FusedIterator for ErrorsIter<'a, E> {}
 
 /// Mutable iterator over the errors of a [`Validation`].
 ///
@@ -168,6 +175,8 @@ impl<'a, E> ExactSizeIterator for ErrorsIterMut<'a, E> {
         }
     }
 }
+
+impl<'a, E> FusedIterator for ErrorsIterMut<'a, E> {}
 
 /// Converts a [`Validation`] into an iterator over its valid value.
 ///
@@ -230,6 +239,8 @@ impl<A> ExactSizeIterator for IntoIter<A> {
         self.inner.is_some() as usize
     }
 }
+
+impl<A> FusedIterator for IntoIter<A> {}
 
 /// Converts a reference to a [`Validation`] into an iterator.
 ///
@@ -296,6 +307,7 @@ impl<E, A> Validation<E, A> {
     /// let invalid: Validation<String, i32> = Validation::invalid("error".to_string());
     /// assert_eq!(invalid.iter().next(), None);
     /// ```
+    #[must_use]
     pub fn iter(&self) -> Iter<'_, A> {
         match self {
             Validation::Valid(a) => Iter { inner: Some(a) },
@@ -319,6 +331,7 @@ impl<E, A> Validation<E, A> {
     /// }
     /// assert_eq!(valid, Validation::Valid(10));
     /// ```
+    #[must_use]
     pub fn iter_mut(&mut self) -> IterMut<'_, A> {
         match self {
             Validation::Valid(a) => IterMut { inner: Some(a) },
@@ -345,6 +358,7 @@ impl<E, A> Validation<E, A> {
     /// let multi_invalid: Validation<&str, i32> = Validation::invalid_many(["err1", "err2"]);
     /// assert_eq!(multi_invalid.iter_errors().count(), 2);
     /// ```
+    #[must_use]
     pub fn iter_errors(&self) -> ErrorsIter<'_, E> {
         match self {
             Self::Valid(_) => ErrorsIter::Empty,
@@ -371,6 +385,7 @@ impl<E, A> Validation<E, A> {
     ///     Some(&"error [updated]".to_string())
     /// );
     /// ```
+    #[must_use]
     pub fn iter_errors_mut(&mut self) -> ErrorsIterMut<'_, E> {
         match self {
             Validation::Invalid(es) => ErrorsIterMut::Multi(es.iter_mut()),

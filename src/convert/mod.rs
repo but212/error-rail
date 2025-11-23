@@ -52,13 +52,15 @@ use crate::validation::core::Validation;
 /// assert_eq!(validation_to_result(invalid), Err("error"));
 /// ```
 #[inline]
-pub fn validation_to_result<T, E>(validation: Validation<E, T>) -> Result<T, E>
-where
-    E: Default,
-{
+pub fn validation_to_result<T, E>(validation: Validation<E, T>) -> Result<T, E> {
     match validation {
         Validation::Valid(value) => Ok(value),
-        Validation::Invalid(mut errors) => Err(errors.pop().unwrap_or_else(E::default)),
+        Validation::Invalid(mut errors) => {
+            let error = errors
+                .pop()
+                .expect("Validation::Invalid must contain at least one error");
+            Err(error)
+        }
     }
 }
 

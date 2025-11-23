@@ -20,7 +20,7 @@ use crate::validation::core::Validation;
 /// let invalid: Validation<String, i32> = <Validation<String, ()>>::handle_error("error".to_string());
 /// assert!(invalid.is_invalid());
 /// ```
-impl<E: Clone> ErrorCategory<E> for Validation<E, ()> {
+impl<E> ErrorCategory<E> for Validation<E, ()> {
     type ErrorFunctor<T> = Validation<E, T>;
 
     #[inline]
@@ -53,7 +53,7 @@ impl<E: Clone> ErrorCategory<E> for Validation<E, ()> {
 /// let result = valid.to_result();
 /// assert_eq!(result, Ok(42));
 /// ```
-impl<T, E: Clone> WithError<E> for Validation<E, T> {
+impl<T, E> WithError<E> for Validation<E, T> {
     type Success = T;
     type ErrorOutput<G> = Validation<G, T>;
 

@@ -63,7 +63,7 @@ pub trait WithError<E> {
     fn to_result(self) -> Result<Self::Success, E>;
 }
 
-impl<T, E: Clone> WithError<E> for Result<T, E> {
+impl<T, E> WithError<E> for Result<T, E> {
     type Success = T;
     type ErrorOutput<G> = Result<T, G>;
 

@@ -31,12 +31,27 @@
         .build();
     ```
 
+- **Enhanced type safety and ergonomics**:
+  - Added `#[must_use]` annotations to core types and combinators (`Validation`, `ComposableError`, `ErrorPipeline`, etc.) to surface ignored results as compile-time warnings.
+  - Relaxed trait bounds for better reuse: removed unnecessary `E: Clone` / `E: Default` constraints from `ErrorCategory`, `WithError`, `ErrorOps`, `validation_to_result`, and `Validation` conversion helpers.
+  - Improved iterator ergonomics for `Validation`: implemented `FusedIterator` for `Iter`, `IterMut`, `ErrorsIter`, `ErrorsIterMut`, and `IntoIter` to better integrate with the standard iterator ecosystem.
+
 ### Changed - 0.3.0
 
 - **Performance optimization**: `GroupContext` now uses `SmallVec` instead of `Vec` for `tags` and `metadata` fields
   - Reduces heap allocations for common cases with 1-2 tags or metadata entries
   - Inline storage for up to 2 elements per collection
   - **Benchmark results**: Up to 50% performance improvement in context operations
+
+- **Safer error/validation combinators**:
+  - Marked core types and combinators with `#[must_use]` (e.g. `Validation`,
+    `ComposableError`, `ErrorPipeline` and their builder-style methods) so ignored
+    results surface as compile-time warnings.
+
+- **Relaxed trait bounds for better reuse**:
+  - Removed unnecessary `E: Clone` / `E: Default` constraints from
+    `ErrorCategory`, `WithError`, `ErrorOps`, `validation_to_result`, and
+    `Validation` conversion helpers, making trait impls more broadly applicable.
 
 ### Fixed - 0.3.0
 
