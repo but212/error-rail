@@ -11,7 +11,7 @@
 
 ## Quick Start
 
-> **New to error-rail?** Check out the [Quick Start Guide](QUICK_START.md) for a beginner-friendly introduction.
+> **New to error-rail?** Check out the [Quick Start Guide](docs/QUICK_START.md) for a beginner-friendly introduction.
 
 ## Key Features
 
