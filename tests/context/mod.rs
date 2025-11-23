@@ -20,7 +20,7 @@ fn rail_macro_wraps_expression_results() {
         .with_context(ErrorContext::tag("comparison"));
 
     let manual = ErrorPipeline::new(Err::<(), &str>("boom"))
-        .finish()
+        .finish_boxed()
         .unwrap_err()
         .with_context(ErrorContext::tag("comparison"));
 
@@ -62,7 +62,7 @@ fn error_pipeline_applies_contexts_on_error() {
     let error = ErrorPipeline::<(), &str>::new(Err("fail"))
         .with_context(context!("user_id: {}", 42))
         .with_context(ErrorContext::tag("auth"))
-        .finish()
+        .finish_boxed()
         .unwrap_err();
 
     let contexts = error.context();
@@ -75,7 +75,7 @@ fn error_pipeline_applies_contexts_on_error() {
 fn error_pipeline_skips_contexts_when_successful() {
     let value = ErrorPipeline::new(Ok::<_, &str>(10))
         .with_context(ErrorContext::tag("should not appear"))
-        .finish();
+        .finish_boxed();
 
     assert_eq!(value, Ok(10));
 }
@@ -110,11 +110,11 @@ fn context_accumulator_attaches_multiple_entries() {
 fn error_pipeline_helper_function_matches_constructor() {
     let pipeline_from_fn = error_pipeline::<(), &str>(Err("fail"))
         .with_context(ErrorContext::tag("fn"))
-        .finish();
+        .finish_boxed();
 
     let pipeline_from_new = ErrorPipeline::new(Err::<(), &str>("fail"))
         .with_context(ErrorContext::tag("fn"))
-        .finish();
+        .finish_boxed();
 
     assert_eq!(
         pipeline_from_fn.unwrap_err().context(),

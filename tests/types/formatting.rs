@@ -2,7 +2,7 @@ use error_rail::ComposableError;
 
 #[test]
 fn default_formatting_matches_previous_behavior() {
-    let err = ComposableError::<&str, u32>::new("core error")
+    let err = ComposableError::<&str>::new("core error")
         .with_context("ctx1")
         .with_context("ctx2")
         .set_code(500);
@@ -13,7 +13,7 @@ fn default_formatting_matches_previous_behavior() {
 
 #[test]
 fn custom_separator() {
-    let err = ComposableError::<&str, u32>::new("core error")
+    let err = ComposableError::<&str>::new("core error")
         .with_context("ctx1")
         .with_context("ctx2");
 
@@ -23,7 +23,7 @@ fn custom_separator() {
 
 #[test]
 fn reverse_context_order() {
-    let err = ComposableError::<&str, u32>::new("core error")
+    let err = ComposableError::<&str>::new("core error")
         .with_context("ctx1")
         .with_context("ctx2");
 
@@ -33,7 +33,7 @@ fn reverse_context_order() {
 
 #[test]
 fn hide_error_code() {
-    let err = ComposableError::<&str, u32>::new("core error").set_code(500);
+    let err = ComposableError::<&str>::new("core error").set_code(500);
 
     let output = format!("{}", err.fmt().show_code(false));
     assert_eq!(output, "core error");
@@ -41,7 +41,7 @@ fn hide_error_code() {
 
 #[test]
 fn complex_formatting_combination() {
-    let err = ComposableError::<&str, u32>::new("core error")
+    let err = ComposableError::<&str>::new("core error")
         .with_context("ctx1")
         .with_context("ctx2")
         .set_code(500);

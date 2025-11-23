@@ -68,7 +68,7 @@ fn bench_context_lazy_vs_eager_success(c: &mut Criterion) {
             let result: Result<(), &str> = Ok(());
             let _ = ErrorPipeline::new(result)
                 .with_context(context!("computed: {:?}", large))
-                .finish();
+                .finish_boxed();
         })
     });
 
@@ -96,7 +96,7 @@ fn bench_context_lazy_vs_eager_error(c: &mut Criterion) {
             let result: Result<(), &str> = Err("fail");
             let _ = ErrorPipeline::new(result)
                 .with_context(context!("computed: {:?}", large))
-                .finish();
+                .finish_boxed();
         })
     });
 
@@ -123,7 +123,7 @@ fn bench_backtrace_lazy_success(c: &mut Criterion) {
             let result: Result<(), &str> = Ok(());
             let _ = ErrorPipeline::new(result)
                 .with_context(backtrace!())
-                .finish_without_box();
+                .finish();
         })
     });
 }
@@ -134,12 +134,12 @@ fn bench_backtrace_lazy_error(c: &mut Criterion) {
             let result: Result<(), &str> = Err("fail");
             let _ = ErrorPipeline::new(result)
                 .with_context(backtrace!())
-                .finish_without_box();
+                .finish();
         })
     });
 }
 
-fn build_error_with_depth(depth: usize) -> ComposableError<&'static str, u32> {
+fn build_error_with_depth(depth: usize) -> ComposableError<&'static str> {
     let mut err = ComposableError::new("failure");
     for _ in 0..depth {
         err = err.with_context(ErrorContext::new("context"));
@@ -204,7 +204,7 @@ fn bench_pipeline_vs_result_success(c: &mut Criterion) {
                 .with_context(context!("parsing"))
                 .and_then(|v| validate(v))
                 .and_then(|v| transform(v))
-                .finish_without_box();
+                .finish();
             let _ = black_box(result).is_ok();
         })
     });
@@ -215,8 +215,7 @@ fn bench_pipeline_vs_result_success(c: &mut Criterion) {
                 .and_then(|v| validate(v))
                 .and_then(|v| transform(v));
             let result = result.map_err(|e| {
-                ComposableError::<&'static str, u32>::new(e)
-                    .with_context(ErrorContext::new("parsing"))
+                ComposableError::<&'static str>::new(e).with_context(ErrorContext::new("parsing"))
             });
             let _ = black_box(result).is_ok();
         })
@@ -239,7 +238,7 @@ fn bench_pipeline_vs_result_error(c: &mut Criterion) {
                 .with_context(context!("parsing"))
                 .and_then(|v| validate(v))
                 .and_then(|v| transform(v))
-                .finish_without_box();
+                .finish();
             let _ = black_box(result).is_ok();
         })
     });
@@ -250,8 +249,7 @@ fn bench_pipeline_vs_result_error(c: &mut Criterion) {
                 .and_then(|v| validate(v))
                 .and_then(|v| transform(v));
             let result = result.map_err(|e| {
-                ComposableError::<&'static str, u32>::new(e)
-                    .with_context(ErrorContext::new("parsing"))
+                ComposableError::<&'static str>::new(e).with_context(ErrorContext::new("parsing"))
             });
             let _ = black_box(result).is_ok();
         })

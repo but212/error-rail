@@ -44,7 +44,7 @@
 //! let result = ErrorPipeline::<i32, &str>::new(Err("failed"))
 //!     .with_context(context!("operation: load_config"))
 //!     .with_context(context!("user_id: 42"))
-//!     .finish();
+//!     .finish_boxed();
 //!
 //! if let Err(err) = result {
 //!     eprintln!("{}", err.error_chain());

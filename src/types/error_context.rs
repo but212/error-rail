@@ -26,6 +26,7 @@
 //! let meta = ErrorContext::metadata("retry_count", "3");
 //! ```
 use serde::{Deserialize, Serialize};
+use smallvec::SmallVec;
 use std::fmt::Display;
 
 /// Structured metadata attached to a [`ComposableError`](crate::types::ComposableError).
@@ -63,9 +64,9 @@ pub struct GroupContext {
     /// Optional source location where the error occurred
     pub location: Option<Location>,
     /// Tags for categorizing and filtering errors
-    pub tags: Vec<String>,
+    pub tags: SmallVec<[String; 2]>,
     /// Arbitrary key-value metadata pairs
-    pub metadata: Vec<(String, String)>,
+    pub metadata: SmallVec<[(String, String); 2]>,
 }
 
 /// Source file and line number where the error occurred.
@@ -143,7 +144,7 @@ impl ErrorContext {
     #[inline]
     pub fn tag<S: Into<String>>(tag: S) -> Self {
         Self::Group(GroupContext {
-            tags: vec![tag.into()],
+            tags: smallvec::smallvec![tag.into()],
             ..Default::default()
         })
     }
@@ -168,7 +169,7 @@ impl ErrorContext {
     #[inline]
     pub fn metadata<K: Into<String>, V: Into<String>>(key: K, value: V) -> Self {
         Self::Group(GroupContext {
-            metadata: vec![(key.into(), value.into())],
+            metadata: smallvec::smallvec![(key.into(), value.into())],
             ..Default::default()
         })
     }
@@ -227,3 +228,75 @@ impl Display for ErrorContext {
 }
 
 impl std::error::Error for ErrorContext {}
+
+/// Builder for creating complex [`ErrorContext::Group`] entries.
+///
+/// # Examples
+///
+/// ```
+/// use error_rail::ErrorContext;
+///
+/// let ctx = ErrorContext::builder()
+///     .message("connection failed")
+///     .tag("network")
+///     .metadata("host", "localhost")
+///     .build();
+/// ```
+#[derive(Debug, Default)]
+pub struct ErrorContextBuilder {
+    context: GroupContext,
+}
+
+impl ErrorContextBuilder {
+    /// Creates a new builder.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Sets the message.
+    pub fn message<S: Into<String>>(mut self, msg: S) -> Self {
+        self.context.message = Some(msg.into());
+        self
+    }
+
+    /// Sets the location.
+    pub fn location<S: Into<String>>(mut self, file: S, line: u32) -> Self {
+        self.context.location = Some(Location {
+            file: file.into(),
+            line,
+        });
+        self
+    }
+
+    /// Adds a tag.
+    pub fn tag<S: Into<String>>(mut self, tag: S) -> Self {
+        self.context.tags.push(tag.into());
+        self
+    }
+
+    /// Adds a metadata pair.
+    pub fn metadata<K: Into<String>, V: Into<String>>(mut self, key: K, value: V) -> Self {
+        self.context.metadata.push((key.into(), value.into()));
+        self
+    }
+
+    /// Builds the [`ErrorContext`].
+    pub fn build(self) -> ErrorContext {
+        ErrorContext::Group(self.context)
+    }
+}
+
+impl ErrorContext {
+    /// Creates a new [`ErrorContextBuilder`].
+    pub fn builder() -> ErrorContextBuilder {
+        ErrorContextBuilder::new()
+    }
+
+    /// Creates a group context with a message.
+    ///
+    /// This is a convenience method for starting a builder-like pattern or just creating a group with a message.
+    /// Note that `ErrorContext::new` creates a `Simple` variant, while this creates a `Group` variant.
+    pub fn group<S: Into<String>>(message: S) -> ErrorContextBuilder {
+        ErrorContextBuilder::new().message(message)
+    }
+}

@@ -25,7 +25,7 @@ use crate::{
 /// let result = ErrorPipeline::<u32, &str>::new(Err("failed"))
 ///     .with_context(context!("step 1"))
 ///     .with_context(context!("step 2"))
-///     .finish();
+///     .finish_boxed();
 /// ```
 pub struct ErrorPipeline<T, E> {
     result: Result<T, E>,
@@ -50,7 +50,7 @@ impl<T, E> ErrorPipeline<T, E> {
     ///
     /// let err = ErrorPipeline::new(flaky())
     ///     .with_context(context!("calling flaky"))
-    ///     .finish()
+    ///     .finish_boxed()
     ///     .unwrap_err();
     ///
     /// assert!(err.error_chain().contains("calling flaky"));
@@ -282,10 +282,10 @@ impl<T, E> ErrorPipeline<T, E> {
     ///
     /// let result = ErrorPipeline::<u32, &str>::new(Err("failed"))
     ///     .with_context(context!("operation failed"))
-    ///     .finish();
+    ///     .finish_boxed();
     /// ```
     #[inline]
-    pub fn finish(self) -> BoxedComposableResult<T, E> {
+    pub fn finish_boxed(self) -> BoxedComposableResult<T, E> {
         match self.result {
             Ok(v) => Ok(v),
             Err(e) => {
@@ -297,7 +297,7 @@ impl<T, E> ErrorPipeline<T, E> {
 
     /// Finalizes the pipeline into an unboxed [`ComposableResult`].
     ///
-    /// Similar to `finish`, but returns the error directly without boxing.
+    /// Similar to `finish_boxed`, but returns the error directly without boxing.
     /// Use this when you need to avoid heap allocation.
     ///
     /// # Examples
@@ -307,11 +307,11 @@ impl<T, E> ErrorPipeline<T, E> {
     ///
     /// let result = ErrorPipeline::<u32, &str>::new(Err("failed"))
     ///     .with_context(context!("operation failed"))
-    ///     .finish_without_box();
+    ///     .finish();
     /// ```
     #[inline]
     #[allow(clippy::result_large_err)]
-    pub fn finish_without_box(self) -> ComposableResult<T, E> {
+    pub fn finish(self) -> ComposableResult<T, E> {
         match self.result {
             Ok(v) => Ok(v),
             Err(e) => {

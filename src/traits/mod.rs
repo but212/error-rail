@@ -18,7 +18,7 @@
 //! let success: Result<i32, String> = <Result<(), String>>::lift(42);
 //!
 //! // Using IntoErrorContext for structured contexts
-//! let err = ComposableError::<&str, u32>::new("failed")
+//! let err = ComposableError::<&str>::new("failed")
 //!     .with_context("operation context");
 //! ```
 

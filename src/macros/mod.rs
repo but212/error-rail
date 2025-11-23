@@ -22,7 +22,7 @@
 //!     .with_context(location!())
 //!     .with_context(tag!("auth"))
 //!     .with_context(metadata!("retry_count", "3"))
-//!     .finish();
+//!     .finish_boxed();
 //!
 //! // Equivalent rail! shorthand that also returns a boxed composable result
 //! let _ = rail!({
@@ -70,7 +70,7 @@
 #[macro_export]
 macro_rules! rail {
     ($expr:expr $(,)?) => {
-        $crate::ErrorPipeline::new($expr).finish()
+        $crate::ErrorPipeline::new($expr).finish_boxed()
     };
 }
 
@@ -90,7 +90,7 @@ macro_rules! rail {
 /// use error_rail::{context, ComposableError};
 ///
 /// let user_id = 42;
-/// let err = ComposableError::<&str, u32>::new("auth failed")
+/// let err = ComposableError::<&str>::new("auth failed")
 ///     .with_context(context!("user_id: {}", user_id));
 /// ```
 #[macro_export]
@@ -111,7 +111,7 @@ macro_rules! context {
 /// ```
 /// use error_rail::{location, ComposableError};
 ///
-/// let err = ComposableError::<&str, u32>::new("io error")
+/// let err = ComposableError::<&str>::new("io error")
 ///     .with_context(location!());
 /// ```
 #[macro_export]
@@ -135,7 +135,7 @@ macro_rules! location {
 /// ```
 /// use error_rail::{tag, ComposableError};
 ///
-/// let err = ComposableError::<&str, u32>::new("connection failed")
+/// let err = ComposableError::<&str>::new("connection failed")
 ///     .with_context(tag!("network"));
 /// ```
 #[macro_export]
@@ -160,7 +160,7 @@ macro_rules! tag {
 /// ```
 /// use error_rail::{metadata, ComposableError};
 ///
-/// let err = ComposableError::<&str, u32>::new("rate limit exceeded")
+/// let err = ComposableError::<&str>::new("rate limit exceeded")
 ///     .with_context(metadata!("retry_after", "60"));
 /// ```
 #[macro_export]
@@ -227,7 +227,7 @@ macro_rules! impl_error_context {
 /// ```
 /// use error_rail::{backtrace, ComposableError};
 ///
-/// let err = ComposableError::<&str, u32>::new("panic occurred")
+/// let err = ComposableError::<&str>::new("panic occurred")
 ///     .with_context(backtrace!());
 /// ```
 #[macro_export]

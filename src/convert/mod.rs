@@ -110,7 +110,7 @@ pub fn result_to_validation<T, E>(result: Result<T, E>) -> Validation<E, T> {
 /// ```
 /// use error_rail::{ComposableError, convert::composable_to_core};
 ///
-/// let composable = ComposableError::<&str, u32>::new("error")
+/// let composable = ComposableError::<&str>::new("error")
 ///     .with_context("additional context");
 /// let core = composable_to_core(composable);
 /// assert_eq!(core, "error");
