@@ -22,14 +22,14 @@ Wrap any error in `ComposableError` and attach layered metadata like messages, f
 ```rust
 use error_rail::{ComposableError, context, location, tag};
 
-let err = ComposableError::<&str, u32>::new("db error")
+let err = ComposableError::<&str>::new("db error")
     .with_context(tag!("database"))
     .with_context(location!())
     .with_context(context!("failed to connect"));
 
 // Print the full error chain
-println!("{}", err.error_chain());
-// Output: failed to connect -> at src/main.rs:10 -> [database] -> db error
+println!("Error: {:?}", err);
+// Output shows structured context with location, tag, and message
 ```
 
 ### 2. Validation Accumulation
@@ -44,6 +44,14 @@ let v2 = Validation::<&str, i32>::invalid("too small");
 let combined: Validation<&str, Vec<i32>> = vec![v1, v2].into_iter().collect();
 
 assert!(combined.is_invalid());
+
+// You can iterate over the accumulated errors
+if let Validation::Invalid(errors) = combined {
+    println!("Found {} errors:", errors.len());
+    for err in errors {
+        println!("- {}", err);
+    }
+}
 ```
 
 ### 3. Performance Optimization
