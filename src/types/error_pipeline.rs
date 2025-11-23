@@ -175,7 +175,7 @@ impl<T, E> ErrorPipeline<T, E> {
             },
             Err(_) => ErrorPipeline {
                 result: Ok(value),
-                pending_contexts: self.pending_contexts,
+                pending_contexts: ErrorVec::new(),
             },
         }
     }
@@ -209,7 +209,7 @@ impl<T, E> ErrorPipeline<T, E> {
             },
             Err(e) => ErrorPipeline {
                 result: Ok(f(e)),
-                pending_contexts: self.pending_contexts,
+                pending_contexts: ErrorVec::new(),
             },
         }
     }
