@@ -55,7 +55,7 @@ impl<T, E> ErrorPipeline<T, E> {
     ///
     /// assert!(err.error_chain().contains("calling flaky"));
     /// ```
-    #[inline]
+    #[inline(always)]
     pub fn new(result: Result<T, E>) -> Self {
         Self {
             result,
@@ -110,7 +110,7 @@ impl<T, E> ErrorPipeline<T, E> {
     /// let pipeline = ErrorPipeline::<&str, &str>::new(Err("text error"))
     ///     .map_error(|e| e.len());
     /// ```
-    #[inline]
+    #[inline(always)]
     pub fn map_error<F, NewE>(self, f: F) -> ErrorPipeline<T, NewE>
     where
         F: FnOnce(E) -> NewE,
@@ -138,7 +138,7 @@ impl<T, E> ErrorPipeline<T, E> {
     /// let pipeline = ErrorPipeline::new(Err("error"))
     ///     .recover(|_| Ok(42));
     /// ```
-    #[inline]
+    #[inline(always)]
     pub fn recover<F>(self, recovery: F) -> ErrorPipeline<T, E>
     where
         F: FnOnce(E) -> Result<T, E>,
@@ -166,7 +166,7 @@ impl<T, E> ErrorPipeline<T, E> {
     /// let pipeline = ErrorPipeline::<i32, &str>::new(Err("error"))
     ///     .fallback(42);
     /// ```
-    #[inline]
+    #[inline(always)]
     pub fn fallback(self, value: T) -> ErrorPipeline<T, E> {
         match self.result {
             Ok(v) => ErrorPipeline {
@@ -197,7 +197,7 @@ impl<T, E> ErrorPipeline<T, E> {
     /// let pipeline = ErrorPipeline::<i32, &str>::new(Err("error"))
     ///     .recover_safe(|_| 42);
     /// ```
-    #[inline]
+    #[inline(always)]
     pub fn recover_safe<F>(self, f: F) -> ErrorPipeline<T, E>
     where
         F: FnOnce(E) -> T,
@@ -231,7 +231,7 @@ impl<T, E> ErrorPipeline<T, E> {
     /// let pipeline = ErrorPipeline::<i32, &str>::new(Ok(5))
     ///     .and_then(|x| Ok(x * 2));
     /// ```
-    #[inline]
+    #[inline(always)]
     pub fn and_then<U, F>(self, f: F) -> ErrorPipeline<U, E>
     where
         F: FnOnce(T) -> Result<U, E>,
@@ -259,7 +259,7 @@ impl<T, E> ErrorPipeline<T, E> {
     /// let pipeline = ErrorPipeline::<i32, &str>::new(Ok(5))
     ///     .map(|x| x * 2);
     /// ```
-    #[inline]
+    #[inline(always)]
     pub fn map<U, F>(self, f: F) -> ErrorPipeline<U, E>
     where
         F: FnOnce(T) -> U,
@@ -284,7 +284,7 @@ impl<T, E> ErrorPipeline<T, E> {
     ///     .with_context(context!("operation failed"))
     ///     .finish_boxed();
     /// ```
-    #[inline]
+    #[inline(always)]
     pub fn finish_boxed(self) -> BoxedComposableResult<T, E> {
         match self.result {
             Ok(v) => Ok(v),
@@ -309,7 +309,7 @@ impl<T, E> ErrorPipeline<T, E> {
     ///     .with_context(context!("operation failed"))
     ///     .finish();
     /// ```
-    #[inline]
+    #[inline(always)]
     #[allow(clippy::result_large_err)]
     pub fn finish(self) -> ComposableResult<T, E> {
         match self.result {
