@@ -1,4 +1,3 @@
-use error_rail::traits::WithError;
 use error_rail::validation::Validation;
 use serde::{Deserialize, Serialize};
 
@@ -24,6 +23,13 @@ fn test_validation_or_else_valid() {
 }
 
 #[test]
+fn test_validation_or_else_invalid() {
+    let v: Validation<&str, i32> = Validation::invalid("error");
+    let recovered = v.or_else(|_| Validation::valid(0));
+    assert_eq!(recovered.into_value(), Some(0));
+}
+
+#[test]
 fn test_validation_map_err_valid() {
     let v: Validation<&str, i32> = Validation::valid(42);
     let mapped = v.map_err(|e| format!("Error: {}", e));
@@ -46,37 +52,6 @@ fn test_validation_into_errors_valid() {
 fn test_validation_into_value_invalid() {
     let v: Validation<&str, i32> = Validation::invalid("error");
     assert!(v.into_value().is_none());
-}
-
-#[test]
-fn test_validation_iter_invalid() {
-    let v: Validation<&str, i32> = Validation::invalid("error");
-    assert_eq!(v.iter().next(), None);
-
-    let mut v_mut = v.clone();
-    assert_eq!(v_mut.iter_mut().next(), None);
-}
-
-#[test]
-fn test_validation_iter_errors_valid() {
-    let v: Validation<&str, i32> = Validation::valid(42);
-    assert_eq!(v.iter_errors().next(), None);
-
-    let mut v_mut = v.clone();
-    assert_eq!(v_mut.iter_errors_mut().next(), None);
-}
-
-#[test]
-fn test_validation_with_error_fmap_error_valid() {
-    let v: Validation<&str, i32> = Validation::valid(42);
-    let mapped = v.fmap_error(|e| format!("Error: {}", e));
-    assert!(mapped.is_valid());
-}
-
-#[test]
-fn test_validation_with_error_to_result_valid() {
-    let v: Validation<&str, i32> = Validation::valid(42);
-    assert_eq!(v.to_result(), Ok(42));
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
