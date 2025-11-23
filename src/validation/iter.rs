@@ -381,7 +381,7 @@ impl<E, A> Validation<E, A> {
 
 /// Collects an iterator of `Result`s into a single `Validation`, aggregating all errors.
 ///
-/// If all results are `Ok`, returns `Valid` with a vector of all success values.
+/// If all results are `Ok`, returns `Valid` with a collection of all success values.
 /// If any results are `Err`, returns `Invalid` with all accumulated errors.
 ///
 /// This is useful for validating multiple operations and collecting all failures
@@ -401,7 +401,10 @@ impl<E, A> Validation<E, A> {
 /// let collected: Validation<&str, Vec<i32>> = all_ok.into_iter().collect();
 /// assert_eq!(collected, Validation::Valid(vec![1, 2, 3]));
 /// ```
-impl<E, A> FromIterator<Result<A, E>> for Validation<E, Vec<A>> {
+impl<E, A, C> FromIterator<Result<A, E>> for Validation<E, C>
+where
+    C: FromIterator<A>,
+{
     fn from_iter<T: IntoIterator<Item = Result<A, E>>>(iter: T) -> Self {
         let mut values = Vec::new();
         let mut errors = ErrorVec::new();
@@ -414,7 +417,8 @@ impl<E, A> FromIterator<Result<A, E>> for Validation<E, Vec<A>> {
         }
 
         if errors.is_empty() {
-            Validation::Valid(values)
+            let collected: C = values.into_iter().collect();
+            Validation::Valid(collected)
         } else {
             Validation::Invalid(errors)
         }
@@ -423,7 +427,7 @@ impl<E, A> FromIterator<Result<A, E>> for Validation<E, Vec<A>> {
 
 /// Collects an iterator of `Validation`s into a single `Validation`, aggregating all errors.
 ///
-/// If all validations are valid, returns `Valid` with a vector of all success values.
+/// If all validations are valid, returns `Valid` with a collection of all success values.
 /// If any validations are invalid, returns `Invalid` with all accumulated errors from all
 /// invalid validations.
 ///
@@ -438,7 +442,10 @@ impl<E, A> FromIterator<Result<A, E>> for Validation<E, Vec<A>> {
 /// let collected: Validation<&str, Vec<i32>> = items.into_iter().collect();
 /// assert!(collected.is_invalid());
 /// ```
-impl<E, A> FromIterator<Validation<E, A>> for Validation<E, Vec<A>> {
+impl<E, A, C> FromIterator<Validation<E, A>> for Validation<E, C>
+where
+    C: FromIterator<A>,
+{
     fn from_iter<T: IntoIterator<Item = Validation<E, A>>>(iter: T) -> Self {
         let mut values = Vec::new();
         let mut errors = ErrorVec::new();
@@ -451,7 +458,8 @@ impl<E, A> FromIterator<Validation<E, A>> for Validation<E, Vec<A>> {
         }
 
         if errors.is_empty() {
-            Validation::Valid(values)
+            let collected: C = values.into_iter().collect();
+            Validation::Valid(collected)
         } else {
             Validation::Invalid(errors)
         }
