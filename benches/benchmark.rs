@@ -2,7 +2,7 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 use error_rail::traits::ErrorOps;
 use error_rail::validation::Validation;
-use error_rail::{context, ComposableError, ErrorContext, ErrorPipeline};
+use error_rail::{backtrace, context, ComposableError, ErrorContext, ErrorPipeline};
 use std::{hint::black_box, sync::OnceLock};
 
 #[derive(Debug)]
@@ -113,6 +113,28 @@ fn bench_context_lazy_vs_eager_error(c: &mut Criterion) {
         b.iter(|| {
             let result: Result<(), &str> = Err("fail");
             let _ = ErrorPipeline::new(result).finish();
+        })
+    });
+}
+
+fn bench_backtrace_lazy_success(c: &mut Criterion) {
+    c.bench_function("backtrace_lazy_success", |b| {
+        b.iter(|| {
+            let result: Result<(), &str> = Ok(());
+            let _ = ErrorPipeline::new(result)
+                .with_context(backtrace!())
+                .finish_without_box();
+        })
+    });
+}
+
+fn bench_backtrace_lazy_error(c: &mut Criterion) {
+    c.bench_function("backtrace_lazy_error", |b| {
+        b.iter(|| {
+            let result: Result<(), &str> = Err("fail");
+            let _ = ErrorPipeline::new(result)
+                .with_context(backtrace!())
+                .finish_without_box();
         })
     });
 }
@@ -336,6 +358,8 @@ criterion_group!(
     bench_error_ops_bimap,
     bench_context_lazy_vs_eager_success,
     bench_context_lazy_vs_eager_error,
+    bench_backtrace_lazy_success,
+    bench_backtrace_lazy_error,
     bench_context_depth,
     bench_pipeline_vs_result_success,
     bench_pipeline_vs_result_error,

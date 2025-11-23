@@ -149,6 +149,71 @@ impl<T, E> ErrorPipeline<T, E> {
         }
     }
 
+    /// Recovers from an error using a default value.
+    ///
+    /// If the current result is `Err`, replaces it with `Ok(value)`.
+    /// Pending contexts are discarded on recovery since the error is resolved.
+    ///
+    /// # Arguments
+    ///
+    /// * `value` - The default value to use in case of error
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use error_rail::ErrorPipeline;
+    ///
+    /// let pipeline = ErrorPipeline::<i32, &str>::new(Err("error"))
+    ///     .fallback(42);
+    /// ```
+    #[inline]
+    pub fn fallback(self, value: T) -> ErrorPipeline<T, E> {
+        match self.result {
+            Ok(v) => ErrorPipeline {
+                result: Ok(v),
+                pending_contexts: self.pending_contexts,
+            },
+            Err(_) => ErrorPipeline {
+                result: Ok(value),
+                pending_contexts: self.pending_contexts,
+            },
+        }
+    }
+
+    /// Recovers from an error using a safe function that always returns a value.
+    ///
+    /// If the current result is `Err`, calls `f` to get a success value.
+    /// Pending contexts are discarded on recovery since the error is resolved.
+    ///
+    /// # Arguments
+    ///
+    /// * `f` - Function that produces a success value from the error
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use error_rail::ErrorPipeline;
+    ///
+    /// let pipeline = ErrorPipeline::<i32, &str>::new(Err("error"))
+    ///     .recover_safe(|_| 42);
+    /// ```
+    #[inline]
+    pub fn recover_safe<F>(self, f: F) -> ErrorPipeline<T, E>
+    where
+        F: FnOnce(E) -> T,
+    {
+        match self.result {
+            Ok(v) => ErrorPipeline {
+                result: Ok(v),
+                pending_contexts: self.pending_contexts,
+            },
+            Err(e) => ErrorPipeline {
+                result: Ok(f(e)),
+                pending_contexts: self.pending_contexts,
+            },
+        }
+    }
+
     /// Chains a fallible operation on the success value.
     ///
     /// If the current result is `Ok`, applies the function. Otherwise, preserves
