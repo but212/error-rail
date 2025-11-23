@@ -248,18 +248,60 @@ pub struct ErrorContextBuilder {
 }
 
 impl ErrorContextBuilder {
-    /// Creates a new builder.
+    /// Creates a new builder for constructing complex [`ErrorContext::Group`] entries.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use error_rail::ErrorContext;
+    ///
+    /// let ctx = ErrorContext::builder()
+    ///     .message("operation failed")
+    ///     .build();
+    /// ```
     pub fn new() -> Self {
         Self::default()
     }
 
-    /// Sets the message.
+    /// Sets the message for this context.
+    ///
+    /// # Arguments
+    ///
+    /// * `msg` - Any type that can be converted into a `String`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use error_rail::ErrorContext;
+    ///
+    /// let ctx = ErrorContext::builder()
+    ///     .message("database query failed")
+    ///     .build();
+    /// ```
     pub fn message<S: Into<String>>(mut self, msg: S) -> Self {
         self.context.message = Some(msg.into());
         self
     }
 
-    /// Sets the location.
+    /// Sets the source location for this context.
+    ///
+    /// Typically used with the `file!()` and `line!()` macros to automatically
+    /// record where the error occurred.
+    ///
+    /// # Arguments
+    ///
+    /// * `file` - The source file path.
+    /// * `line` - The line number in the source file.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use error_rail::ErrorContext;
+    ///
+    /// let ctx = ErrorContext::builder()
+    ///     .location(file!(), line!())
+    ///     .build();
+    /// ```
     pub fn location<S: Into<String>>(mut self, file: S, line: u32) -> Self {
         self.context.location = Some(Location {
             file: file.into(),
@@ -268,34 +310,117 @@ impl ErrorContextBuilder {
         self
     }
 
-    /// Adds a tag.
+    /// Adds a tag to this context.
+    ///
+    /// Tags are useful for categorizing and filtering errors. Multiple tags
+    /// can be added by calling this method multiple times.
+    ///
+    /// # Arguments
+    ///
+    /// * `tag` - Any type that can be converted into a `String`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use error_rail::ErrorContext;
+    ///
+    /// let ctx = ErrorContext::builder()
+    ///     .tag("network")
+    ///     .tag("timeout")
+    ///     .build();
+    /// ```
     pub fn tag<S: Into<String>>(mut self, tag: S) -> Self {
         self.context.tags.push(tag.into());
         self
     }
 
-    /// Adds a metadata pair.
+    /// Adds a metadata key-value pair to this context.
+    ///
+    /// Metadata provides structured information that can be parsed by log
+    /// aggregators or monitoring tools. Multiple metadata pairs can be added
+    /// by calling this method multiple times.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - The metadata key.
+    /// * `value` - The metadata value.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use error_rail::ErrorContext;
+    ///
+    /// let ctx = ErrorContext::builder()
+    ///     .metadata("user_id", "12345")
+    ///     .metadata("request_id", "abc-def")
+    ///     .build();
+    /// ```
     pub fn metadata<K: Into<String>, V: Into<String>>(mut self, key: K, value: V) -> Self {
         self.context.metadata.push((key.into(), value.into()));
         self
     }
 
-    /// Builds the [`ErrorContext`].
+    /// Builds and returns the final [`ErrorContext`].
+    ///
+    /// Consumes the builder and produces an [`ErrorContext::Group`] variant
+    /// containing all the accumulated information.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use error_rail::ErrorContext;
+    ///
+    /// let ctx = ErrorContext::builder()
+    ///     .message("connection failed")
+    ///     .tag("network")
+    ///     .metadata("host", "localhost")
+    ///     .build();
+    /// ```
     pub fn build(self) -> ErrorContext {
         ErrorContext::Group(self.context)
     }
 }
 
 impl ErrorContext {
-    /// Creates a new [`ErrorContextBuilder`].
+    /// Creates a new [`ErrorContextBuilder`] for constructing complex contexts.
+    ///
+    /// This is the starting point for building [`ErrorContext::Group`] entries
+    /// with multiple pieces of information such as location, tags, and metadata.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use error_rail::ErrorContext;
+    ///
+    /// let ctx = ErrorContext::builder()
+    ///     .message("operation failed")
+    ///     .tag("critical")
+    ///     .build();
+    /// ```
     pub fn builder() -> ErrorContextBuilder {
         ErrorContextBuilder::new()
     }
 
-    /// Creates a group context with a message.
+    /// Creates a group context initialized with a message.
     ///
-    /// This is a convenience method for starting a builder-like pattern or just creating a group with a message.
-    /// Note that `ErrorContext::new` creates a `Simple` variant, while this creates a `Group` variant.
+    /// This is a convenience method that starts a builder with a message already set.
+    /// Unlike [`ErrorContext::new`] which creates a `Simple` variant, this creates
+    /// a `Group` variant that can be further enhanced with additional context.
+    ///
+    /// # Arguments
+    ///
+    /// * `message` - Any type that can be converted into a `String`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use error_rail::ErrorContext;
+    ///
+    /// let ctx = ErrorContext::group("database error")
+    ///     .tag("db")
+    ///     .metadata("table", "users")
+    ///     .build();
+    /// ```
     pub fn group<S: Into<String>>(message: S) -> ErrorContextBuilder {
         ErrorContextBuilder::new().message(message)
     }
