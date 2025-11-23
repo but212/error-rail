@@ -9,6 +9,11 @@ use smallvec::smallvec;
 /// error, `Validation` accumulates all errors, making it ideal for form validation and other
 /// scenarios where you want to collect all problems at once.
 ///
+/// # Serde Support
+///
+/// `Validation` implements `Serialize` and `Deserialize` when `E` and `A` do.
+/// This makes it easy to use in API responses or configuration files.
+///
 /// # Type Parameters
 ///
 /// * `E` - The error type

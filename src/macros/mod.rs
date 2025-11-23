@@ -169,3 +169,46 @@ macro_rules! metadata {
         $crate::types::ErrorContext::metadata($key, $value)
     };
 }
+
+/// Implements `IntoErrorContext` for a custom type.
+///
+/// This macro simplifies the implementation of the [`IntoErrorContext`](crate::traits::IntoErrorContext)
+/// trait for user-defined types. It converts the type into an [`ErrorContext::Message`](crate::types::ErrorContext::Message)
+/// using its `Display` implementation.
+///
+/// # Arguments
+///
+/// * `$type` - The type to implement `IntoErrorContext` for.
+///
+/// # Examples
+///
+/// ```
+/// use error_rail::{impl_error_context, ErrorContext, traits::IntoErrorContext};
+/// use std::fmt;
+///
+/// struct MyError {
+///     code: u32,
+/// }
+///
+/// impl fmt::Display for MyError {
+///     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+///         write!(f, "Error code: {}", self.code)
+///     }
+/// }
+///
+/// impl_error_context!(MyError);
+///
+/// let err = MyError { code: 404 };
+/// let ctx = err.into_error_context();
+/// assert_eq!(ctx.to_string(), "Error code: 404");
+/// ```
+#[macro_export]
+macro_rules! impl_error_context {
+    ($type:ty) => {
+        impl $crate::traits::IntoErrorContext for $type {
+            fn into_error_context(self) -> $crate::types::ErrorContext {
+                $crate::types::ErrorContext::new(self.to_string())
+            }
+        }
+    };
+}
