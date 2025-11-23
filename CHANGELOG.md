@@ -1,5 +1,49 @@
 # CHANGELOG
 
+## [0.3.0]
+
+### Breaking Changes - 0.3.0
+
+- **Removed generic `C` parameter from `ComposableError`**: The error code type is now fixed to `u32` instead of being generic.
+  - Changed: `ComposableError<E, C>` → `ComposableError<E>`
+  - Type aliases updated: `ComposableResult`, `SimpleComposableError`, `TaggedComposableError`, etc.
+  - **Migration**: Users relying on custom error code types (e.g., `&str`, enums) should migrate to using `ErrorContext::tag` or `ErrorContext::metadata`.
+
+- **ErrorPipeline method renaming**:
+  - `finish()` → `finish_boxed()` (returns `BoxedComposableResult`)
+  - `finish_without_box()` → `finish()` (returns `ComposableResult`)
+  - The `rail!` macro now uses `finish_boxed()` internally
+  - **Migration**: Replace `.finish()` with `.finish_boxed()` for boxed results, or `.finish_without_box()` with `.finish()` for unboxed results.
+
+### Added - 0.3.0
+
+- **ErrorContextBuilder**: New fluent builder API for creating complex error contexts
+  - `ErrorContext::builder()` - Creates a new builder
+  - `ErrorContext::group(message)` - Starts a builder with a message
+  - Builder methods: `.message()`, `.tag()`, `.metadata()`, `.location()`, `.build()`
+  - Example:
+
+    ```rust
+    let ctx = ErrorContext::builder()
+        .message("connection failed")
+        .tag("network")
+        .metadata("host", "localhost")
+        .build();
+    ```
+
+### Changed - 0.3.0
+
+- **Performance optimization**: `GroupContext` now uses `SmallVec` instead of `Vec` for `tags` and `metadata` fields
+  - Reduces heap allocations for common cases with 1-2 tags or metadata entries
+  - Inline storage for up to 2 elements per collection
+  - **Benchmark results**: Up to 50% performance improvement in context operations
+
+### Fixed - 0.3.0
+
+- Updated all examples, tests, and documentation to reflect API changes
+- Fixed doctests in `src/convert/mod.rs` and `src/macros/mod.rs`
+- All 121 tests passing
+
 ## [0.2.1]
 
 ### Added - 0.2.1
