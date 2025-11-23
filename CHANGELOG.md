@@ -11,6 +11,7 @@
 - Added `fallback` and `recover_safe` recovery methods to `ErrorPipeline` for default value recovery.
 - Documented Serde support for `Validation` and added tests confirming serialization/deserialization.
 - Organized tests into `tests/unit` submodule.
+- Added `backtrace!` macro for lazy backtrace capture.
 
 ## [0.2.0]
 

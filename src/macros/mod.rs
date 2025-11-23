@@ -212,3 +212,27 @@ macro_rules! impl_error_context {
         }
     };
 }
+
+/// Captures the current backtrace as lazy error context.
+///
+/// This macro creates a [`LazyContext`](crate::types::LazyContext) that captures the stack
+/// backtrace only when the error actually occurs, avoiding the performance overhead of
+/// backtrace generation on the success path.
+///
+/// The backtrace is captured using [`std::backtrace::Backtrace::capture()`] and converted
+/// to a string representation when the context is evaluated.
+///
+/// # Examples
+///
+/// ```
+/// use error_rail::{backtrace, ComposableError};
+///
+/// let err = ComposableError::<&str, u32>::new("panic occurred")
+///     .with_context(backtrace!());
+/// ```
+#[macro_export]
+macro_rules! backtrace {
+    () => {{
+        $crate::types::LazyContext::new(|| std::backtrace::Backtrace::capture().to_string())
+    }};
+}
