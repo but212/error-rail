@@ -7,6 +7,10 @@
 - Implemented `std::error::Error` for `ComposableError` when the core error implements `Error`, improving interoperability with `anyhow`/`eyre`.
 - Enhanced `Display` implementation to support alternate formatting (`{:#}`) for multi-line, structured error output.
 - Generalized `FromIterator` for `Validation` to support collecting into any collection type (e.g., `HashSet`, `SmallVec`) instead of just `Vec`.
+- Added `impl_error_context!` macro for easy `IntoErrorContext` implementations on custom types.
+- Added `fallback` and `recover_safe` recovery methods to `ErrorPipeline` for default value recovery.
+- Documented Serde support for `Validation` and added tests confirming serialization/deserialization.
+- Organized tests into `tests/unit` submodule.
 
 ## [0.2.0]
 
