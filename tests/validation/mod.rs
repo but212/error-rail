@@ -112,3 +112,5 @@ fn collecting_into_custom_collection_type_success() {
     let expected: SmallVec<[i32; 4]> = smallvec![1, 2];
     assert_eq!(collected.into_value().unwrap(), expected);
 }
+
+pub mod core;

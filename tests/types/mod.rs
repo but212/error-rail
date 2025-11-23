@@ -70,3 +70,7 @@ fn composable_error_map_core_preserves_context() {
     assert_eq!(err.core_error(), "wrapped: fail");
     assert_eq!(err.context().len(), 1);
 }
+
+pub mod composable_error;
+pub mod error_context;
+pub mod error_pipeline;

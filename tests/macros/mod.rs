@@ -42,3 +42,6 @@ fn metadata_macro_builds_kv_pair() {
     assert_eq!(ctx, ErrorContext::metadata("attempt", "3"));
     assert_eq!(ctx.message(), "attempt=3");
 }
+
+pub mod backtrace;
+pub mod impl_error_context;
