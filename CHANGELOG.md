@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## [0.3.1]
+
+### Added
+
+- **Validation**: Added `zip` method to combine two `Validation` instances into a tuple
+
+### Changed
+
+- **ErrorVec**: Reduced inline capacity from 4 to **2** elements to lower maximum stack usage per error from ~1KB to ~500B.
+
 ## [0.3.0]
 
 ### Breaking Changes - 0.3.0

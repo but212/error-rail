@@ -30,9 +30,9 @@ pub use lazy_context::*;
 
 /// SmallVec-backed collection used for accumulating contexts/errors.
 ///
-/// Uses inline storage for up to 4 elements to avoid heap allocations
+/// Uses inline storage for up to 2 elements to avoid heap allocations
 /// in common cases where only a few contexts are attached.
-pub type ErrorVec<E> = SmallVec<[E; 4]>;
+pub type ErrorVec<E> = SmallVec<[E; 2]>;
 
 /// Result alias that wraps failures in [`ComposableError`].
 ///

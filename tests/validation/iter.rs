@@ -206,7 +206,7 @@ fn collecting_into_custom_collection_type() {
     use smallvec::SmallVec;
 
     let inputs = vec![Ok(1), Err("err1"), Ok(2)];
-    let collected: Validation<&str, SmallVec<[i32; 4]>> = inputs.into_iter().collect();
+    let collected: Validation<&str, SmallVec<[i32; 2]>> = inputs.into_iter().collect();
 
     assert!(collected.is_invalid());
     assert_eq!(collected.into_errors().unwrap().len(), 1);
@@ -217,9 +217,9 @@ fn collecting_into_custom_collection_type_success() {
     use smallvec::{smallvec, SmallVec};
 
     let inputs = vec![Ok(1), Ok(2)];
-    let collected: Validation<&str, SmallVec<[i32; 4]>> = inputs.into_iter().collect();
+    let collected: Validation<&str, SmallVec<[i32; 2]>> = inputs.into_iter().collect();
 
     assert!(collected.is_valid());
-    let expected: SmallVec<[i32; 4]> = smallvec![1, 2];
+    let expected: SmallVec<[i32; 2]> = smallvec![1, 2];
     assert_eq!(collected.into_value().unwrap(), expected);
 }
