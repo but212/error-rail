@@ -525,7 +525,7 @@ impl<E: Display> Display for ComposableError<E> {
 
 impl<E> std::error::Error for ComposableError<E>
 where
-    E: std::error::Error + 'static,
+    E: std::error::Error + Send + Sync + 'static,
 {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         Some(self.core_error())
