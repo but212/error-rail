@@ -8,7 +8,7 @@
 
 ### Changed
 
-- **ErrorVec**: Changed inline storage for up to 1 elements to avoid heap allocations
+- **ErrorVec**: Changed inline storage from 4 elements down to 1 element to avoid stack overflow
 
 ## [0.3.0]
 
