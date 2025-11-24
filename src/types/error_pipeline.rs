@@ -126,8 +126,12 @@ impl<T, E> ErrorPipeline<T, E> {
 
     /// Attempts to recover from an error using a fallback function.
     ///
-    /// If the current result is `Err`, calls the recovery function. All pending
-    /// contexts are preserved regardless of recovery success.
+    /// If the current result is `Err`, calls the recovery function. If recovery
+    /// succeeds, all pending contexts are discarded since the error is resolved.
+    /// If recovery fails, pending contexts are preserved.
+    ///
+    /// **Note:** Successful recovery discards all accumulated contexts from the
+    /// error path, as the error has been handled and resolved.
     ///
     /// # Arguments
     ///
@@ -147,16 +151,31 @@ impl<T, E> ErrorPipeline<T, E> {
     where
         F: FnOnce(E) -> Result<T, E>,
     {
-        ErrorPipeline {
-            result: self.result.or_else(recovery),
-            pending_contexts: self.pending_contexts,
+        match self.result {
+            Ok(v) => ErrorPipeline {
+                result: Ok(v),
+                pending_contexts: self.pending_contexts,
+            },
+            Err(e) => match recovery(e) {
+                Ok(v) => ErrorPipeline {
+                    result: Ok(v),
+                    pending_contexts: ErrorVec::new(),
+                },
+                Err(e) => ErrorPipeline {
+                    result: Err(e),
+                    pending_contexts: self.pending_contexts,
+                },
+            },
         }
     }
 
     /// Recovers from an error using a default value.
     ///
     /// If the current result is `Err`, replaces it with `Ok(value)`.
-    /// Pending contexts are discarded on recovery since the error is resolved.
+    /// All pending contexts are discarded on recovery since the error is resolved.
+    ///
+    /// **Note:** This method unconditionally discards all accumulated contexts
+    /// from the error path when recovery occurs.
     ///
     /// # Arguments
     ///
