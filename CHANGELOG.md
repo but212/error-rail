@@ -5,19 +5,27 @@
 ### Breaking Changes - 0.3.0
 
 - **Removed generic `C` parameter from `ComposableError`**: The error code type is now fixed to `u32` instead of being generic.
+
   - Changed: `ComposableError<E, C>` → `ComposableError<E>`
   - Type aliases updated: `ComposableResult`, `SimpleComposableError`, `TaggedComposableError`, etc.
   - **Migration**: Users relying on custom error code types (e.g., `&str`, enums) should migrate to using `ErrorContext::tag` or `ErrorContext::metadata`.
 
 - **ErrorPipeline method renaming**:
+
   - `finish()` → `finish_boxed()` (returns `BoxedComposableResult`)
   - `finish_without_box()` → `finish()` (returns `ComposableResult`)
   - The `rail!` macro now uses `finish_boxed()` internally
   - **Migration**: Replace `.finish()` with `.finish_boxed()` for boxed results, or `.finish_without_box()` with `.finish()` for unboxed results.
 
+- **`ErrorContext` now uses `Cow<'static, str>`**:
+  - Changed `String` fields to `Cow<'static, str>` in `ErrorContext`, `GroupContext`, and `Location` to reduce allocations.
+  - `ErrorContext::new`, `tag`, `metadata`, `location` now accept `Into<Cow<'static, str>>`.
+  - **Migration**: Most code using string literals (`&'static str`) or `String` will continue to work. Code that previously passed non-static string slices (`&str`) will need to be updated to explicitly create an owned `String` (e.g., using `.to_owned()`) before passing it to context-creating functions. Custom construction of `ErrorContext` variants will need to wrap strings in `Cow::Borrowed` or `Cow::Owned`.
+
 ### Added - 0.3.0
 
 - **ErrorContextBuilder**: New fluent builder API for creating complex error contexts
+
   - `ErrorContext::builder()` - Creates a new builder
   - `ErrorContext::group(message)` - Starts a builder with a message
   - Builder methods: `.message()`, `.tag()`, `.metadata()`, `.location()`, `.build()`
@@ -39,11 +47,18 @@
 ### Changed - 0.3.0
 
 - **Performance optimization**: `GroupContext` now uses `SmallVec` instead of `Vec` for `tags` and `metadata` fields
+
   - Reduces heap allocations for common cases with 1-2 tags or metadata entries
   - Inline storage for up to 2 elements per collection
   - **Benchmark results**: Up to 50% performance improvement in context operations
 
+- **Zero-allocation for static strings**:
+
+  - `ErrorContext` now avoids heap allocation when created from static string slices (e.g., string literals, `file!()` macro).
+  - `IntoErrorContext` implemented for `&'static str` and `Cow<'static, str>`.
+
 - **Safer error/validation combinators**:
+
   - Marked core types and combinators with `#[must_use]` (e.g. `Validation`,
     `ComposableError`, `ErrorPipeline` and their builder-style methods) so ignored
     results surface as compile-time warnings.

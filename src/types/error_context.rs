@@ -27,6 +27,7 @@
 //! ```
 use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
+use std::borrow::Cow;
 use std::fmt::Display;
 
 /// Structured metadata attached to a [`ComposableError`](crate::types::ComposableError).
@@ -37,7 +38,7 @@ use std::fmt::Display;
 ///
 /// # Variants
 ///
-/// - `Simple(String)`: A plain text message describing the error context.
+/// - `Simple(Cow<'static, str>)`: A plain text message describing the error context.
 /// - `Group(GroupContext)`: A rich context containing multiple pieces of information.
 ///
 /// # Examples
@@ -52,7 +53,7 @@ use std::fmt::Display;
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ErrorContext {
-    Simple(String),
+    Simple(Cow<'static, str>),
     Group(GroupContext),
 }
 
@@ -60,20 +61,20 @@ pub enum ErrorContext {
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 pub struct GroupContext {
     /// Optional message describing this context
-    pub message: Option<String>,
+    pub message: Option<Cow<'static, str>>,
     /// Optional source location where the error occurred
     pub location: Option<Location>,
     /// Tags for categorizing and filtering errors
-    pub tags: SmallVec<[String; 2]>,
+    pub tags: SmallVec<[Cow<'static, str>; 2]>,
     /// Arbitrary key-value metadata pairs
-    pub metadata: SmallVec<[(String, String); 2]>,
+    pub metadata: SmallVec<[(Cow<'static, str>, Cow<'static, str>); 2]>,
 }
 
 /// Source file and line number where the error occurred.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Location {
     /// Source file path
-    pub file: String,
+    pub file: Cow<'static, str>,
     /// Line number in the source file
     pub line: u32,
 }
@@ -85,7 +86,7 @@ impl ErrorContext {
     ///
     /// # Arguments
     ///
-    /// * `message` - Any type that can be converted into a `String`.
+    /// * `message` - Any type that can be converted into a `Cow<'static, str>`.
     ///
     /// # Examples
     /// ```
@@ -95,7 +96,7 @@ impl ErrorContext {
     /// assert_eq!(ctx.message(), "fetching profile");
     /// ```
     #[inline]
-    pub fn new<S: Into<String>>(message: S) -> Self {
+    pub fn new<S: Into<Cow<'static, str>>>(message: S) -> Self {
         Self::Simple(message.into())
     }
 
@@ -116,10 +117,10 @@ impl ErrorContext {
     /// let ctx = ErrorContext::location(file!(), line!());
     /// ```
     #[inline]
-    pub fn location(file: &str, line: u32) -> Self {
+    pub fn location<S: Into<Cow<'static, str>>>(file: S, line: u32) -> Self {
         Self::Group(GroupContext {
             location: Some(Location {
-                file: file.to_string(),
+                file: file.into(),
                 line,
             }),
             ..Default::default()
@@ -132,7 +133,7 @@ impl ErrorContext {
     ///
     /// # Arguments
     ///
-    /// * `tag` - Any type that can be converted into a `String`.
+    /// * `tag` - Any type that can be converted into a `Cow<'static, str>`.
     ///
     /// # Examples
     /// ```
@@ -142,7 +143,7 @@ impl ErrorContext {
     /// assert_eq!(ctx.message(), "[network]");
     /// ```
     #[inline]
-    pub fn tag<S: Into<String>>(tag: S) -> Self {
+    pub fn tag<S: Into<Cow<'static, str>>>(tag: S) -> Self {
         Self::Group(GroupContext {
             tags: smallvec::smallvec![tag.into()],
             ..Default::default()
@@ -163,11 +164,11 @@ impl ErrorContext {
     /// ```
     /// use error_rail::ErrorContext;
     ///
-    /// let ctx = ErrorContext::metadata("user_id", 42.to_string());
+    /// let ctx = ErrorContext::metadata("user_id", "42");
     /// assert_eq!(ctx.message(), "user_id=42");
     /// ```
     #[inline]
-    pub fn metadata<K: Into<String>, V: Into<String>>(key: K, value: V) -> Self {
+    pub fn metadata<K: Into<Cow<'static, str>>, V: Into<Cow<'static, str>>>(key: K, value: V) -> Self {
         Self::Group(GroupContext {
             metadata: smallvec::smallvec![(key.into(), value.into())],
             ..Default::default()
@@ -188,21 +189,21 @@ impl ErrorContext {
     /// assert_eq!(ctx.message(), "at main.rs:10");
     /// ```
     #[inline]
-    pub fn message(&self) -> std::borrow::Cow<'_, str> {
+    pub fn message(&self) -> Cow<'_, str> {
         match self {
-            Self::Simple(s) => std::borrow::Cow::Borrowed(s.as_str()),
+            Self::Simple(s) => Cow::Borrowed(s.as_ref()),
             Self::Group(g) => {
                 if let Some(msg) = &g.message {
-                    return std::borrow::Cow::Borrowed(msg.as_str());
+                    return Cow::Borrowed(msg.as_ref());
                 }
                 if let Some(loc) = &g.location {
-                    return std::borrow::Cow::Owned(format!("at {}:{}", loc.file, loc.line));
+                    return Cow::Owned(format!("at {}:{}", loc.file, loc.line));
                 }
                 if !g.tags.is_empty() {
                     // Join tags with comma if multiple? Or just show first?
                     // Previous behavior was single tag -> "[tag]".
                     // Let's format as "[tag1, tag2]"
-                    return std::borrow::Cow::Owned(format!("[{}]", g.tags.join(", ")));
+                    return Cow::Owned(format!("[{}]", g.tags.join(", ")));
                 }
                 if !g.metadata.is_empty() {
                     // Previous behavior was single key-value -> "key=value".
@@ -213,9 +214,9 @@ impl ErrorContext {
                         .map(|(k, v)| format!("{}={}", k, v))
                         .collect::<Vec<_>>()
                         .join(", ");
-                    return std::borrow::Cow::Owned(meta_str);
+                    return Cow::Owned(meta_str);
                 }
-                std::borrow::Cow::Borrowed("")
+                Cow::Borrowed("")
             }
         }
     }
@@ -267,7 +268,7 @@ impl ErrorContextBuilder {
     ///
     /// # Arguments
     ///
-    /// * `msg` - Any type that can be converted into a `String`.
+    /// * `msg` - Any type that can be converted into a `Cow<'static, str>`.
     ///
     /// # Examples
     ///
@@ -278,7 +279,7 @@ impl ErrorContextBuilder {
     ///     .message("database query failed")
     ///     .build();
     /// ```
-    pub fn message<S: Into<String>>(mut self, msg: S) -> Self {
+    pub fn message<S: Into<Cow<'static, str>>>(mut self, msg: S) -> Self {
         self.context.message = Some(msg.into());
         self
     }
@@ -302,7 +303,7 @@ impl ErrorContextBuilder {
     ///     .location(file!(), line!())
     ///     .build();
     /// ```
-    pub fn location<S: Into<String>>(mut self, file: S, line: u32) -> Self {
+    pub fn location<S: Into<Cow<'static, str>>>(mut self, file: S, line: u32) -> Self {
         self.context.location = Some(Location {
             file: file.into(),
             line,
@@ -317,7 +318,7 @@ impl ErrorContextBuilder {
     ///
     /// # Arguments
     ///
-    /// * `tag` - Any type that can be converted into a `String`.
+    /// * `tag` - Any type that can be converted into a `Cow<'static, str>`.
     ///
     /// # Examples
     ///
@@ -329,7 +330,7 @@ impl ErrorContextBuilder {
     ///     .tag("timeout")
     ///     .build();
     /// ```
-    pub fn tag<S: Into<String>>(mut self, tag: S) -> Self {
+    pub fn tag<S: Into<Cow<'static, str>>>(mut self, tag: S) -> Self {
         self.context.tags.push(tag.into());
         self
     }
@@ -355,7 +356,7 @@ impl ErrorContextBuilder {
     ///     .metadata("request_id", "abc-def")
     ///     .build();
     /// ```
-    pub fn metadata<K: Into<String>, V: Into<String>>(mut self, key: K, value: V) -> Self {
+    pub fn metadata<K: Into<Cow<'static, str>>, V: Into<Cow<'static, str>>>(mut self, key: K, value: V) -> Self {
         self.context.metadata.push((key.into(), value.into()));
         self
     }
@@ -409,7 +410,7 @@ impl ErrorContext {
     ///
     /// # Arguments
     ///
-    /// * `message` - Any type that can be converted into a `String`.
+    /// * `message` - Any type that can be converted into a `Cow<'static, str>`.
     ///
     /// # Examples
     ///
@@ -421,7 +422,7 @@ impl ErrorContext {
     ///     .metadata("table", "users")
     ///     .build();
     /// ```
-    pub fn group<S: Into<String>>(message: S) -> ErrorContextBuilder {
+    pub fn group<S: Into<Cow<'static, str>>>(message: S) -> ErrorContextBuilder {
         ErrorContextBuilder::new().message(message)
     }
 }
