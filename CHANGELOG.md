@@ -6,6 +6,10 @@
 
 - **Validation**: Added `zip` method to combine two `Validation` instances into a tuple
 
+### Fixed
+
+- `ErrorPipeline::recover` now correctly discards all pending contexts on successful recovery (fixes a longstanding inconsistency between docs and behavior)
+
 ### Changed
 
 - **ErrorVec**: Reduced inline capacity from 4 to **2** elements to lower maximum stack usage per error from ~1KB to ~500B.
