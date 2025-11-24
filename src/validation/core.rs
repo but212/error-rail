@@ -266,11 +266,12 @@ impl<E, A> Validation<E, A> {
     pub fn zip<B>(self, other: Validation<E, B>) -> Validation<E, (A, B)> {
         match (self, other) {
             (Validation::Valid(a), Validation::Valid(b)) => Validation::Valid((a, b)),
+            (Validation::Invalid(e), Validation::Valid(_)) => Validation::Invalid(e),
+            (Validation::Valid(_), Validation::Invalid(e)) => Validation::Invalid(e),
             (Validation::Invalid(mut e1), Validation::Invalid(e2)) => {
                 e1.extend(e2);
                 Validation::Invalid(e1)
             }
-            (Validation::Invalid(e), _) | (_, Validation::Invalid(e)) => Validation::Invalid(e),
         }
     }
 

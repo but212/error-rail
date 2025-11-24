@@ -30,20 +30,25 @@ fn test_validation_or_else_invalid() {
 }
 
 #[test]
-fn test_validation_zip_valid() {
-    let v1: Validation<&str, i32> = Validation::valid(42);
+fn test_validation_zip_first_invalid() {
+    let v1: Validation<&str, i32> = Validation::invalid("error1");
     let v2: Validation<&str, String> = Validation::valid("hello".to_string());
     let result = v1.zip(v2);
-    assert_eq!(result.into_value(), Some((42, "hello".to_string())));
+    assert!(result.is_invalid());
+    let errors = result.into_errors().unwrap();
+    assert_eq!(errors.len(), 1);
+    assert_eq!(errors[0], "error1");
 }
 
 #[test]
-fn test_validation_zip_invalid() {
-    let v1: Validation<&str, i32> = Validation::invalid("error1");
-    let v2: Validation<&str, i32> = Validation::invalid("error2");
+fn test_validation_zip_second_invalid() {
+    let v1: Validation<&str, i32> = Validation::valid(42);
+    let v2: Validation<&str, String> = Validation::invalid("error2");
     let result = v1.zip(v2);
     assert!(result.is_invalid());
-    assert_eq!(result.into_errors().unwrap().len(), 2);
+    let errors = result.into_errors().unwrap();
+    assert_eq!(errors.len(), 1);
+    assert_eq!(errors[0], "error2");
 }
 
 #[test]
