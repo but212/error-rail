@@ -20,7 +20,7 @@
 - **`ErrorContext` now uses `Cow<'static, str>`**:
   - Changed `String` fields to `Cow<'static, str>` in `ErrorContext`, `GroupContext`, and `Location` to reduce allocations.
   - `ErrorContext::new`, `tag`, `metadata`, `location` now accept `Into<Cow<'static, str>>`.
-  - **Migration**: Most code using string literals or `String` will continue to work due to `Into` implementations. Custom construction of `ErrorContext` variants will need to wrap strings in `Cow::Borrowed` or `Cow::Owned`.
+  - **Migration**: Most code using string literals (`&'static str`) or `String` will continue to work. Code that previously passed non-static string slices (`&str`) will need to be updated to explicitly create an owned `String` (e.g., using `.to_owned()`) before passing it to context-creating functions. Custom construction of `ErrorContext` variants will need to wrap strings in `Cow::Borrowed` or `Cow::Owned`.
 
 ### Added - 0.3.0
 
