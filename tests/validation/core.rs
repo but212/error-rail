@@ -30,6 +30,23 @@ fn test_validation_or_else_invalid() {
 }
 
 #[test]
+fn test_validation_zip_valid() {
+    let v1: Validation<&str, i32> = Validation::valid(42);
+    let v2: Validation<&str, String> = Validation::valid("hello".to_string());
+    let result = v1.zip(v2);
+    assert_eq!(result.into_value(), Some((42, "hello".to_string())));
+}
+
+#[test]
+fn test_validation_zip_invalid() {
+    let v1: Validation<&str, i32> = Validation::invalid("error1");
+    let v2: Validation<&str, i32> = Validation::invalid("error2");
+    let result = v1.zip(v2);
+    assert!(result.is_invalid());
+    assert_eq!(result.into_errors().unwrap().len(), 2);
+}
+
+#[test]
 fn test_validation_map_err_valid() {
     let v: Validation<&str, i32> = Validation::valid(42);
     let mapped = v.map_err(|e| format!("Error: {}", e));

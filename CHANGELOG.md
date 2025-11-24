@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## [0.3.1]
+
+### Added
+
+- **Validation**: Added `zip` method to combine two `Validation` instances into a tuple
+
+### Changed
+
+- **ErrorVec**: Changed inline storage for up to 1 elements to avoid heap allocations
+
 ## [0.3.0]
 
 ### Breaking Changes - 0.3.0

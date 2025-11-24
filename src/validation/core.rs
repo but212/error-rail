@@ -237,6 +237,43 @@ impl<E, A> Validation<E, A> {
         }
     }
 
+    /// Combines two validations into a tuple, accumulating all errors.
+    ///
+    /// If both validations are valid, returns a tuple of both values.
+    /// If either or both are invalid, accumulates all errors from both.
+    ///
+    /// # Arguments
+    ///
+    /// * `other` - Another validation to combine with this one
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use error_rail::validation::Validation;
+    ///
+    /// let v1 = Validation::<&str, i32>::valid(42);
+    /// let v2 = Validation::<&str, i32>::valid(21);
+    /// let result = v1.zip(v2);
+    /// assert_eq!(result.into_value(), Some((42, 21)));
+    ///
+    /// let v3 = Validation::<&str, i32>::invalid("error1");
+    /// let v4 = Validation::<&str, i32>::invalid("error2");
+    /// let result = v3.zip(v4);
+    /// assert_eq!(result.into_errors().unwrap().len(), 2);
+    /// ```
+    #[must_use]
+    #[inline]
+    pub fn zip<B>(self, other: Validation<E, B>) -> Validation<E, (A, B)> {
+        match (self, other) {
+            (Validation::Valid(a), Validation::Valid(b)) => Validation::Valid((a, b)),
+            (Validation::Invalid(mut e1), Validation::Invalid(e2)) => {
+                e1.extend(e2);
+                Validation::Invalid(e1)
+            }
+            (Validation::Invalid(e), _) | (_, Validation::Invalid(e)) => Validation::Invalid(e),
+        }
+    }
+
     /// Maps each error while preserving the success branch.
     ///
     /// Transforms all accumulated errors using the provided function,
