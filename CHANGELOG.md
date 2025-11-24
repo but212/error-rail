@@ -8,7 +8,7 @@
 
 ### Fixed
 
-- `ErrorPipeline::recover` now correctly discard all pending contexts on successful recovery (fixes a longstanding inconsistency between docs and behavior)
+- `ErrorPipeline::recover` now correctly discards all pending contexts on successful recovery (fixes a longstanding inconsistency between docs and behavior)
 
 ### Changed
 
