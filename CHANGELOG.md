@@ -8,7 +8,7 @@
 
 ### Changed
 
-- **ErrorVec**: Changed inline storage from 4 elements down to 2 elements to avoid stack overflow
+- **ErrorVec**: Reduced inline capacity from 4 to **2** elements to lower maximum stack usage per error from ~1KB to ~500B.
 
 ## [0.3.0]
 
