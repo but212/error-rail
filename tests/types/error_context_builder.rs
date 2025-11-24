@@ -12,10 +12,10 @@ fn builder_creates_group_context() {
 
     if let ErrorContext::Group(g) = ctx {
         assert_eq!(g.message, Some("connection failed".into()));
-        assert!(g.tags.contains(&"network".to_string()));
+        assert!(g.tags.contains(&"network".into()));
         assert!(g
             .metadata
-            .contains(&("host".to_string(), "localhost".to_string())));
+            .contains(&("host".into(), "localhost".into())));
     } else {
         panic!("Expected Group context");
     }
@@ -32,12 +32,12 @@ fn builder_accumulates_multiple_tags_and_metadata() {
 
     if let ErrorContext::Group(g) = ctx {
         assert_eq!(g.tags.len(), 2);
-        assert!(g.tags.contains(&"t1".to_string()));
-        assert!(g.tags.contains(&"t2".to_string()));
+        assert!(g.tags.contains(&"t1".into()));
+        assert!(g.tags.contains(&"t2".into()));
 
         assert_eq!(g.metadata.len(), 2);
-        assert!(g.metadata.contains(&("k1".to_string(), "v1".to_string())));
-        assert!(g.metadata.contains(&("k2".to_string(), "v2".to_string())));
+        assert!(g.metadata.contains(&("k1".into(), "v1".into())));
+        assert!(g.metadata.contains(&("k2".into(), "v2".into())));
     } else {
         panic!("Expected Group context");
     }
@@ -51,7 +51,7 @@ fn group_factory_method_starts_builder() {
 
     assert_eq!(ctx.message(), "error occurred");
     if let ErrorContext::Group(g) = ctx {
-        assert!(g.tags.contains(&"important".to_string()));
+        assert!(g.tags.contains(&"important".into()));
     } else {
         panic!("Expected Group context");
     }

@@ -23,7 +23,7 @@ fn test_error_context_message_variants() {
 fn test_error_context_group_message_and_empty_group() {
     // GroupContext with explicit message should prefer the group message
     let ctx_group_msg = ErrorContext::Group(GroupContext {
-        message: Some("group-msg".to_string()),
+        message: Some("group-msg".into()),
         ..Default::default()
     });
     assert_eq!(ctx_group_msg.message(), "group-msg");

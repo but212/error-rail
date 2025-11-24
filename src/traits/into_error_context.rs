@@ -20,6 +20,7 @@
 //! let ctx3 = ErrorContext::tag("network").into_error_context();
 //! ```
 use crate::types::error_context::ErrorContext;
+use std::borrow::Cow;
 
 /// Converts a type into an [`ErrorContext`] for error annotation.
 ///
@@ -38,8 +39,16 @@ impl IntoErrorContext for String {
     }
 }
 
-impl IntoErrorContext for &str {
-    /// Converts a string slice into a message context.
+impl IntoErrorContext for &'static str {
+    /// Converts a static string slice into a message context.
+    #[inline]
+    fn into_error_context(self) -> ErrorContext {
+        ErrorContext::new(self)
+    }
+}
+
+impl IntoErrorContext for Cow<'static, str> {
+    /// Converts a Cow string into a message context.
     #[inline]
     fn into_error_context(self) -> ErrorContext {
         ErrorContext::new(self)
