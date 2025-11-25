@@ -53,8 +53,8 @@ use serde::{Deserialize, Serialize};
 ///
 /// # Interoperability
 ///
-/// When the wrapped error implements [`std::error::Error`], the composable error
-/// exposes it through [`std::error::Error::source`], preserving compatibility with
+/// When the wrapped error implements [`core::error::Error`], the composable error
+/// exposes it through [`core::error::Error::source`], preserving compatibility with
 /// libraries that inspect chained errors.
 ///
 /// ```
@@ -523,11 +523,11 @@ impl<E: Display> Display for ComposableError<E> {
     }
 }
 
-impl<E> std::error::Error for ComposableError<E>
+impl<E> core::error::Error for ComposableError<E>
 where
-    E: std::error::Error + 'static,
+    E: core::error::Error + 'static,
 {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+    fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
         Some(self.core_error())
     }
 }
