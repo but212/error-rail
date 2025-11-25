@@ -1,16 +1,22 @@
 # CHANGELOG
 
+## [unreleased]
+
+### Changed
+
+- `std::error::Error` -> `core::error::Error`
+
 ## [0.3.1]
 
-### Added
+### Added - 0.3.1
 
 - **Validation**: Added `zip` method to combine two `Validation` instances into a tuple
 
-### Fixed
+### Fixed - 0.3.1
 
 - `ErrorPipeline::recover` now correctly discards all pending contexts on successful recovery (fixes a longstanding inconsistency between docs and behavior)
 
-### Changed
+### Changed - 0.3.1
 
 - **ErrorVec**: Reduced inline capacity from 4 to **2** elements to lower maximum stack usage per error from ~1KB to ~500B.
 
