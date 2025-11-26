@@ -25,10 +25,10 @@
 //! let tag = ErrorContext::tag("db");
 //! let meta = ErrorContext::metadata("retry_count", "3");
 //! ```
+use core::fmt::Display;
 use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
 use std::borrow::Cow;
-use std::fmt::Display;
 
 /// Structured metadata attached to a [`ComposableError`](crate::types::ComposableError).
 ///
@@ -168,7 +168,10 @@ impl ErrorContext {
     /// assert_eq!(ctx.message(), "user_id=42");
     /// ```
     #[inline]
-    pub fn metadata<K: Into<Cow<'static, str>>, V: Into<Cow<'static, str>>>(key: K, value: V) -> Self {
+    pub fn metadata<K: Into<Cow<'static, str>>, V: Into<Cow<'static, str>>>(
+        key: K,
+        value: V,
+    ) -> Self {
         Self::Group(GroupContext {
             metadata: smallvec::smallvec![(key.into(), value.into())],
             ..Default::default()
@@ -223,7 +226,7 @@ impl ErrorContext {
 }
 
 impl Display for ErrorContext {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.message())
     }
 }
@@ -356,7 +359,11 @@ impl ErrorContextBuilder {
     ///     .metadata("request_id", "abc-def")
     ///     .build();
     /// ```
-    pub fn metadata<K: Into<Cow<'static, str>>, V: Into<Cow<'static, str>>>(mut self, key: K, value: V) -> Self {
+    pub fn metadata<K: Into<Cow<'static, str>>, V: Into<Cow<'static, str>>>(
+        mut self,
+        key: K,
+        value: V,
+    ) -> Self {
         self.context.metadata.push((key.into(), value.into()));
         self
     }

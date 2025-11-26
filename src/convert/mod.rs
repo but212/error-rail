@@ -20,9 +20,10 @@
 //! let composable = wrap_in_composable_result(result);
 //! ```
 
-use crate::types::composable_error::ComposableError;
 use crate::types::BoxedComposableResult;
 use crate::validation::core::Validation;
+use crate::{types::composable_error::ComposableError, ErrorVec};
+use core::iter::FusedIterator;
 
 /// Converts a `Validation` to a `Result`, taking the first error if invalid.
 ///
@@ -256,13 +257,43 @@ pub fn collect_errors<E, I>(errors: I) -> Validation<E, ()>
 where
     I: IntoIterator<Item = E>,
 {
-    let error_vec: Vec<E> = errors.into_iter().collect();
+    let error_vec: ErrorVec<E> = errors.into_iter().collect();
     if error_vec.is_empty() {
         Validation::Valid(())
     } else {
         Validation::invalid_many(error_vec)
     }
 }
+
+/// Iterator returned by [`split_validation_errors`].
+pub enum SplitValidationIter<T, E> {
+    Valid(Option<T>),
+    Invalid(<ErrorVec<E> as IntoIterator>::IntoIter),
+}
+
+impl<T, E> Iterator for SplitValidationIter<T, E> {
+    type Item = Result<T, E>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self {
+            Self::Valid(opt) => opt.take().map(Ok),
+            Self::Invalid(iter) => iter.next().map(Err),
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        match self {
+            Self::Valid(opt) => {
+                let len = if opt.is_some() { 1 } else { 0 };
+                (len, Some(len))
+            }
+            Self::Invalid(iter) => iter.size_hint(),
+        }
+    }
+}
+
+impl<T, E> ExactSizeIterator for SplitValidationIter<T, E> {}
+impl<T, E> FusedIterator for SplitValidationIter<T, E> {}
 
 /// Splits a `Validation` into individual `Result` values.
 ///
@@ -272,8 +303,9 @@ where
 ///
 /// # Returns
 ///
-/// * `vec![Ok(value)]` if validation is valid
-/// * A vector of `Err(e)` for each error if invalid
+/// An iterator that yields:
+/// * `Ok(value)` if validation is valid
+/// * `Err(e)` for each error if validation is invalid
 ///
 /// # Examples
 ///
@@ -282,16 +314,16 @@ where
 /// use error_rail::validation::Validation;
 ///
 /// let valid = Validation::<&str, i32>::Valid(42);
-/// let results = split_validation_errors(valid);
+/// let results: Vec<_> = split_validation_errors(valid).collect();
 /// assert_eq!(results, vec![Ok(42)]);
 ///
 /// let invalid = Validation::<&str, i32>::invalid_many(vec!["err1", "err2"]);
-/// let results = split_validation_errors(invalid);
+/// let results: Vec<_> = split_validation_errors(invalid).collect();
 /// assert_eq!(results, vec![Err("err1"), Err("err2")]);
 /// ```
-pub fn split_validation_errors<T, E>(validation: Validation<E, T>) -> Vec<Result<T, E>> {
+pub fn split_validation_errors<T, E>(validation: Validation<E, T>) -> SplitValidationIter<T, E> {
     match validation {
-        Validation::Valid(value) => vec![Ok(value)],
-        Validation::Invalid(errors) => errors.into_iter().map(|e| Err(e)).collect(),
+        Validation::Valid(value) => SplitValidationIter::Valid(Some(value)),
+        Validation::Invalid(errors) => SplitValidationIter::Invalid(errors.into_iter()),
     }
 }

@@ -2,8 +2,16 @@
 
 ## [unreleased]
 
+### Breaking Changes
+
+- `extract_context` and `ComposableError::context()` now return `ErrorVec<ErrorContext>` instead of `Vec<ErrorContext>`.
+- `split_validation_errors` now returns `SplitValidationIter` (a lazy iterator) instead of `Vec<Result<T, E>>`. This allows for zero-allocation iteration over validation results.
+
 ### Changed
 
+- Replaced `std` usage with `core` across `context`, `convert`, `types`, and `validation` modules.
+- `collect_errors` and `Validation::from_iter` now use `ErrorVec` / `SmallVec` internally to reduce heap allocations.
+- `split_validation_errors` is now lazy, avoiding immediate vector allocation.
 - `std::error::Error` -> `core::error::Error`
 
 ## [0.3.1]

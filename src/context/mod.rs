@@ -11,10 +11,11 @@
 //! See the crate-level docs for a high-level overview of when to prefer these
 //! utilities over bare `Result` transformations.
 
-use crate::traits::IntoErrorContext;
 use crate::types::composable_error::ComposableError;
-use crate::types::{BoxedComposableResult, ErrorContext, ErrorPipeline};
-use std::fmt::Display;
+use crate::types::BoxedComposableResult;
+use crate::types::{ErrorContext, ErrorPipeline};
+use crate::{traits::IntoErrorContext, ErrorVec};
+use core::fmt::Display;
 
 /// Wraps an error with a single context entry.
 ///
@@ -141,7 +142,7 @@ where
     I: IntoIterator<Item = C>,
     C: IntoErrorContext,
 {
-    let context_vec: Vec<ErrorContext> = contexts
+    let context_vec: ErrorVec<ErrorContext> = contexts
         .into_iter()
         .map(|c| c.into_error_context())
         .collect();
@@ -218,6 +219,6 @@ where
 /// let contexts = extract_context(&err);
 /// assert_eq!(contexts.len(), 1);
 /// ```
-pub fn extract_context<E>(error: &ComposableError<E>) -> Vec<ErrorContext> {
+pub fn extract_context<E>(error: &ComposableError<E>) -> ErrorVec<ErrorContext> {
     error.context()
 }

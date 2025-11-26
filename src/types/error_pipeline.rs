@@ -1,7 +1,5 @@
-use crate::{
-    BoxedComposableResult, ComposableError, ComposableResult, ErrorContext, ErrorVec,
-    IntoErrorContext,
-};
+use crate::BoxedComposableResult;
+use crate::{ComposableError, ComposableResult, ErrorContext, ErrorVec, IntoErrorContext};
 
 /// A builder for composing error transformations with accumulated context.
 ///

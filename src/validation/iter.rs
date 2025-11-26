@@ -1,6 +1,6 @@
 use crate::{validation::core::Validation, ErrorVec};
-use std::iter::FusedIterator;
-use std::slice::{Iter as SliceIter, IterMut as SliceIterMut};
+use core::iter::FusedIterator;
+use core::slice::{Iter as SliceIter, IterMut as SliceIterMut};
 
 /// Iterator over the valid value of a [`Validation`].
 ///
@@ -421,7 +421,7 @@ where
     C: FromIterator<A>,
 {
     fn from_iter<T: IntoIterator<Item = Result<A, E>>>(iter: T) -> Self {
-        let mut values = Vec::new();
+        let mut values: smallvec::SmallVec<[A; 2]> = smallvec::SmallVec::new();
         let mut errors = ErrorVec::new();
 
         for item in iter {
@@ -462,7 +462,7 @@ where
     C: FromIterator<A>,
 {
     fn from_iter<T: IntoIterator<Item = Validation<E, A>>>(iter: T) -> Self {
-        let mut values = Vec::new();
+        let mut values: smallvec::SmallVec<[A; 2]> = smallvec::SmallVec::new();
         let mut errors = ErrorVec::new();
 
         for item in iter {

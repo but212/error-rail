@@ -18,7 +18,7 @@
 //! println!("{}", err.error_chain());
 //! // Output: [db] -> main.rs:42 -> database connection failed (code: 500)
 //! ```
-use std::fmt::{Debug, Display};
+use core::fmt::{Debug, Display};
 
 use crate::traits::IntoErrorContext;
 use crate::types::{ErrorContext, ErrorVec};
@@ -228,7 +228,7 @@ impl<E> ComposableError<E> {
     /// assert_eq!(contexts[1].message(), "first");
     /// ```
     #[inline]
-    pub fn context(&self) -> Vec<ErrorContext> {
+    pub fn context(&self) -> ErrorVec<ErrorContext> {
         self.context.iter().rev().cloned().collect()
     }
 
@@ -250,7 +250,7 @@ impl<E> ComposableError<E> {
     /// assert_eq!(iter.next().unwrap().message(), "ctx1");
     /// ```
     #[inline]
-    pub fn context_iter(&self) -> std::iter::Rev<std::slice::Iter<'_, ErrorContext>> {
+    pub fn context_iter(&self) -> core::iter::Rev<core::slice::Iter<'_, ErrorContext>> {
         self.context.iter().rev()
     }
 
@@ -446,12 +446,12 @@ impl<'a, E> Display for ErrorFormatter<'a, E>
 where
     E: Display,
 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let contexts = &self.error.context;
         let mut first = true;
 
         // Helper to write separator
-        let mut write_sep = |f: &mut std::fmt::Formatter<'_>| -> std::fmt::Result {
+        let mut write_sep = |f: &mut core::fmt::Formatter<'_>| -> core::fmt::Result {
             if !first {
                 write!(f, "{}", self.separator)?;
             }
@@ -490,7 +490,7 @@ where
 }
 
 impl<E: Display> Display for ComposableError<E> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         if f.alternate() {
             // Multi-line format
             // Error: core error (code: 500)
