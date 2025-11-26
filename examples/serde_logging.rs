@@ -18,7 +18,7 @@ impl std::fmt::Display for MyError {
     }
 }
 
-impl std::error::Error for MyError {}
+impl core::error::Error for MyError {}
 
 fn main() {
     // 1. Create a base error

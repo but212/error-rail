@@ -1,5 +1,5 @@
 use error_rail::ComposableError;
-use std::error::Error;
+use core::error::Error;
 
 fn main() {
     let err = ComposableError::new("core error")
@@ -10,7 +10,7 @@ fn main() {
     println!("Display: {}", err);
     println!("Alternate Display:\n{:#}", err);
 
-    // Check if it implements std::error::Error
+    // Check if it implements core::error::Error
     // Note: String/&str errors won't implement Error due to coherence rules,
     // but wrapping a real error (like io::Error) should work.
     let io_err = ComposableError::<std::io::Error>::new(std::io::Error::new(
@@ -21,6 +21,6 @@ fn main() {
 }
 
 fn print_error<E: Error>(e: &E) {
-    println!("Is std::error::Error: yes");
+    println!("Is core::error::Error: yes");
     println!("Source: {:?}", e.source());
 }

@@ -228,7 +228,7 @@ impl Display for ErrorContext {
     }
 }
 
-impl std::error::Error for ErrorContext {}
+impl core::error::Error for ErrorContext {}
 
 /// Builder for creating complex [`ErrorContext::Group`] entries.
 ///
