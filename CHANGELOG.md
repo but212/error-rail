@@ -2,24 +2,9 @@
 
 ## [Unreleased]
 
-### Added - Unreleased
+### Breaking Changes - Unreleased
 
-- **`ResultExt` trait**: New ergonomic extension trait for adding context to `Result` types
-  - `.ctx(msg)` - Add static context message
-  - `.ctx_with(|| format!(...))` - Add lazily-evaluated context (2.1x faster on success)
-- **`BoxedResultExt` trait**: Chain contexts on already-boxed `ComposableError` results
-  - `.ctx_boxed(msg)` - Add context to boxed error
-  - `.ctx_boxed_with(|| ...)` - Add lazy context to boxed error
-- **`prelude` module**: Convenient re-exports for quick starts
-  - Import everything with `use error_rail::prelude::*;`
-  - Includes `BoxedResult<T, E>` type alias for ergonomic return types
-
-### Changed - Unreleased
-
-- **Deprecated redundant type aliases**: `SimpleComposableError<E>` and `TaggedComposableError<E>` now marked as deprecated with clear migration guidance
-- **Enhanced error messages**: Added `#[diagnostic::on_unimplemented]` to `IntoErrorContext` trait for better compiler guidance when trait bounds are not satisfied
-- **Improved DX**: Added helpful implementation examples and links to documentation in trait documentation
-- **Breaking: `GroupContext::message()` now combines all available fields**:
+- **`GroupContext::message()` now combines all available fields**:
   - **Before**: Displayed only the first available field in priority order (message → location → tags → metadata)
   - **After**: Combines all fields into one cohesive unit with format `[tag1, tag2] at file:line: message (key1=value1, key2=value2)`
   - **Rationale**: Improves readability by presenting each context as a unified information unit rather than fragmented parts separated by "->" arrows
@@ -42,6 +27,23 @@
     // Output: -> [database] at main.rs:42 (host=localhost)
     ```
 
+### Added - Unreleased
+
+- **`ResultExt` trait**: New ergonomic extension trait for adding context to `Result` types
+  - `.ctx(msg)` - Add static context message
+  - `.ctx_with(|| format!(...))` - Add lazily-evaluated context (2.1x faster on success)
+- **`BoxedResultExt` trait**: Chain contexts on already-boxed `ComposableError` results
+  - `.ctx_boxed(msg)` - Add context to boxed error
+  - `.ctx_boxed_with(|| ...)` - Add lazy context to boxed error
+- **`prelude` module**: Convenient re-exports for quick starts
+  - Import everything with `use error_rail::prelude::*;`
+  - Includes `BoxedResult<T, E>` type alias for ergonomic return types
+
+### Changed - Unreleased
+
+- **Deprecated redundant type aliases**: `SimpleComposableError<E>` and `TaggedComposableError<E>` now marked as deprecated with clear migration guidance
+- **Enhanced error messages**: Added `#[diagnostic::on_unimplemented]` to `IntoErrorContext` trait for better compiler guidance when trait bounds are not satisfied
+- **Improved DX**: Added helpful implementation examples and links to documentation in trait documentation
 - **Deprecated individual context macros**: `location!()`, `tag!()`, and `metadata!()` macros are now deprecated in favor of the new `group!` macro
   - **Rationale**: The new `group!` macro provides lazy evaluation for grouped contexts, combining multiple fields into a single cohesive unit while maintaining performance benefits
   - **Migration**: Replace individual macro calls with `group! { ... }` using semicolon-separated fields:
