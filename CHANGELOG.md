@@ -17,9 +17,8 @@
     - Wrap non-thread-safe errors in a thread-safe container (e.g., `Arc<Mutex<_>>`)
   
 - **`ComposableError::context()` method signature changed**:
-  - **Before**: `pub fn context(&self) -> &ErrorVec<ErrorContext>` (returns a reference)
-  - **After**: `pub fn context(&self) -> ErrorVec<ErrorContext>` (returns an owned value in LIFO order)
-  - **Migration**: Code that previously used `error.context()` should continue to work, but may need adjustment if it relied on the borrowed reference. The method now allocates and returns a reversed copy of the context stack.
+  - **Before**: `pub fn context(&self) -> Vec<ErrorContext>`
+  - **After**: `pub fn context(&self) -> ErrorVec<ErrorContext>`
 
 - **`extract_context` now returns owned `ErrorVec`**: Changed from `Vec<ErrorContext>` to `ErrorVec<ErrorContext>` (already noted above, now consistent with `context()` method).
 
