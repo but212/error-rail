@@ -2,17 +2,41 @@
 
 This document summarizes performance benchmarks for `error-rail` using realistic production scenarios.
 
+> **Last Updated**: 2025-11-27
+> **Rust Version**: 1.90.0
+> **Platform**: Windows 11 (x86_64)
+> **CPU**: Intel(R) Core(TM) i5-9400F CPU @ 2.90GHz
+> **Criterion Version**: 0.7.0
+
+## Running Benchmarks
+
+To reproduce these results:
+
+```bash
+# Run all benchmarks with serde feature (includes serialization benchmarks)
+cargo bench --features serde
+
+# Run all benchmarks without serde feature
+cargo bench --no-default-features
+
+# Run specific benchmark
+cargo bench context_lazy
+
+# View detailed results in HTML
+start target/criterion/report/index.html
+```
+
 > **Note**: Absolute numbers depend on hardware and compiler settings. Focus on relative differences between configurations and patterns.
 
 ## Executive Summary
 
 The benchmarks demonstrate that `error-rail` provides excellent performance characteristics:
 
-- **Error creation**: ~280ns for complex domain errors with rich context
-- **Lazy evaluation**: 7x faster than eager formatting on success paths
+- **Error creation**: ~290ns for complex domain errors with rich context
+- **Lazy evaluation**: 2.1x faster than eager formatting on success paths
 - **Error propagation**: Minimal overhead compared to raw `Result` chains
-- **Validation**: Competitive with manual collection, often faster
-- **Serialization**: Sub-microsecond for complex error structures
+- **Validation**: Competitive with manual collection (within 5%)
+- **Serialization**: Sub-microsecond for complex error structures (~680ns)
 
 ## 1. Error Creation & Serialization
 
@@ -24,14 +48,14 @@ The benchmarks demonstrate that `error-rail` provides excellent performance char
 ### Results
 
 ```text
-composable_error_creation     → 281.47 ns/iter
-composable_error_serialization → 746.10 ns/iter
+composable_error_creation     → 292.53 ns/iter
+composable_error_serialization → 682.48 ns/iter
 ```
 
 ### Analysis
 
 - Error creation is extremely fast even with complex domain types and rich context
-- Serialization adds ~2.6x overhead but remains sub-microsecond
+- Serialization adds ~2.3x overhead but remains sub-microsecond
 - Suitable for hot paths and high-frequency error handling
 
 ## 2. Context Evaluation: Lazy vs Eager
@@ -42,37 +66,37 @@ composable_error_serialization → 746.10 ns/iter
 
 ```text
 Success Path:
-- context_lazy_success    → 603.86 ns/iter
-- context_eager_success   → 4.2722 µs/iter  (7.1x slower)
-- context_baseline_success → 696.67 ns/iter
+- context_lazy_success    → 637.49 ns/iter
+- context_eager_success   → 1.3513 µs/iter  (2.1x slower)
+- context_baseline_success → 714.46 ns/iter
 
 Error Path:
-- context_lazy_error      → 890.47 ns/iter
-- context_eager_error     → 792.57 ns/iter
-- context_baseline_error  → 82.187 ns/iter
+- context_lazy_error      → 940.72 ns/iter
+- context_eager_error     → 835.01 ns/iter
+- context_baseline_error  → 83.215 ns/iter
 ```
 
 ### Context Evaluation Analysis
 
-- **Success paths**: Lazy context is essentially free (only 13% overhead vs baseline)
+- **Success paths**: Lazy context is essentially free (10% overhead vs baseline)
 - **Error paths**: Both lazy and eager have similar costs as they must evaluate
-- **Production impact**: In applications with >95% success rate, lazy evaluation provides significant performance benefits
+- **Production impact**: Lazy evaluation is 2.1x faster than eager on success paths, making it the preferred choice for applications with high success rates
 
 ## 3. Context Depth Scaling
 
 ### Context Depth Results
 
 ```text
-context_depth_1   → 410.37 ns/iter
-context_depth_3   → 957.90 ns/iter
-context_depth_10  → 2.7307 µs/iter
-context_depth_30  → 7.3159 µs/iter
+context_depth_1   → 420.47 ns/iter
+context_depth_3   → 986.83 ns/iter
+context_depth_10  → 2.7987 µs/iter
+context_depth_30  → 7.3782 µs/iter
 ```
 
 ### Context Depth Analysis
 
 - Linear scaling with context depth (approximately 2.3x per 3x increase)
-- Even at 30 context layers, overhead remains under 10µs
+- Even at 30 context layers, overhead remains under 8µs
 - Deep call stacks with rich error context are practical
 
 ## 4. Pipeline vs Raw Result Performance
@@ -85,20 +109,20 @@ Realistic user service with database → validation → authentication flow
 
 ```text
 Success Path:
-- pipeline_success              → 778.12 ns/iter
-- result_with_context_success   → 706.73 ns/iter
-- result_baseline_success       → 744.95 ns/iter
+- pipeline_success              → 773.42 ns/iter
+- result_with_context_success   → 715.99 ns/iter
+- result_baseline_success       → 712.50 ns/iter
 
 Error Path:
-- pipeline_error                → 620.89 ns/iter
-- result_with_context_error     → 59.193 ns/iter
-- result_baseline_error         → 54.749 ns/iter
+- pipeline_error                → 643.32 ns/iter
+- result_with_context_error     → 63.195 ns/iter
+- result_baseline_error         → 56.733 ns/iter
 ```
 
 ### Pipeline Comparison Analysis
 
-- **Success overhead**: Pipeline adds only ~4% overhead vs baseline
-- **Error overhead**: Pipeline adds ~10x overhead vs raw result (still sub-microsecond)
+- **Success overhead**: Pipeline adds ~9% overhead vs baseline
+- **Error overhead**: Pipeline adds ~11x overhead vs raw result (still sub-microsecond)
 - **Ergonomics vs Performance**: Excellent trade-off for improved error handling ergonomics
 
 ## 5. Validation Performance
@@ -106,19 +130,19 @@ Error Path:
 ### Validation Collection Results
 
 ```text
-validation_collect_realistic_mixed → 933.84 ns/iter
-manual_collect_realistic_mixed     → 883.30 ns/iter
+validation_collect_realistic_mixed → 957.83 ns/iter
+manual_collect_realistic_mixed     → 914.91 ns/iter
 ```
 
 ### Heterogeneous Validation Results
 
 ```text
-validation_collect_heterogeneous → 1.5984 µs/iter
+validation_collect_heterogeneous → 1.7303 µs/iter
 ```
 
 ### Validation Performance Analysis
 
-- `Validation` type is competitive with manual collection (only 5.7% overhead)
+- `Validation` type is competitive with manual collection (only 4.7% overhead)
 - Provides better ergonomics and type safety
 - Heterogeneous validation scales well for complex forms
 
@@ -127,8 +151,8 @@ validation_collect_heterogeneous → 1.5984 µs/iter
 ### Error Operations Results
 
 ```text
-error_ops_recover → 1.2776 ns/iter
-error_ops_bimap   → 1.5288 ns/iter
+error_ops_recover → 1.3137 ns/iter
+error_ops_bimap   → 1.5736 ns/iter
 ```
 
 ### Error Operations Analysis
@@ -142,8 +166,8 @@ error_ops_bimap   → 1.5288 ns/iter
 ### Concurrency Performance Results
 
 ```text
-error_clone    → 133.33 ns/iter
-error_arc_wrap → 196.25 ns/iter
+error_clone    → 142.66 ns/iter
+error_arc_wrap → 209.83 ns/iter
 ```
 
 ### Concurrency Performance Analysis
@@ -157,8 +181,8 @@ error_arc_wrap → 196.25 ns/iter
 ### Mixed Ratio Results
 
 ```text
-mixed_95percent_success → 100.84 µs/iter (100 operations)
-mixed_50percent_success → 98.596 µs/iter  (100 operations)
+mixed_95percent_success → 119.65 µs/iter (100 operations)
+mixed_50percent_success → 139.23 µs/iter  (100 operations)
 ```
 
 ### Mixed Ratio Analysis
@@ -172,8 +196,8 @@ mixed_50percent_success → 98.596 µs/iter  (100 operations)
 ### Type Conversion Results
 
 ```text
-std_io_error_conversion → 320.66 ns/iter
-serde_error_conversion  → 444.84 ns/iter
+std_io_error_conversion → 337.19 ns/iter
+serde_error_conversion  → 463.85 ns/iter
 ```
 
 ### Type Conversion Analysis
@@ -187,8 +211,8 @@ serde_error_conversion  → 444.84 ns/iter
 ### Backtrace Performance Results
 
 ```text
-backtrace_lazy_success → 707.81 ns/iter
-backtrace_lazy_error   → 202.23 ns/iter
+backtrace_lazy_success → 714.36 ns/iter
+backtrace_lazy_error   → 195.79 ns/iter
 ```
 
 ### Backtrace Performance Analysis
@@ -229,13 +253,13 @@ High outlier percentages (5-14%) in some benchmarks indicate:
 
 | Benchmark Category | Key Metric | Performance | Recommendation |
 |-------------------|------------|-------------|----------------|
-| Error Creation | 281 ns | Excellent | Use freely in hot paths |
-| Lazy Context | 604 ns vs 4.27µs | 7x faster | Always prefer lazy evaluation |
-| Context Depth (30) | 7.32µs | Linear scaling | Deep context is practical |
-| Pipeline Success | 778 ns | 4% overhead | Excellent ergonomics trade-off |
-| Validation | 934 ns | 5.7% overhead | Better than manual collection |
-| Error Clone | 133 ns | Very fast | Safe for concurrent use |
-| Serialization | 746 ns | Sub-microsecond | Great for API responses |
+| Error Creation | 293 ns | Excellent | Use freely in hot paths |
+| Lazy Context | 637 ns vs 1.35µs | 2.1x faster | Always prefer lazy evaluation |
+| Context Depth (30) | 7.38µs | Linear scaling | Deep context is practical |
+| Pipeline Success | 773 ns | 9% overhead | Excellent ergonomics trade-off |
+| Validation | 958 ns | 4.7% overhead | Better than manual collection |
+| Error Clone | 143 ns | Very fast | Safe for concurrent use |
+| Serialization | 682 ns | Sub-microsecond | Great for API responses |
 
 ### Performance Tips
 
