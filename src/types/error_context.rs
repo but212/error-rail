@@ -53,6 +53,7 @@ use std::borrow::Cow;
 /// let meta = ErrorContext::metadata("retry_count", "3");
 /// ```
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ErrorContext {
     Simple(Cow<'static, str>),
