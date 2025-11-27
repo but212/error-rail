@@ -6,6 +6,15 @@
 
 - **Library is `no_std`-compatible by default**: The crate builds without `std` when the `std` feature is disabled, and uses standard library types when the `std` feature is explicitly enabled. The default configuration (`default = []`) provides `no_std` compatibility.
   - **Migration**: Code that relies on `std`-specific functionality should continue to work when the `std` feature is enabled. In `no_std` mode, the library uses `alloc` types for heap allocations.
+
+- **`core::error::Error` implementation for `ComposableError<E>` now requires `Send + Sync` bounds**:
+  - **Before**: `impl<E: std::error::Error + 'static> std::error::Error for ComposableError<E>`
+  - **After**: `impl<E: core::error::Error + Send + Sync + 'static> core::error::Error for ComposableError<E>`
+  - **Rationale**: This change enables better interoperability with error handling libraries like `anyhow` and `eyre` in concurrent contexts, ensuring `ComposableError` can be safely shared across thread boundaries.
+  - **Migration**: Error types wrapped in `ComposableError` must now implement `Send + Sync`. Most standard error types already satisfy these bounds. For custom error types that are not thread-safe, either:
+    - Add `Send + Sync` implementations if the type can be made thread-safe
+    - Use `ComposableError` without relying on the `Error` trait implementation
+    - Wrap non-thread-safe errors in a thread-safe container (e.g., `Arc<Mutex<_>>`)
   
 - **`ComposableError::context()` method signature changed**:
   - **Before**: `pub fn context(&self) -> &ErrorVec<ErrorContext>` (returns a reference)
