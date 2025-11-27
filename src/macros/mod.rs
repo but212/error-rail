@@ -129,7 +129,7 @@ macro_rules! context {
 ///     .with_context(location!());
 /// ```
 #[macro_export]
-#[deprecated(since = "0.6.0", note = "Use `group!` instead")]
+#[deprecated(since = "0.5.0", note = "Use `group!` instead")]
 macro_rules! location {
     () => {
         $crate::types::ErrorContext::location(file!(), line!())
@@ -158,7 +158,7 @@ macro_rules! location {
 ///     .with_context(tag!("network"));
 /// ```
 #[macro_export]
-#[deprecated(since = "0.6.0", note = "Use `group!` instead")]
+#[deprecated(since = "0.5.0", note = "Use `group!` instead")]
 macro_rules! tag {
     ($tag:expr) => {
         $crate::types::ErrorContext::tag($tag)
@@ -188,7 +188,7 @@ macro_rules! tag {
 ///     .with_context(metadata!("retry_after", "60"));
 /// ```
 #[macro_export]
-#[deprecated(since = "0.6.0", note = "Use `group!` instead")]
+#[deprecated(since = "0.5.0", note = "Use `group!` instead")]
 macro_rules! metadata {
     ($key:expr, $value:expr) => {
         $crate::types::ErrorContext::metadata($key, $value)

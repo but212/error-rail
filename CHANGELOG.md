@@ -49,7 +49,7 @@
 - **Improved DX**: Added helpful implementation examples and links to documentation in trait documentation
 - **Deprecated individual context macros**: `location!()`, `tag!()`, and `metadata!()` macros are now deprecated in favor of the new `group!` macro
   - **Rationale**: The new `group!` macro provides lazy evaluation for grouped contexts, combining multiple fields into a single cohesive unit while maintaining performance benefits
-  - **Migration**: Replace individual macro calls with `group! { ... }` using semicolon-separated fields:
+  - **Migration**: Replace individual macro calls with function-call style `group!()`:
 
     ```rust
     // Before: Multiple separate contexts (eager allocation)
@@ -59,11 +59,11 @@
     // Output: -> at main.rs:42 -> [database] -> (host=localhost)
     
     // After: Single grouped context (lazy evaluation)
-    err.with_context(group! {
-        location: file!(), line!();
-        tag: "database";
-        metadata: "host", "localhost"
-    });
+    err.with_context(group!(
+        location(file!(), line!()),
+        tag("database"),
+        metadata("host", "localhost")
+    ));
     // Output: -> [database] at main.rs:42 (host=localhost)
     ```
 
@@ -71,14 +71,17 @@
     - Lazy evaluation: No string formatting until error occurs
     - Unified display: All fields appear as one cohesive context unit
     - Better performance: Reduced allocations on success paths
-  - **Removal timeline**: Deprecated macros will be removed in version 0.5.0
+  - **Removal timeline**: Deprecated macros will be removed in version 0.6.0
   - **New exports**: `group!` macro and `LazyGroupContext` type added to prelude
 
 ### Deprecated - 0.5.0
 
-- `SimpleComposableError<E>` - Use `ComposableError<E>` directly (scheduled for removal in 0.5.0)
-- `TaggedComposableError<E>` - Use `ComposableError<E>` with `ErrorContext::tag()` instead (scheduled for removal in 0.5.0)
-- `location!()`, `tag!()`, and `metadata!()` macros - Use `group!` macro instead (scheduled for removal in 0.5.0)
+- `location!()`, `tag!()`, and `metadata!()` macros - Use `group!` macro instead (scheduled for removal in 0.6.0)
+
+### Removed - 0.5.0
+
+- `SimpleComposableError<E>` - Use `ComposableError<E>` directly (completely removed)
+- `TaggedComposableError<E>` - Use `ComposableError<E>` with `ErrorContext::tag()` instead (completely removed)
 
 ## [0.4.0]
 

@@ -273,7 +273,7 @@ ErrorPipeline::new(result)
 | `prelude` | **Start here!** Common imports: `ResultExt`, `BoxedResult`, macros |
 | `context` | Context attachment: `with_context`, `accumulate_context`, `format_error_chain` |
 | `convert` | Conversions between `Result`, `Validation`, and `ComposableError` |
-| `macros` | `context!`, `location!`, `tag!`, `metadata!`, `rail!`, `impl_error_context!` |
+| `macros` | `context!`, `group!`, `rail!`, `impl_error_context!` |
 | `traits` | `ResultExt`, `BoxedResultExt`, `IntoErrorContext`, `ErrorOps`, `WithError` |
 | `types` | `ComposableError`, `ErrorContext`, `ErrorPipeline`, `LazyContext` |
 | `validation` | `Validation<E, A>` type with collectors and iterators |

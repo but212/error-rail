@@ -1,5 +1,4 @@
 use error_rail::traits::{BoxedResultExt, ResultExt};
-use error_rail::ComposableError;
 
 #[test]
 fn test_ctx_on_err() {
@@ -20,16 +19,35 @@ fn test_ctx_on_ok() {
 }
 
 #[test]
-fn test_ctx_with_lazy() {
+fn test_ctx_with_lazy_on_ok() {
     let mut called = false;
     let result: Result<(), &str> = Ok(());
 
     // Closure should NOT be called for Ok
-    let _ = result.map_err(|e| {
+    let _ = result.ctx_with(|| {
         called = true;
-        ComposableError::new(e)
+        "should not be called".to_string()
     });
-    assert!(!called);
+    assert!(
+        !called,
+        "Closure for ctx_with should not be called on Ok result"
+    );
+}
+
+#[test]
+fn test_ctx_with_lazy_on_err() {
+    let mut called = false;
+    let result: Result<(), &str> = Err("error");
+
+    // Closure SHOULD be called for Err
+    let _ = result.ctx_with(|| {
+        called = true;
+        "should be called".to_string()
+    });
+    assert!(
+        called,
+        "Closure for ctx_with should be called on Err result"
+    );
 }
 
 #[test]
