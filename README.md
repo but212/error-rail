@@ -20,19 +20,38 @@ fn load_config() -> BoxedResult<String, std::io::Error> {
 
 Most error handling libraries format context eagerly—even on success paths where the context is never used. **error-rail** uses lazy evaluation, deferring string formatting until an error actually occurs.
 
-**Benchmark Results** ([full details](docs/BENCHMARKS.md)):
+### **Benchmark Results** ([full methodology](docs/BENCHMARKS.md))
 
-| Scenario | error-rail | Eager formatting | Speedup |
-|----------|------------|------------------|---------|
-| Success path | 637 ns | 1,351 ns | **2.1x faster** |
-| Error path | 941 ns | 835 ns | 1.1x slower |
+| Scenario | error-rail | Eager `format!()` | Speedup |
+|----------|------------|-------------------|---------|
+| Success path (95% of cases) | 637 ns | 1,351 ns | **2.1x faster** |
+| Error path (5% of cases) | 941 ns | 835 ns | 1.1x slower |
+
+### **Benchmark Details**
+
+- **Environment**: Rust 1.81.0, criterion 0.7
+- **Comparison**: Lazy `context!()` vs eager `format!()` evaluation
+- **Real-world impact**: With typical 95% success rate, ~1.8x overall improvement
+- **Error path overhead**: Extra ~100ns for lazy evaluation on errors
 
 Since most operations succeed (95%+), lazy evaluation provides significant real-world performance gains.
+
+## Requirements
+
+- **Rust**: 1.81.0 or later (MSRV)
+- **Edition**: 2021
 
 ## Installation
 
 ```sh
 cargo add error-rail
+```
+
+Or add to `Cargo.toml`:
+
+```toml
+[dependencies]
+error-rail = "0.5"
 ```
 
 ## 30-Second Quick Start
@@ -47,16 +66,15 @@ fn read_config() -> BoxedResult<String, std::io::Error> {
 }
 
 // Chain multiple contexts
-fn process() -> BoxedResult<(), std::io::Error> {
-    let config = read_config()?;
-    parse_config(&config)
-        .ctx("parsing configuration")
+fn process() -> BoxedResult<String, std::io::Error> {
+    read_config()
+        .ctx("processing configuration")
 }
 
 fn main() {
     if let Err(e) = process() {
         eprintln!("{}", e.error_chain());
-        // Output: parsing configuration -> loading configuration -> No such file...
+        // Output: processing configuration -> loading configuration -> No such file or directory (os error 2)
     }
 }
 ```
@@ -194,14 +212,29 @@ let result = rail!(std::fs::read_to_string("config.toml"));
 ### 6. Type Aliases for Ergonomics
 
 ```rust
-use error_rail::{ComposableResult, BoxedComposableResult};
+use error_rail::prelude::*;
 
-// Instead of Result<T, ComposableError<E>>
-fn parse_config() -> ComposableResult<Config, ParseError> { /* ... */ }
+// Recommended: BoxedResult for public API (8 bytes stack)
+fn load_file() -> BoxedResult<String, std::io::Error> {
+    std::fs::read_to_string("file.txt").ctx("loading file")
+}
 
-// Instead of Result<T, Box<ComposableError<E>>>
-fn load_file() -> BoxedComposableResult<String, std::io::Error> { /* ... */ }
+// Alternative: ComposableResult for internal use (larger stack)
+use error_rail::ComposableResult;
+fn internal_op() -> ComposableResult<i32, &'static str> {
+    Ok(42)
+}
 ```
+
+#### Type Aliases Comparison
+
+| Type Alias | Definition | Stack Size | Use When |
+|------------|------------|------------|----------|
+| `BoxedResult<T, E>` | `Result<T, Box<ComposableError<E>>>` | 8 bytes | **Recommended** for public APIs |
+| `BoxedComposableResult<T, E>` | Same as `BoxedResult` | 8 bytes | Legacy alias (identical) |
+| `ComposableResult<T, E>` | `Result<T, ComposableError<E>>` | 48+ bytes | Internal functions only |
+
+> **Note**: `BoxedResult` and `BoxedComposableResult` are identical. Use `BoxedResult` for brevity.
 
 ## When to Use What?
 
@@ -210,7 +243,7 @@ fn load_file() -> BoxedComposableResult<String, std::io::Error> { /* ... */ }
 | Scenario | Recommended Type | Example |
 |----------|------------------|---------|
 | **Simple error wrapping** | `ComposableError<E>` | Internal error handling |
-| **Function return type** | `BoxedComposableResult<T, E>` | Public API boundaries |
+| **Function return type** | `BoxedResult<T, E>` | Public API boundaries |
 | **Adding context to Result** | `ErrorPipeline` | Wrapping I/O operations |
 | **Form/input validation** | `Validation<E, T>` | Collecting all field errors |
 | **Error chaining** | `ErrorPipeline` + `finish_boxed()` | Multi-step operations |
@@ -233,7 +266,7 @@ fn load_file() -> BoxedComposableResult<String, std::io::Error> { /* ... */ }
 fn process() -> Result<Data, ComposableError<MyError>> { ... }
 
 // ✅ Reduced stack size (8 bytes pointer)
-fn process() -> BoxedComposableResult<Data, MyError> { ... }
+fn process() -> BoxedResult<Data, MyError> { ... }
 ```
 
 ### 2. Excessive Context Depth
@@ -278,21 +311,41 @@ ErrorPipeline::new(result)
 | `types` | `ComposableError`, `ErrorContext`, `ErrorPipeline`, `LazyContext` |
 | `validation` | `Validation<E, A>` type with collectors and iterators |
 
-## `no_std` Support
+## Feature Flags
+
+| Feature | Description | Default |
+|---------|-------------|---------|
+| `std` | Standard library support (enables `backtrace!` macro) | ❌ No |
+| `serde` | Serialization/deserialization support | ❌ No |
+| `full` | Enable all features (`std` + `serde`) | ❌ No |
+
+### Usage Examples
+
+```toml
+# Default (no_std compatible, requires alloc)
+[dependencies]
+error-rail = "0.5"
+
+# With serialization support
+[dependencies]
+error-rail = { version = "0.5", features = ["serde"] }
+
+# All features enabled
+[dependencies]
+error-rail = { version = "0.5", features = ["full"] }
+```
+
+### `no_std` Support
 
 `error-rail` is `no_std` compatible by default. It requires only the `alloc` crate.
 
 ```toml
+# Minimal no_std usage
 [dependencies]
-error-rail = { version = "0.4", default-features = false }
+error-rail = { version = "0.5", default-features = false }
 ```
 
-Enable `std` features when needed:
-
-```toml
-[dependencies]
-error-rail = { version = "0.4", features = ["std"] }  # Enables backtrace! macro
-```
+> **Note**: Some features like `backtrace!` require the `std` feature.
 
 ## Examples
 
@@ -307,6 +360,19 @@ cargo run --example validation_collect # Validation accumulation
 
 - **[Quick Start Guide](docs/QUICK_START.md)** - Step-by-step tutorial
 
+## Glossary
+
+| Term | Definition |
+|------|------------|
+| **Context** | Additional information attached to an error (location, tags, messages) |
+| **Metadata** | Key-value pairs within context (subset of context) |
+| **Pipeline** | Builder pattern for chaining error operations (`ErrorPipeline`) |
+| **Boxed Error** | Heap-allocated error via `Box<ComposableError<E>>` for reduced stack size |
+| **Lazy Evaluation** | Deferred computation until actually needed (e.g., `context!` macro) |
+| **Validation** | Accumulating type that collects all errors instead of short-circuiting |
+
 ## License
 
-Apache-2.0
+Licensed under the Apache License 2.0. See [LICENSE](LICENSE) for details.
+
+For third-party attributions, see [NOTICE](NOTICE).
