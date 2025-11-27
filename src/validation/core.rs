@@ -1,4 +1,5 @@
 use crate::types::ErrorVec;
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use smallvec::smallvec;
 
@@ -36,7 +37,8 @@ use smallvec::smallvec;
 /// assert!(invalid.is_invalid());
 /// ```
 #[must_use]
-#[derive(Clone, PartialEq, PartialOrd, Eq, Ord, Debug, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Clone, PartialEq, PartialOrd, Eq, Ord, Debug, Hash)]
 pub enum Validation<E, A> {
     Valid(A),
     Invalid(ErrorVec<E>),
@@ -57,7 +59,6 @@ impl<E, A> Validation<E, A> {
     /// let v = Validation::<&str, i32>::valid(42);
     /// assert_eq!(v.into_value(), Some(42));
     /// ```
-    #[must_use]
     #[inline]
     pub fn valid(value: A) -> Self {
         Self::Valid(value)
@@ -77,7 +78,6 @@ impl<E, A> Validation<E, A> {
     /// let v = Validation::<&str, ()>::invalid("missing field");
     /// assert!(v.is_invalid());
     /// ```
-    #[must_use]
     #[inline]
     pub fn invalid(error: E) -> Self {
         Self::Invalid(smallvec![error])
@@ -98,7 +98,6 @@ impl<E, A> Validation<E, A> {
     /// assert!(v.is_invalid());
     /// assert_eq!(v.into_errors().unwrap().len(), 2);
     /// ```
-    #[must_use]
     #[inline]
     pub fn invalid_many<I>(errors: I) -> Self
     where
@@ -156,7 +155,6 @@ impl<E, A> Validation<E, A> {
     /// let doubled = v.map(|x| x * 2);
     /// assert_eq!(doubled.into_value(), Some(42));
     /// ```
-    #[must_use]
     #[inline]
     pub fn map<B, F>(self, f: F) -> Validation<E, B>
     where
@@ -196,7 +194,6 @@ impl<E, A> Validation<E, A> {
     /// let invalid = Validation::valid(3).and_then(parse_even);
     /// assert!(invalid.is_invalid());
     /// ```
-    #[must_use]
     #[inline]
     pub fn and_then<B, F>(self, f: F) -> Validation<E, B>
     where
@@ -225,7 +222,6 @@ impl<E, A> Validation<E, A> {
     /// let res = v.or_else(|_errs| Validation::valid(42));
     /// assert_eq!(res.into_value(), Some(42));
     /// ```
-    #[must_use]
     #[inline]
     pub fn or_else<F>(self, op: F) -> Validation<E, A>
     where
@@ -261,7 +257,6 @@ impl<E, A> Validation<E, A> {
     /// let result = v3.zip(v4);
     /// assert_eq!(result.into_errors().unwrap().len(), 2);
     /// ```
-    #[must_use]
     #[inline]
     pub fn zip<B>(self, other: Validation<E, B>) -> Validation<E, (A, B)> {
         match (self, other) {
@@ -293,7 +288,6 @@ impl<E, A> Validation<E, A> {
     /// let mapped = v.map_err(|e| format!("Error: {}", e));
     /// assert!(mapped.is_invalid());
     /// ```
-    #[must_use]
     #[inline]
     pub fn map_err<F, G>(self, f: F) -> Validation<G, A>
     where
@@ -320,7 +314,6 @@ impl<E, A> Validation<E, A> {
     /// let v = Validation::<&str, i32>::invalid("error");
     /// assert!(v.to_result().is_err());
     /// ```
-    #[must_use]
     #[inline]
     pub fn to_result(self) -> Result<A, ErrorVec<E>> {
         match self {
@@ -344,7 +337,6 @@ impl<E, A> Validation<E, A> {
     /// let v = Validation::from_result(result);
     /// assert!(v.is_valid());
     /// ```
-    #[must_use]
     #[inline]
     pub fn from_result(result: Result<A, E>) -> Self {
         match result {

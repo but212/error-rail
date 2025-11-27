@@ -31,8 +31,8 @@ fn rail_macro_wraps_expression_results() {
 #[test]
 fn rail_macro_accepts_block_syntax() {
     let result = rail!({
-        let value = Err::<u8, &str>("fail");
-        value
+        
+        Err::<u8, &str>("fail")
     });
 
     assert!(result.is_err());

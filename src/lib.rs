@@ -51,6 +51,13 @@
 //!     // Output: user_id: 42 -> operation: load_config -> failed
 //! }
 //! ```
+#![cfg_attr(not(feature = "std"), no_std)]
+
+#[cfg(not(feature = "std"))]
+extern crate alloc;
+
+#[cfg(feature = "std")]
+extern crate std;
 
 /// Error context management and accumulation
 pub mod context;

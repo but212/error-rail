@@ -25,10 +25,16 @@
 //! let tag = ErrorContext::tag("db");
 //! let meta = ErrorContext::metadata("retry_count", "3");
 //! ```
+use crate::types::alloc_type::{Cow, Vec};
+use core::fmt::Display;
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
-use std::borrow::Cow;
-use std::fmt::Display;
+
+#[cfg(not(feature = "std"))]
+use alloc::format;
+#[cfg(feature = "std")]
+use std::format;
 
 /// Structured metadata attached to a [`ComposableError`](crate::types::ComposableError).
 ///
@@ -51,14 +57,17 @@ use std::fmt::Display;
 /// let tag = ErrorContext::tag("db");
 /// let meta = ErrorContext::metadata("retry_count", "3");
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[allow(clippy::large_enum_variant)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ErrorContext {
     Simple(Cow<'static, str>),
     Group(GroupContext),
 }
 
 /// A rich context containing multiple pieces of information.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
 pub struct GroupContext {
     /// Optional message describing this context
     pub message: Option<Cow<'static, str>>,
@@ -71,7 +80,8 @@ pub struct GroupContext {
 }
 
 /// Source file and line number where the error occurred.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Location {
     /// Source file path
     pub file: Cow<'static, str>,
@@ -168,7 +178,10 @@ impl ErrorContext {
     /// assert_eq!(ctx.message(), "user_id=42");
     /// ```
     #[inline]
-    pub fn metadata<K: Into<Cow<'static, str>>, V: Into<Cow<'static, str>>>(key: K, value: V) -> Self {
+    pub fn metadata<K: Into<Cow<'static, str>>, V: Into<Cow<'static, str>>>(
+        key: K,
+        value: V,
+    ) -> Self {
         Self::Group(GroupContext {
             metadata: smallvec::smallvec![(key.into(), value.into())],
             ..Default::default()
@@ -200,14 +213,9 @@ impl ErrorContext {
                     return Cow::Owned(format!("at {}:{}", loc.file, loc.line));
                 }
                 if !g.tags.is_empty() {
-                    // Join tags with comma if multiple? Or just show first?
-                    // Previous behavior was single tag -> "[tag]".
-                    // Let's format as "[tag1, tag2]"
                     return Cow::Owned(format!("[{}]", g.tags.join(", ")));
                 }
                 if !g.metadata.is_empty() {
-                    // Previous behavior was single key-value -> "key=value".
-                    // Let's format as "key1=value1, key2=value2"
                     let meta_str = g
                         .metadata
                         .iter()
@@ -223,12 +231,12 @@ impl ErrorContext {
 }
 
 impl Display for ErrorContext {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.message())
     }
 }
 
-impl std::error::Error for ErrorContext {}
+impl core::error::Error for ErrorContext {}
 
 /// Builder for creating complex [`ErrorContext::Group`] entries.
 ///
@@ -356,7 +364,11 @@ impl ErrorContextBuilder {
     ///     .metadata("request_id", "abc-def")
     ///     .build();
     /// ```
-    pub fn metadata<K: Into<Cow<'static, str>>, V: Into<Cow<'static, str>>>(mut self, key: K, value: V) -> Self {
+    pub fn metadata<K: Into<Cow<'static, str>>, V: Into<Cow<'static, str>>>(
+        mut self,
+        key: K,
+        value: V,
+    ) -> Self {
         self.context.metadata.push((key.into(), value.into()));
         self
     }

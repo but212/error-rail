@@ -9,6 +9,10 @@
 
 `error-rail` provides a middle ground between simple string errors and full-blown tracing systems. It allows you to attach rich, structured context to errors and collect multiple validation failures without early returns.
 
+## `no_std` Support
+
+`error-rail` is `no_std` compatible by default. The library requires the `alloc` crate for heap allocation, but works seamlessly in embedded and resource-constrained environments.
+
 ## Quick Start
 
 > **New to error-rail?** Check out the [Quick Start Guide](docs/QUICK_START.md) for a beginner-friendly introduction.

@@ -11,10 +11,12 @@
 //! See the crate-level docs for a high-level overview of when to prefer these
 //! utilities over bare `Result` transformations.
 
-use crate::traits::IntoErrorContext;
+use crate::types::alloc_type::{Box, String};
 use crate::types::composable_error::ComposableError;
-use crate::types::{BoxedComposableResult, ErrorContext, ErrorPipeline};
-use std::fmt::Display;
+use crate::types::BoxedComposableResult;
+use crate::types::{ErrorContext, ErrorPipeline};
+use crate::{traits::IntoErrorContext, ErrorVec};
+use core::fmt::Display;
 
 /// Wraps an error with a single context entry.
 ///
@@ -129,11 +131,8 @@ pub fn error_pipeline<T, E>(result: Result<T, E>) -> ErrorPipeline<T, E> {
 /// ```
 /// use error_rail::{accumulate_context, ErrorContext};
 ///
-/// let contexts = vec![
-///     ErrorContext::tag("db"),
-///     ErrorContext::new("connection failed"),
-/// ];
-/// let err = accumulate_context("timeout", contexts);
+/// let contexts = vec![ErrorContext::tag("auth"), ErrorContext::tag("api")];
+/// let err = accumulate_context("unauthorized", contexts);
 /// assert_eq!(err.context().len(), 2);
 /// ```
 pub fn accumulate_context<E, I, C>(error: E, contexts: I) -> ComposableError<E>
@@ -141,17 +140,17 @@ where
     I: IntoIterator<Item = C>,
     C: IntoErrorContext,
 {
-    let context_vec: Vec<ErrorContext> = contexts
-        .into_iter()
-        .map(|c| c.into_error_context())
-        .collect();
-
-    ComposableError::new(error).with_contexts(context_vec)
+    let mut err = ComposableError::new(error);
+    for context in contexts {
+        err = err.with_context(context);
+    }
+    err
 }
 
 /// Creates a reusable closure that wraps errors with multiple contexts.
 ///
-/// Returns a function that attaches all provided contexts to any error.
+/// Returns a function that can be used with `map_err` to attach the same
+/// set of contexts to multiple error paths.
 ///
 /// # Arguments
 ///
@@ -218,6 +217,6 @@ where
 /// let contexts = extract_context(&err);
 /// assert_eq!(contexts.len(), 1);
 /// ```
-pub fn extract_context<E>(error: &ComposableError<E>) -> Vec<ErrorContext> {
+pub fn extract_context<E>(error: &ComposableError<E>) -> ErrorVec<ErrorContext> {
     error.context()
 }

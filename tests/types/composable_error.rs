@@ -1,5 +1,5 @@
 use error_rail::ComposableError;
-use std::error::Error;
+use core::error::Error;
 use std::io;
 
 #[test]
@@ -36,8 +36,8 @@ fn test_composable_error_display_multiline() {
 
 #[test]
 fn test_error_trait_impl() {
-    // Verify ComposableError<io::Error> implements std::error::Error
-    let io_err = io::Error::new(io::ErrorKind::Other, "root cause");
+    // Verify ComposableError<io::Error> implements core::error::Error
+    let io_err = io::Error::other("root cause");
     let err = ComposableError::<io::Error>::new(io_err).with_context("context");
 
     assert!(err.source().is_some());

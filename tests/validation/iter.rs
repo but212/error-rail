@@ -69,7 +69,7 @@ fn iter_errors_mut_allows_mutating_errors() {
         Validation::invalid_many(["e1".to_string(), "e2".to_string()]);
 
     for error in v.iter_errors_mut() {
-        error.push_str("!");
+        error.push('!');
     }
 
     let collected: Vec<_> = v.iter_errors().cloned().collect();

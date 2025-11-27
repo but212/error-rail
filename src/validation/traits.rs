@@ -45,7 +45,7 @@ impl<E> ErrorCategory<E> for Validation<E, ()> {
 /// use error_rail::traits::WithError;
 /// use error_rail::validation::Validation;
 ///
-/// let validation: Validation<&str, i32> = Validation::invalid_many(["err1", "err2"]);
+/// let validation: Validation<&str, i32> = Validation::invalid_many(vec!["err1", "err2"]);
 /// let mapped = validation.fmap_error(|e| format!("Error: {}", e));
 /// assert_eq!(mapped.iter_errors().count(), 2);
 ///

@@ -53,11 +53,12 @@ fn collect_errors_accumulates_all_items() {
 #[test]
 fn split_validation_errors_expands_invalid_case() {
     let validation: Validation<&str, i32> = Validation::invalid_many(["a", "b"]);
-    let results = split_validation_errors(validation);
+    let results: Vec<_> = split_validation_errors(validation).collect();
     assert_eq!(results, vec![Err("a"), Err("b")]);
 
     let validation: Validation<&str, i32> = Validation::valid(1);
-    assert_eq!(split_validation_errors(validation), vec![Ok(1)]);
+    let results: Vec<_> = split_validation_errors(validation).collect();
+    assert_eq!(results, vec![Ok(1)]);
 }
 
 #[test]

@@ -18,11 +18,18 @@
 //! println!("{}", err.error_chain());
 //! // Output: [db] -> main.rs:42 -> database connection failed (code: 500)
 //! ```
-use std::fmt::{Debug, Display};
+use core::fmt::{Debug, Display};
 
 use crate::traits::IntoErrorContext;
+use crate::types::alloc_type::String;
 use crate::types::{ErrorContext, ErrorVec};
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+
+#[cfg(not(feature = "std"))]
+use alloc::string::ToString;
+#[cfg(feature = "std")]
+use std::string::ToString;
 
 /// Error wrapper that stores the original error plus structured contexts and an optional code.
 ///
@@ -53,8 +60,8 @@ use serde::{Deserialize, Serialize};
 ///
 /// # Interoperability
 ///
-/// When the wrapped error implements [`std::error::Error`], the composable error
-/// exposes it through [`std::error::Error::source`], preserving compatibility with
+/// When the wrapped error implements [`core::error::Error`], the composable error
+/// exposes it through [`core::error::Error::source`], preserving compatibility with
 /// libraries that inspect chained errors.
 ///
 /// ```
@@ -65,7 +72,8 @@ use serde::{Deserialize, Serialize};
 /// assert!(StdError::source(&err).is_some());
 /// ```
 #[must_use]
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ComposableError<E> {
     core_error: E,
     context: ErrorVec<ErrorContext>,
@@ -145,7 +153,6 @@ impl<E> ComposableError<E> {
     ///
     /// assert_eq!(err.context().len(), 2);
     /// ```
-    #[must_use]
     #[inline]
     pub fn with_context<Ctx>(mut self, ctx: Ctx) -> Self
     where
@@ -178,7 +185,6 @@ impl<E> ComposableError<E> {
     ///
     /// assert_eq!(err.context().len(), 2);
     /// ```
-    #[must_use]
     #[inline]
     pub fn with_contexts<I>(mut self, contexts: I) -> Self
     where
@@ -203,6 +209,12 @@ impl<E> ComposableError<E> {
         &self.core_error
     }
 
+    /// Returns the context stack in LIFO order (most recent first).
+    #[inline]
+    pub fn context(&self) -> ErrorVec<ErrorContext> {
+        self.context.iter().rev().cloned().collect()
+    }
+
     /// Consumes the composable error, returning the underlying core error.
     #[inline]
     pub fn into_core(self) -> E {
@@ -222,18 +234,7 @@ impl<E> ComposableError<E> {
     /// let err = ComposableError::new("error")
     ///     .with_context("first")
     ///     .with_context("second");
-    ///
-    /// let contexts = err.context();
-    /// assert_eq!(contexts[0].message(), "second");
-    /// assert_eq!(contexts[1].message(), "first");
-    /// ```
-    #[inline]
-    pub fn context(&self) -> Vec<ErrorContext> {
-        self.context.iter().rev().cloned().collect()
-    }
-
-    /// Efficient iterator over contexts without allocation.
-    ///
+    ///```
     /// Returns an iterator in LIFO order (most recent first) that borrows the contexts.
     ///
     /// # Examples
@@ -250,7 +251,7 @@ impl<E> ComposableError<E> {
     /// assert_eq!(iter.next().unwrap().message(), "ctx1");
     /// ```
     #[inline]
-    pub fn context_iter(&self) -> std::iter::Rev<std::slice::Iter<'_, ErrorContext>> {
+    pub fn context_iter(&self) -> core::iter::Rev<core::slice::Iter<'_, ErrorContext>> {
         self.context.iter().rev()
     }
 
@@ -290,7 +291,6 @@ impl<E> ComposableError<E> {
     ///
     /// assert_eq!(err.error_code(), Some(500));
     /// ```
-    #[must_use]
     #[inline]
     pub fn set_code(mut self, code: u32) -> Self {
         self.error_code = Some(code);
@@ -320,7 +320,6 @@ impl<E> ComposableError<E> {
     /// assert_eq!(mapped.error_code(), Some(500));
     /// assert_eq!(mapped.context().len(), 1);
     /// ```
-    #[must_use]
     #[inline]
     pub fn map_core<F, T>(self, f: F) -> ComposableError<T>
     where
@@ -446,12 +445,12 @@ impl<'a, E> Display for ErrorFormatter<'a, E>
 where
     E: Display,
 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let contexts = &self.error.context;
         let mut first = true;
 
         // Helper to write separator
-        let mut write_sep = |f: &mut std::fmt::Formatter<'_>| -> std::fmt::Result {
+        let mut write_sep = |f: &mut core::fmt::Formatter<'_>| -> core::fmt::Result {
             if !first {
                 write!(f, "{}", self.separator)?;
             }
@@ -490,7 +489,7 @@ where
 }
 
 impl<E: Display> Display for ComposableError<E> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         if f.alternate() {
             // Multi-line format
             // Error: core error (code: 500)
@@ -523,11 +522,11 @@ impl<E: Display> Display for ComposableError<E> {
     }
 }
 
-impl<E> std::error::Error for ComposableError<E>
+impl<E> core::error::Error for ComposableError<E>
 where
-    E: std::error::Error + 'static,
+    E: core::error::Error + Send + Sync + 'static,
 {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+    fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
         Some(self.core_error())
     }
 }

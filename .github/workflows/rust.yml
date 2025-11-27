@@ -32,8 +32,36 @@ jobs:
         with:
           toolchain: ${{ matrix.rust }}
       - uses: Swatinem/rust-cache@v2
-      - name: Run tests
+      - name: Run tests (no features)
         run: cargo test --verbose
+      - name: Run tests (full features)
+        run: cargo test --verbose --features full
+
+  feature-combinations:
+    name: Feature ${{ matrix.features }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        features:
+          - "--no-default-features"
+          - "--features serde"
+          - "--features std"
+          - "--features full"
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Check ${{ matrix.features }}
+        run: cargo check ${{ matrix.features }}
+      - name: Test ${{ matrix.features }}
+        run: cargo test ${{ matrix.features }}
+      - name: Clippy ${{ matrix.features }}
+        run: cargo clippy ${{ matrix.features }} -- -D warnings
+      - name: Check benchmarks compilation ${{ matrix.features }}
+        run: cargo bench --no-run ${{ matrix.features }}
 
   msrv:
     name: Check MSRV
@@ -57,6 +85,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Check MSRV compatibility
         run: cargo check
+      - name: Check MSRV compatibility (full features)
+        run: cargo check --features full
 
   unused_dependencies:
     name: Check for unused dependencies
@@ -72,6 +102,8 @@ jobs:
           tool: cargo-udeps
       - name: Run cargo-udeps
         run: cargo +nightly udeps --all-targets
+      - name: Run cargo-udeps (full features)
+        run: cargo +nightly udeps --all-targets --features full
 
   security:
     name: Security Audit
@@ -112,7 +144,7 @@ jobs:
       - name: Build documentation with broken link check
         run: |
           RUSTDOCFLAGS="-D warnings -D rustdoc::broken_intra_doc_links --cfg docsrs" \
-          cargo +nightly doc --no-deps
+          cargo +nightly doc --no-deps --features full
 
       - name: Verify docs directory exists
         run: |
@@ -124,7 +156,7 @@ jobs:
   publish:
     name: Publish to crates.io
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [test, msrv, security, docs]
+    needs: [test, feature-combinations, msrv, security, docs]
     runs-on: ubuntu-latest
     permissions:
       contents: read

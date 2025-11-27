@@ -18,6 +18,8 @@
 //! ```
 use smallvec::SmallVec;
 
+pub mod alloc_type;
+
 pub mod composable_error;
 pub mod error_context;
 pub mod error_pipeline;
@@ -58,7 +60,7 @@ pub type TaggedComposableError<E> = ComposableError<E>;
 /// # Type Parameters
 ///
 /// * `E` - The core error type
-pub type BoxedComposableError<E> = Box<ComposableError<E>>;
+pub type BoxedComposableError<E> = alloc_type::Box<ComposableError<E>>;
 
 /// Result alias with boxed [`ComposableError`] for reduced stack size.
 ///
