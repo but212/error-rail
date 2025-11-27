@@ -118,7 +118,7 @@ macro_rules! context {
 ///
 /// # Deprecated
 ///
-/// Use [`group!`](crate::group) instead since version 0.6.0.
+/// Use [`group!`](crate::group) instead since version 0.5.0.
 ///
 /// # Examples
 ///
@@ -143,7 +143,7 @@ macro_rules! location {
 ///
 /// # Deprecated
 ///
-/// Use [`group!`](crate::group) instead since version 0.6.0.
+/// Use [`group!`](crate::group) instead since version 0.5.0.
 ///
 /// # Arguments
 ///
@@ -172,7 +172,7 @@ macro_rules! tag {
 ///
 /// # Deprecated
 ///
-/// Use [`group!`](crate::group) instead since version 0.6.0.
+/// Use [`group!`](crate::group) instead since version 0.5.0.
 ///
 /// # Arguments
 ///

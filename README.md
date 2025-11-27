@@ -90,16 +90,18 @@ println!("{}", err.error_chain());
 Chain context and transformations with a fluent builder API.
 
 ```rust
-use error_rail::{ErrorPipeline, context, location, tag};
+use error_rail::{ErrorPipeline, context, group};
 
 fn fetch_user(id: u64) -> Result<String, &'static str> {
     Err("user not found")
 }
 
 let result = ErrorPipeline::new(fetch_user(42))
-    .with_context(tag!("user-service"))
+    .with_context(group!(
+        tag("user-service"),
+        location(file!(), line!())
+    ))
     .with_context(context!("user_id: {}", 42))
-    .with_context(location!())
     .map_error(|e| format!("Fetch failed: {}", e))  // Transform error type
     .finish_boxed();
 
@@ -179,9 +181,7 @@ let result = ErrorPipeline::new(process(&payload))
 | Macro | Purpose | Example |
 |-------|---------|---------|
 | `context!` | Lazy formatted message | `context!("user_id: {}", id)` |
-| `location!` | Capture file:line | `location!()` |
-| `tag!` | Categorical label | `tag!("database")` |
-| `metadata!` | Key-value pair | `metadata!("host", "localhost")` |
+| `group!` | Structured context with multiple fields | `group!(tag("db"), location(file!(), line!()))` |
 | `rail!` | Quick pipeline wrapper | `rail!(fallible_fn())` |
 
 ```rust
