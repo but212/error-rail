@@ -1,5 +1,5 @@
-use crate::BoxedComposableResult;
-use crate::{ComposableError, ComposableResult, ErrorContext, ErrorVec, IntoErrorContext};
+use crate::types::composable_error::ComposableError;
+use crate::{ComposableResult, ErrorContext, ErrorVec, IntoErrorContext};
 
 /// A builder for composing error transformations with accumulated context.
 ///
@@ -303,17 +303,17 @@ impl<T, E> ErrorPipeline<T, E> {
     ///     .finish_boxed();
     /// ```
     #[inline]
-    pub fn finish_boxed(self) -> BoxedComposableResult<T, E> {
+    pub fn finish_boxed(self) -> crate::types::BoxedComposableResult<T, E> {
         match self.result {
             Ok(v) => Ok(v),
             Err(e) => {
                 let composable = ComposableError::new(e).with_contexts(self.pending_contexts);
-                Err(Box::new(composable))
+                Err(alloc::boxed::Box::new(composable))
             }
         }
     }
 
-    /// Finalizes the pipeline into an unboxed [`ComposableResult`].
+    /// Finalizes the pipeline into a [`ComposableResult`].
     ///
     /// Similar to `finish_boxed`, but returns the error directly without boxing.
     /// Use this when you need to avoid heap allocation.

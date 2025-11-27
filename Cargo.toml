@@ -25,7 +25,8 @@ criterion = "0.7.0"
 [features]
 default = []
 serde = ["dep:serde", "smallvec/serde"]
-full = ["serde"]
+std = []
+full = ["serde", "std"]
 
 [[bench]]
 name = "benchmark"

@@ -66,7 +66,7 @@ pub fn with_context_result<T, E, C>(result: Result<T, E>, context: C) -> BoxedCo
 where
     C: IntoErrorContext,
 {
-    result.map_err(|e| Box::new(with_context(e, context)))
+    result.map_err(|e| alloc::boxed::Box::new(with_context(e, context)))
 }
 
 /// Creates a reusable closure that wraps errors with a fixed context.
@@ -130,11 +130,8 @@ pub fn error_pipeline<T, E>(result: Result<T, E>) -> ErrorPipeline<T, E> {
 /// ```
 /// use error_rail::{accumulate_context, ErrorContext};
 ///
-/// let contexts = vec![
-///     ErrorContext::tag("db"),
-///     ErrorContext::new("connection failed"),
-/// ];
-/// let err = accumulate_context("timeout", contexts);
+/// let contexts = vec![ErrorContext::tag("auth"), ErrorContext::tag("api")];
+/// let err = accumulate_context("unauthorized", contexts);
 /// assert_eq!(err.context().len(), 2);
 /// ```
 pub fn accumulate_context<E, I, C>(error: E, contexts: I) -> ComposableError<E>
@@ -142,17 +139,17 @@ where
     I: IntoIterator<Item = C>,
     C: IntoErrorContext,
 {
-    let context_vec: ErrorVec<ErrorContext> = contexts
-        .into_iter()
-        .map(|c| c.into_error_context())
-        .collect();
-
-    ComposableError::new(error).with_contexts(context_vec)
+    let mut err = ComposableError::new(error);
+    for context in contexts {
+        err = err.with_context(context);
+    }
+    err
 }
 
 /// Creates a reusable closure that wraps errors with multiple contexts.
 ///
-/// Returns a function that attaches all provided contexts to any error.
+/// Returns a function that can be used with `map_err` to attach the same
+/// set of contexts to multiple error paths.
 ///
 /// # Arguments
 ///
@@ -194,7 +191,7 @@ where
 /// let chain = format_error_chain(&err);
 /// assert!(chain.contains("failed"));
 /// ```
-pub fn format_error_chain<E>(error: &ComposableError<E>) -> String
+pub fn format_error_chain<E>(error: &ComposableError<E>) -> alloc::string::String
 where
     E: Display,
 {

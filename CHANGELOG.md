@@ -9,14 +9,21 @@
 
 ### Changed
 
-- Replaced `std` usage with `core` across `context`, `convert`, `types`, and `validation` modules.
+- Replaced `std` usage with `core` and `alloc` across `context`, `convert`, `types`, and `validation` modules for `no_std` compatibility.
 - `collect_errors` and `Validation::from_iter` now use `ErrorVec` / `SmallVec` internally to reduce heap allocations.
 - `split_validation_errors` is now lazy, avoiding immediate vector allocation.
 - `std::error::Error` -> `core::error::Error`.
 - Restructured Cargo features:
   - `default = []` (no features enabled by default).
   - `serde` feature now enables optional serde support and forwards to `smallvec/serde`.
-  - `full` feature acts as a convenience bundle that enables `serde`.
+  - `full` feature acts as a convenience bundle that enables `serde` and `std`.
+- `alloc` crate is now unconditionally linked to ensure consistent type usage (`alloc::string::String`, etc.) across `std` and `no_std` builds.
+
+### Fixed
+
+- Restored `ErrorPipeline::finish_boxed()` method which was temporarily missing.
+- Fixed `ComposableError::context()` to return `ErrorVec` in LIFO order (matching previous behavior) instead of a reference.
+- Fixed doctests in `src/validation/traits.rs` by wrapping examples in `fn main()`.
 
 ## [0.3.1]
 

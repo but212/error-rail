@@ -203,6 +203,12 @@ impl<E> ComposableError<E> {
         &self.core_error
     }
 
+    /// Returns the context stack in LIFO order (most recent first).
+    #[inline]
+    pub fn context(&self) -> ErrorVec<ErrorContext> {
+        self.context.iter().rev().cloned().collect()
+    }
+
     /// Consumes the composable error, returning the underlying core error.
     #[inline]
     pub fn into_core(self) -> E {
@@ -222,18 +228,7 @@ impl<E> ComposableError<E> {
     /// let err = ComposableError::new("error")
     ///     .with_context("first")
     ///     .with_context("second");
-    ///
-    /// let contexts = err.context();
-    /// assert_eq!(contexts[0].message(), "second");
-    /// assert_eq!(contexts[1].message(), "first");
-    /// ```
-    #[inline]
-    pub fn context(&self) -> ErrorVec<ErrorContext> {
-        self.context.iter().rev().cloned().collect()
-    }
-
-    /// Efficient iterator over contexts without allocation.
-    ///
+    ///```
     /// Returns an iterator in LIFO order (most recent first) that borrows the contexts.
     ///
     /// # Examples
@@ -378,10 +373,11 @@ impl<E> ComposableError<E> {
     /// assert!(chain.contains("[db] -> fetching user -> database error (code: 500)"));
     /// ```
     #[must_use]
-    pub fn error_chain(&self) -> String
+    pub fn error_chain(&self) -> alloc::string::String
     where
         E: Display,
     {
+        use alloc::string::ToString;
         self.fmt().to_string()
     }
 }

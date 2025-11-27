@@ -20,7 +20,8 @@
 //! let ctx3 = ErrorContext::tag("network").into_error_context();
 //! ```
 use crate::types::error_context::ErrorContext;
-use std::borrow::Cow;
+use alloc::borrow::Cow;
+use alloc::string::String;
 
 /// Converts a type into an [`ErrorContext`] for error annotation.
 ///

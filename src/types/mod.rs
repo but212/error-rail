@@ -52,13 +52,12 @@ pub type SimpleComposableError<E> = ComposableError<E>;
 /// Kept for backward compatibility. Note that string codes are no longer supported via generic C.
 /// Use `ErrorContext::tag` instead.
 pub type TaggedComposableError<E> = ComposableError<E>;
-
 /// Boxed [`ComposableError`] for reduced stack size.
 ///
 /// # Type Parameters
 ///
 /// * `E` - The core error type
-pub type BoxedComposableError<E> = Box<ComposableError<E>>;
+pub type BoxedComposableError<E> = alloc::boxed::Box<ComposableError<E>>;
 
 /// Result alias with boxed [`ComposableError`] for reduced stack size.
 ///

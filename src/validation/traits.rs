@@ -14,11 +14,13 @@ use crate::validation::core::Validation;
 /// use error_rail::traits::ErrorCategory;
 /// use error_rail::validation::Validation;
 ///
-/// let valid: Validation<String, i32> = <Validation<String, ()>>::lift(42);
-/// assert!(valid.is_valid());
+/// fn main() {
+///     let valid: Validation<String, i32> = <Validation<String, ()>>::lift(42);
+///     assert!(valid.is_valid());
 ///
-/// let invalid: Validation<String, i32> = <Validation<String, ()>>::handle_error("error".to_string());
-/// assert!(invalid.is_invalid());
+///     let invalid: Validation<String, i32> = <Validation<String, ()>>::handle_error("error".to_string());
+///     assert!(invalid.is_invalid());
+/// }
 /// ```
 impl<E> ErrorCategory<E> for Validation<E, ()> {
     type ErrorFunctor<T> = Validation<E, T>;
@@ -45,13 +47,15 @@ impl<E> ErrorCategory<E> for Validation<E, ()> {
 /// use error_rail::traits::WithError;
 /// use error_rail::validation::Validation;
 ///
-/// let validation: Validation<&str, i32> = Validation::invalid_many(["err1", "err2"]);
-/// let mapped = validation.fmap_error(|e| format!("Error: {}", e));
-/// assert_eq!(mapped.iter_errors().count(), 2);
+/// fn main() {
+///     let validation: Validation<&str, i32> = Validation::invalid_many(vec!["err1", "err2"]);
+///     let mapped = validation.fmap_error(|e| format!("Error: {}", e));
+///     assert_eq!(mapped.iter_errors().count(), 2);
 ///
-/// let valid: Validation<&str, i32> = Validation::valid(42);
-/// let result = valid.to_result();
-/// assert_eq!(result, Ok(42));
+///     let valid: Validation<&str, i32> = Validation::valid(42);
+///     let result = valid.to_result();
+///     assert_eq!(result, Ok(42));
+/// }
 /// ```
 impl<T, E> WithError<E> for Validation<E, T> {
     type Success = T;

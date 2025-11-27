@@ -69,7 +69,7 @@ impl<F> LazyContext<F> {
 
 impl<F> IntoErrorContext for LazyContext<F>
 where
-    F: FnOnce() -> String,
+    F: FnOnce() -> alloc::string::String,
 {
     /// Evaluates the lazy closure and converts the result into an [`ErrorContext`].
     ///

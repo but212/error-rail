@@ -25,11 +25,11 @@
 //! let tag = ErrorContext::tag("db");
 //! let meta = ErrorContext::metadata("retry_count", "3");
 //! ```
+use alloc::borrow::Cow;
 use core::fmt::Display;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
-use std::borrow::Cow;
 
 /// Structured metadata attached to a [`ComposableError`](crate::types::ComposableError).
 ///
@@ -205,22 +205,17 @@ impl ErrorContext {
                     return Cow::Borrowed(msg.as_ref());
                 }
                 if let Some(loc) = &g.location {
-                    return Cow::Owned(format!("at {}:{}", loc.file, loc.line));
+                    return Cow::Owned(alloc::format!("at {}:{}", loc.file, loc.line));
                 }
                 if !g.tags.is_empty() {
-                    // Join tags with comma if multiple? Or just show first?
-                    // Previous behavior was single tag -> "[tag]".
-                    // Let's format as "[tag1, tag2]"
-                    return Cow::Owned(format!("[{}]", g.tags.join(", ")));
+                    return Cow::Owned(alloc::format!("[{}]", g.tags.join(", ")));
                 }
                 if !g.metadata.is_empty() {
-                    // Previous behavior was single key-value -> "key=value".
-                    // Let's format as "key1=value1, key2=value2"
                     let meta_str = g
                         .metadata
                         .iter()
-                        .map(|(k, v)| format!("{}={}", k, v))
-                        .collect::<Vec<_>>()
+                        .map(|(k, v)| alloc::format!("{}={}", k, v))
+                        .collect::<alloc::vec::Vec<_>>()
                         .join(", ");
                     return Cow::Owned(meta_str);
                 }
