@@ -25,7 +25,9 @@
 //! let tag = ErrorContext::tag("db");
 //! let meta = ErrorContext::metadata("retry_count", "3");
 //! ```
+use crate::alloc_type::String;
 use crate::types::alloc_type::{Cow, Vec};
+use crate::ErrorVec;
 use core::fmt::Display;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -227,7 +229,7 @@ impl ErrorContext {
         match self {
             Self::Simple(s) => Cow::Borrowed(s.as_ref()),
             Self::Group(g) => {
-                let mut parts = Vec::new();
+                let mut parts = ErrorVec::new();
 
                 // Add tags if present
                 if !g.tags.is_empty() {
@@ -241,20 +243,7 @@ impl ErrorContext {
 
                 // Add message if present
                 if let Some(msg) = &g.message {
-                    if g.location.is_some() {
-                        // Append to the last location part
-                        if let Some(last_part) = parts.last_mut() {
-                            if last_part.starts_with("at ") {
-                                *last_part = format!("{}: {}", last_part, msg.as_ref());
-                            } else {
-                                parts.push(msg.as_ref().to_string());
-                            }
-                        } else {
-                            parts.push(msg.as_ref().to_string());
-                        }
-                    } else {
-                        parts.push(msg.as_ref().to_string());
-                    }
+                    Self::add_message_to_parts(&mut parts, msg.as_ref(), g.location.is_some());
                 }
 
                 // Add metadata if present
@@ -274,6 +263,24 @@ impl ErrorContext {
                     Cow::Owned(parts.join(" "))
                 }
             }
+        }
+    }
+
+    /// Helper function to add message to parts with proper location formatting
+    fn add_message_to_parts(parts: &mut ErrorVec<String>, msg: &str, has_location: bool) {
+        if has_location {
+            // Try to append to the last location part
+            if let Some(last_part) = parts.last_mut() {
+                if last_part.starts_with("at ") {
+                    *last_part = format!("{}: {}", last_part, msg);
+                } else {
+                    parts.push(msg.to_string());
+                }
+            } else {
+                parts.push(msg.to_string());
+            }
+        } else {
+            parts.push(msg.to_string());
         }
     }
 }

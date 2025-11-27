@@ -74,11 +74,11 @@ use error_rail::{ComposableError, context, group};
 
 let err = ComposableError::<&str>::new("connection failed")
     .with_context(context!("retry attempt {}", 3))
-    .with_context(group! {
-        tag: "database";
-        location: file!(), line!();
-        metadata: "host", "localhost:5432"
-    })
+    .with_context(group!(
+        tag("database"),
+        location(file!(), line!()),
+        metadata("host", "localhost:5432")
+    ))
     .set_code(500);
 
 println!("{}", err.error_chain());

@@ -12,7 +12,6 @@
 //! - **Macros**: [`context!`], [`group!`], [`rail!`]
 //! - **Types**: [`ComposableError`], [`ErrorContext`], [`ErrorPipeline`], [`LazyGroupContext`]
 //! - **Traits**: [`ResultExt`], [`BoxedResultExt`], [`IntoErrorContext`]
-//! - **Type Aliases**: [`BoxedResult`]
 //!
 //! # Examples
 //!
