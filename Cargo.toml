@@ -4,10 +4,10 @@ version = "0.4.0"
 authors = ["jeong-il suk <wjddlf211@naver.com>"]
 edition = "2021"
 license = "Apache-2.0"
-description = "ErrorRail is a Error Handling library for the Rust language."
+description = "ErrorRail is a no_std compatible Error Handling library for the Rust language."
 repository = "https://github.com/but212/error-rail"
-keywords = ["error", "error-handling"]
-categories = ["algorithms"]
+keywords = ["error", "error-handling", "no_std"]
+categories = ["algorithms", "no-std"]
 readme = "README.md"
 rust-version = "1.81.0"
 
@@ -15,7 +15,7 @@ rust-version = "1.81.0"
 msrv = "1.81.0"
 
 [dependencies]
-serde = { version = "1.0", features = ["derive"], optional = true }
+serde = { version = "1.0", default-features = false, features = ["derive", "alloc"], optional = true }
 smallvec = "1.15.1"
 
 [dev-dependencies]
