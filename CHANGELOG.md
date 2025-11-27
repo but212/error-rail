@@ -30,6 +30,8 @@
 
 - Replaced `std` usage with `core` and `alloc` across `context`, `convert`, `types`, and `validation` modules for `no_std` compatibility.
 - **Introduced `types::alloc_type` module with conditional type aliases**: Added unified `Box`, `String`, `Cow`, and `Vec` type aliases that automatically use `std` types when the `std` feature is enabled or `alloc` types in `no_std` mode, eliminating direct `alloc::` prefixes throughout the codebase.
+- **Enhanced backtrace macros**: Added `backtrace_force!()` macro that always captures stack traces regardless of `RUST_BACKTRACE`/`RUST_LIB_BACKTRACE` environment variables, while the existing `backtrace!()` macro continues to respect environment settings for production use. Improved test coverage to validate actual stack frame capture rather than just non-empty strings.
+- **Improved serde no_std support**: Configured serde with `default-features = false` and `features = ["derive", "alloc"]` for proper `no_std` compatibility while maintaining full `std` support when the `std` feature is enabled.
 - `collect_errors` and `Validation::from_iter` now use `ErrorVec` / `SmallVec` internally to reduce heap allocations.
 - `split_validation_errors` is now lazy, avoiding immediate vector allocation.
 - `std::error::Error` -> `core::error::Error`.

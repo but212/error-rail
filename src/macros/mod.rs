@@ -225,7 +225,7 @@ macro_rules! impl_error_context {
 /// # Examples
 ///
 /// ```
-/// use error_rail::{backtrace, ComposableError};
+/// use error_rail::{ComposableError, backtrace};
 ///
 /// let err = ComposableError::<&str>::new("panic occurred")
 ///     .with_context(backtrace!());
@@ -235,5 +235,32 @@ macro_rules! impl_error_context {
 macro_rules! backtrace {
     () => {{
         $crate::types::LazyContext::new(|| std::backtrace::Backtrace::capture().to_string())
+    }};
+}
+
+/// Creates a backtrace context that always captures regardless of environment.
+///
+/// This macro uses `force_capture()` to always generate a backtrace, ignoring
+/// `RUST_BACKTRACE`/`RUST_LIB_BACKTRACE` settings. Use this for debugging
+/// scenarios where you need guaranteed backtrace information.
+///
+/// # Performance Note
+///
+/// This has higher overhead than `backtrace!()` since it always captures
+/// stack frames, regardless of environment settings.
+///
+/// # Examples
+///
+/// ```
+/// use error_rail::{ComposableError, backtrace_force};
+///
+/// let err = ComposableError::<&str>::new("panic occurred")
+///     .with_context(backtrace_force!());
+/// ```
+#[macro_export]
+#[cfg(feature = "std")]
+macro_rules! backtrace_force {
+    () => {{
+        $crate::types::LazyContext::new(|| std::backtrace::Backtrace::force_capture().to_string())
     }};
 }
