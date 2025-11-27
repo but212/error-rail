@@ -25,7 +25,7 @@ Most error handling libraries format context eagerly—even on success paths whe
 | Scenario | error-rail | Eager formatting | Speedup |
 |----------|------------|------------------|---------|
 | Success path | 637 ns | 1,351 ns | **2.1x faster** |
-| Error path | 941 ns | 835 ns | ~same |
+| Error path | 941 ns | 835 ns | 1.1x slower |
 
 Since most operations succeed (95%+), lazy evaluation provides significant real-world performance gains.
 
