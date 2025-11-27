@@ -62,14 +62,16 @@ println!("{}", err.error_chain());
 `ErrorPipeline` provides a fluent API for wrapping `Result` values with context.
 
 ```rust
-use error_rail::{ErrorPipeline, context, location, tag};
+use error_rail::{ErrorPipeline, context, group};
 
 fn read_config() -> Result<String, Box<error_rail::ComposableError<std::io::Error>>> {
     ErrorPipeline::new(std::fs::read_to_string("config.toml"))
-        .with_context(location!())              // Captures file:line automatically
-        .with_context(tag!("config"))           // Categorical tag for filtering
+        .with_context(group!(
+            location(file!(), line!()),              // Captures file:line automatically
+            tag("config")                             // Categorical tag for filtering
+        ))
         .with_context(context!("reading app configuration"))
-        .finish_boxed()                         // Converts to boxed result
+        .finish_boxed()                               // Converts to boxed result
 }
 
 fn main() {
@@ -172,10 +174,10 @@ fn main() {
 Attach numeric error codes for programmatic error handling:
 
 ```rust
-use error_rail::{ComposableError, context, tag};
+use error_rail::{ComposableError, context, group};
 
 let err = ComposableError::<&str>::new("unauthorized")
-    .with_context(tag!("auth"))
+    .with_context(group!(tag("auth")))
     .with_context(context!("invalid credentials"))
     .set_code(401);
 
