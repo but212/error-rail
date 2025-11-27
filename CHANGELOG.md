@@ -12,7 +12,11 @@
 - Replaced `std` usage with `core` across `context`, `convert`, `types`, and `validation` modules.
 - `collect_errors` and `Validation::from_iter` now use `ErrorVec` / `SmallVec` internally to reduce heap allocations.
 - `split_validation_errors` is now lazy, avoiding immediate vector allocation.
-- `std::error::Error` -> `core::error::Error`
+- `std::error::Error` -> `core::error::Error`.
+- Restructured Cargo features:
+  - `default = []` (no features enabled by default).
+  - `serde` feature now enables optional serde support and forwards to `smallvec/serde`.
+  - `full` feature acts as a convenience bundle that enables `serde`.
 
 ## [0.3.1]
 
