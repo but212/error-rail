@@ -116,6 +116,10 @@ macro_rules! context {
 /// using the `file!()` and `line!()` built-in macros, providing precise source location
 /// information for debugging.
 ///
+/// # Deprecated
+///
+/// Use [`group!`](crate::group) instead since version 0.6.0.
+///
 /// # Examples
 ///
 /// ```
@@ -125,7 +129,7 @@ macro_rules! context {
 ///     .with_context(location!());
 /// ```
 #[macro_export]
-#[deprecated]
+#[deprecated(since = "0.6.0", note = "Use `group!` instead")]
 macro_rules! location {
     () => {
         $crate::types::ErrorContext::location(file!(), line!())
@@ -136,6 +140,10 @@ macro_rules! location {
 ///
 /// This macro creates an [`ErrorContext::tag`](crate::types::ErrorContext::tag) that can be
 /// used to categorize and filter errors by domain (e.g., "db", "auth", "network").
+///
+/// # Deprecated
+///
+/// Use [`group!`](crate::group) instead since version 0.6.0.
 ///
 /// # Arguments
 ///
@@ -150,7 +158,7 @@ macro_rules! location {
 ///     .with_context(tag!("network"));
 /// ```
 #[macro_export]
-#[deprecated]
+#[deprecated(since = "0.6.0", note = "Use `group!` instead")]
 macro_rules! tag {
     ($tag:expr) => {
         $crate::types::ErrorContext::tag($tag)
@@ -161,6 +169,10 @@ macro_rules! tag {
 ///
 /// This macro creates an [`ErrorContext::metadata`](crate::types::ErrorContext::metadata)
 /// entry that can be used for structured logging, filtering, or monitoring.
+///
+/// # Deprecated
+///
+/// Use [`group!`](crate::group) instead since version 0.6.0.
 ///
 /// # Arguments
 ///
@@ -176,7 +188,7 @@ macro_rules! tag {
 ///     .with_context(metadata!("retry_after", "60"));
 /// ```
 #[macro_export]
-#[deprecated]
+#[deprecated(since = "0.6.0", note = "Use `group!` instead")]
 macro_rules! metadata {
     ($key:expr, $value:expr) => {
         $crate::types::ErrorContext::metadata($key, $value)

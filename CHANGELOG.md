@@ -1,8 +1,8 @@
 # CHANGELOG
 
-## [Unreleased]
+## [0.5.0]
 
-### Breaking Changes - Unreleased
+### Breaking Changes - 0.5.0
 
 - **`GroupContext::message()` now combines all available fields**:
   - **Before**: Displayed only the first available field in priority order (message → location → tags → metadata)
@@ -27,7 +27,7 @@
     // Output: -> [database] at main.rs:42 (host=localhost)
     ```
 
-### Added - Unreleased
+### Added - 0.5.0
 
 - **`ResultExt` trait**: New ergonomic extension trait for adding context to `Result` types
   - `.ctx(msg)` - Add static context message
@@ -39,9 +39,12 @@
   - Import everything with `use error_rail::prelude::*;`
   - Includes `BoxedResult<T, E>` type alias for ergonomic return types
 
-### Changed - Unreleased
+### Changed - 0.5.0
 
-- **Deprecated redundant type aliases**: `SimpleComposableError<E>` and `TaggedComposableError<E>` now marked as deprecated with clear migration guidance
+- **Removed redundant type aliases**: `SimpleComposableError<E>` and `TaggedComposableError<E>` have been completely removed
+  - **Rationale**: These aliases provided no additional functionality over `ComposableError<E>` and created unnecessary complexity
+  - **Migration**: Use `ComposableError<E>` directly - these were simple type aliases with no behavior change
+  - **Impact**: Code using these aliases will need to be updated to use `ComposableError<E>` instead
 - **Enhanced error messages**: Added `#[diagnostic::on_unimplemented]` to `IntoErrorContext` trait for better compiler guidance when trait bounds are not satisfied
 - **Improved DX**: Added helpful implementation examples and links to documentation in trait documentation
 - **Deprecated individual context macros**: `location!()`, `tag!()`, and `metadata!()` macros are now deprecated in favor of the new `group!` macro
@@ -71,7 +74,7 @@
   - **Removal timeline**: Deprecated macros will be removed in version 0.5.0
   - **New exports**: `group!` macro and `LazyGroupContext` type added to prelude
 
-### Deprecated - Unreleased
+### Deprecated - 0.5.0
 
 - `SimpleComposableError<E>` - Use `ComposableError<E>` directly (scheduled for removal in 0.5.0)
 - `TaggedComposableError<E>` - Use `ComposableError<E>` with `ErrorContext::tag()` instead (scheduled for removal in 0.5.0)
