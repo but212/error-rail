@@ -26,6 +26,7 @@
 //! let meta = ErrorContext::metadata("retry_count", "3");
 //! ```
 use core::fmt::Display;
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
 use std::borrow::Cow;
@@ -51,14 +52,16 @@ use std::borrow::Cow;
 /// let tag = ErrorContext::tag("db");
 /// let meta = ErrorContext::metadata("retry_count", "3");
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ErrorContext {
     Simple(Cow<'static, str>),
     Group(GroupContext),
 }
 
 /// A rich context containing multiple pieces of information.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
 pub struct GroupContext {
     /// Optional message describing this context
     pub message: Option<Cow<'static, str>>,
@@ -71,7 +74,8 @@ pub struct GroupContext {
 }
 
 /// Source file and line number where the error occurred.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Location {
     /// Source file path
     pub file: Cow<'static, str>,

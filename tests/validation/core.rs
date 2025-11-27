@@ -1,4 +1,5 @@
 use error_rail::validation::Validation;
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 #[test]
@@ -76,12 +77,14 @@ fn test_validation_into_value_invalid() {
     assert!(v.into_value().is_none());
 }
 
+#[cfg(feature = "serde")]
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 struct TestData {
     id: i32,
 }
 
 #[test]
+#[cfg(feature = "serde")]
 fn test_validation_serde() {
     let valid = Validation::<String, TestData>::valid(TestData { id: 1 });
     let serialized = serde_json::to_string(&valid).unwrap();

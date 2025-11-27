@@ -22,6 +22,7 @@ use core::fmt::{Debug, Display};
 
 use crate::traits::IntoErrorContext;
 use crate::types::{ErrorContext, ErrorVec};
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 /// Error wrapper that stores the original error plus structured contexts and an optional code.
@@ -65,7 +66,8 @@ use serde::{Deserialize, Serialize};
 /// assert!(StdError::source(&err).is_some());
 /// ```
 #[must_use]
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ComposableError<E> {
     core_error: E,
     context: ErrorVec<ErrorContext>,

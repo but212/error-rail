@@ -1,4 +1,5 @@
 use crate::types::ErrorVec;
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use smallvec::smallvec;
 
@@ -36,7 +37,8 @@ use smallvec::smallvec;
 /// assert!(invalid.is_invalid());
 /// ```
 #[must_use]
-#[derive(Clone, PartialEq, PartialOrd, Eq, Ord, Debug, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Clone, PartialEq, PartialOrd, Eq, Ord, Debug, Hash)]
 pub enum Validation<E, A> {
     Valid(A),
     Invalid(ErrorVec<E>),

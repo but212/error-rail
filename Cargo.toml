@@ -15,13 +15,35 @@ rust-version = "1.81.0"
 msrv = "1.81.0"
 
 [dependencies]
-serde = { version = "1.0", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"], optional = true }
 smallvec = { version = "1.15.1", features = ["serde"] }
 
 [dev-dependencies]
 serde_json = "1.0.145"
 criterion = "0.7.0"
 
+[features]
+default=[]
+serde = ["dep:serde"]
+full = ['serde']
+
 [[bench]]
 name = "benchmark"
 harness = false
+
+
+[[example]]
+name = "quick_start"
+path = "examples/quick_start.rs"
+
+[[example]]
+name = "readme_features"
+path = "examples/readme_features.rs"
+
+[[example]]
+name = "pipeline"
+path = "examples/pipeline.rs"
+
+[[example]]
+name = "validation_collect"
+path = "examples/validation_collect.rs"

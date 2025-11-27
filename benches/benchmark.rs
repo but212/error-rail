@@ -2,6 +2,7 @@ use criterion::{criterion_group, criterion_main, Criterion};
 use error_rail::traits::ErrorOps;
 use error_rail::validation::Validation;
 use error_rail::{backtrace, context, ComposableError, ErrorContext, ErrorPipeline};
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use std::{hint::black_box, sync::OnceLock};
 
@@ -35,7 +36,8 @@ fn realistic_user_data() -> &'static Vec<UserData> {
     INSTANCE.get_or_init(|| (0..1000).map(UserData::new).collect())
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Debug, Clone)]
 enum DomainError {
     Database(String),
     Network(String),
@@ -100,6 +102,7 @@ fn bench_composable_error_creation(c: &mut Criterion) {
     });
 }
 
+#[cfg(feature = "serde")]
 // 2. Serialization benchmark - realistic complex error
 fn bench_composable_error_serialization(c: &mut Criterion) {
     let err = ComposableError::new(DomainError::Network("API rate limit exceeded".to_string()))
@@ -486,6 +489,26 @@ fn bench_error_type_conversions(c: &mut Criterion) {
     });
 }
 
+#[cfg(not(feature = "serde"))]
+criterion_group!(
+    benches,
+    bench_composable_error_creation,
+    bench_error_ops_recover,
+    bench_error_ops_bimap,
+    bench_context_lazy_vs_eager_success,
+    bench_context_lazy_vs_eager_error,
+    bench_backtrace_lazy_success,
+    bench_backtrace_lazy_error,
+    bench_context_depth,
+    bench_pipeline_vs_result_success,
+    bench_pipeline_vs_result_error,
+    bench_validation_collect_realistic,
+    bench_error_cloning_and_arc,
+    bench_mixed_success_error_ratios,
+    bench_error_type_conversions
+);
+
+#[cfg(feature = "serde")]
 criterion_group!(
     benches,
     bench_composable_error_creation,
