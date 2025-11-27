@@ -90,22 +90,22 @@ fn main() {
 | Macro | What it does | Example |
 |-------|--------------|---------|
 | `context!` | Lazy formatted message | `context!("user_id: {}", 42)` |
-| `location!` | Source file and line | `location!()` |
-| `tag!` | Categorical label | `tag!("database")` |
-| `metadata!` | Key-value pair | `metadata!("host", "localhost")` |
+| `group!` | Combined grouped context (lazy) | `group!(tag("db"), location(file!(), line!()), metadata("host", "localhost"))` |
 | `rail!` | Quick pipeline wrapper | `rail!(fs::read("file"))` |
 
 ```rust
-use error_rail::{ComposableError, context, location, tag, metadata};
+use error_rail::{ComposableError, context, group};
 
 let err = ComposableError::<&str>::new("timeout")
-    .with_context(tag!("http"))
-    .with_context(location!())
-    .with_context(metadata!("endpoint", "/api/users"))
-    .with_context(context!("request failed after {} retries", 3));
+    .with_context(context!("request failed after {} retries", 3))
+    .with_context(group!(
+        tag("http"),
+        location(file!(), line!()),
+        metadata("endpoint", "/api/users")
+    ));
 
 println!("{}", err.error_chain());
-// Output: request failed after 3 retries -> endpoint=/api/users -> src/main.rs:5 -> [http] -> timeout
+// Output: request failed after 3 retries -> [http] at src/main.rs:5 (endpoint=/api/users) -> timeout
 ```
 
 ### The `rail!` Shortcut

@@ -16,7 +16,7 @@ fn test_error_context_message_variants() {
 
     // Group with metadata
     let ctx_meta = ErrorContext::metadata("key", "val");
-    assert_eq!(ctx_meta.message(), "key=val");
+    assert_eq!(ctx_meta.message(), "(key=val)");
 }
 
 #[test]
@@ -39,7 +39,7 @@ fn test_error_context_tag_and_metadata() {
     assert_eq!(ctx_tag.message(), "[tag1]");
 
     let ctx_meta = ErrorContext::metadata("key", "val");
-    assert_eq!(ctx_meta.message(), "key=val");
+    assert_eq!(ctx_meta.message(), "(key=val)");
 }
 
 #[test]
@@ -50,5 +50,5 @@ fn test_error_context_builder() {
         .tag("tag1")
         .metadata("key", "val")
         .build();
-    assert_eq!(ctx.message(), "msg");
+    assert_eq!(ctx.message(), "[tag1] at file.rs:10: msg (key=val)");
 }

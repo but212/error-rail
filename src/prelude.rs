@@ -9,8 +9,8 @@
 //!
 //! # What's Included
 //!
-//! - **Macros**: [`context!`], [`location!`], [`tag!`], [`metadata!`], [`rail!`]
-//! - **Types**: [`ComposableError`], [`ErrorContext`], [`ErrorPipeline`]
+//! - **Macros**: [`context!`], [`group!`], [`rail!`]
+//! - **Types**: [`ComposableError`], [`ErrorContext`], [`ErrorPipeline`], [`LazyGroupContext`]
 //! - **Traits**: [`ResultExt`], [`BoxedResultExt`], [`IntoErrorContext`]
 //! - **Type Aliases**: [`BoxedResult`]
 //!
@@ -39,9 +39,10 @@
 //! ```
 
 // Macros
-pub use crate::{context, location, metadata, rail, tag};
+pub use crate::{context, group, rail};
 
 // Core types
+pub use crate::types::lazy_context::LazyGroupContext;
 pub use crate::types::{ComposableError, ErrorContext, ErrorPipeline};
 
 // Traits

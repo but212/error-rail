@@ -19,11 +19,61 @@
 - **Deprecated redundant type aliases**: `SimpleComposableError<E>` and `TaggedComposableError<E>` now marked as deprecated with clear migration guidance
 - **Enhanced error messages**: Added `#[diagnostic::on_unimplemented]` to `IntoErrorContext` trait for better compiler guidance when trait bounds are not satisfied
 - **Improved DX**: Added helpful implementation examples and links to documentation in trait documentation
+- **Breaking: `GroupContext::message()` now combines all available fields**:
+  - **Before**: Displayed only the first available field in priority order (message → location → tags → metadata)
+  - **After**: Combines all fields into one cohesive unit with format `[tag1, tag2] at file:line: message (key1=value1, key2=value2)`
+  - **Rationale**: Improves readability by presenting each context as a unified information unit rather than fragmented parts separated by "->" arrows
+  - **Migration**: Code parsing `ErrorContext::message()` output needs to be updated to handle the new combined format. Single-field contexts remain unchanged.
+  - **Recommended**: Use `ErrorContext::builder()` to create grouped contexts that display as cohesive units in error chains:
+
+    ```rust
+    // Before: Multiple separate contexts
+    err.with_context(tag!("database"))
+       .with_context(location!())
+       .with_context(metadata!("host", "localhost"))
+    // Output: -> [database] -> at main.rs:42 -> (host=localhost)
+    
+    // After: Single grouped context  
+    err.with_context(ErrorContext::builder()
+        .tag("database")
+        .location(file!(), line!())
+        .metadata("host", "localhost")
+        .build())
+    // Output: -> [database] at main.rs:42 (host=localhost)
+    ```
+
+- **Deprecated individual context macros**: `location!()`, `tag!()`, and `metadata!()` macros are now deprecated in favor of the new `group!` macro
+  - **Rationale**: The new `group!` macro provides lazy evaluation for grouped contexts, combining multiple fields into a single cohesive unit while maintaining performance benefits
+  - **Migration**: Replace individual macro calls with `group! { ... }` using semicolon-separated fields:
+
+    ```rust
+    // Before: Multiple separate contexts (eager allocation)
+    err.with_context(location!())
+       .with_context(tag!("database"))
+       .with_context(metadata!("host", "localhost"));
+    // Output: -> at main.rs:42 -> [database] -> (host=localhost)
+    
+    // After: Single grouped context (lazy evaluation)
+    err.with_context(group! {
+        location: file!(), line!();
+        tag: "database";
+        metadata: "host", "localhost"
+    });
+    // Output: -> [database] at main.rs:42 (host=localhost)
+    ```
+
+  - **Benefits**:
+    - Lazy evaluation: No string formatting until error occurs
+    - Unified display: All fields appear as one cohesive context unit
+    - Better performance: Reduced allocations on success paths
+  - **Removal timeline**: Deprecated macros will be removed in version 0.5.0
+  - **New exports**: `group!` macro and `LazyGroupContext` type added to prelude
 
 ### Deprecated - Unreleased
 
 - `SimpleComposableError<E>` - Use `ComposableError<E>` directly (scheduled for removal in 0.5.0)
 - `TaggedComposableError<E>` - Use `ComposableError<E>` with `ErrorContext::tag()` instead (scheduled for removal in 0.5.0)
+- `location!()`, `tag!()`, and `metadata!()` macros - Use `group!` macro instead (scheduled for removal in 0.5.0)
 
 ## [0.4.0]
 

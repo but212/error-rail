@@ -70,17 +70,19 @@ fn main() {
 Wrap any error in `ComposableError` and attach layered metadata.
 
 ```rust
-use error_rail::{ComposableError, context, location, tag, metadata};
+use error_rail::{ComposableError, context, group};
 
 let err = ComposableError::<&str>::new("connection failed")
-    .with_context(tag!("database"))
-    .with_context(location!())
-    .with_context(metadata!("host", "localhost:5432"))
     .with_context(context!("retry attempt {}", 3))
+    .with_context(group! {
+        tag: "database";
+        location: file!(), line!();
+        metadata: "host", "localhost:5432"
+    })
     .set_code(500);
 
 println!("{}", err.error_chain());
-// Output: retry attempt 3 -> host=localhost:5432 -> src/main.rs:7 -> [database] -> connection failed (code: 500)
+// Output: retry attempt 3 -> [database] at src/main.rs:7 (host=localhost:5432) -> connection failed (code: 500)
 ```
 
 ### 2. Error Pipeline

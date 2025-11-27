@@ -20,8 +20,7 @@ fn test_error_pipeline_recover_clears_context() {
     // 1. Start with error and multiple contexts
     let pipeline = ErrorPipeline::<i32, &str>::new(Err("initial"))
         .with_context(error_rail::context!("ctx1"))
-        .with_context(error_rail::context!("ctx2"))
-        .with_context(error_rail::tag!("database"));
+        .with_context(error_rail::group!(message("ctx2"), tag("database")));
 
     // 2. Recover successfully (should clear all contexts and result in Ok)
     let pipeline = pipeline.recover(|_| Ok(42));
@@ -43,8 +42,7 @@ fn test_error_pipeline_recover_failed_preserves_context() {
     // 1. Start with error and multiple contexts
     let pipeline = ErrorPipeline::<i32, &str>::new(Err("initial"))
         .with_context(error_rail::context!("ctx1"))
-        .with_context(error_rail::context!("ctx2"))
-        .with_context(error_rail::tag!("database"));
+        .with_context(error_rail::group!(message("ctx2"), tag("database")));
 
     // 2. Attempt recovery but fail (should preserve all contexts)
     let pipeline = pipeline.recover(|_| Err("recovery failed"));
@@ -71,8 +69,7 @@ fn test_error_pipeline_chained_recovery_clears_all_contexts() {
     // 1. Start with error and accumulate multiple contexts
     let pipeline = ErrorPipeline::<i32, &str>::new(Err("initial"))
         .with_context(error_rail::context!("ctx1"))
-        .with_context(error_rail::context!("ctx2"))
-        .with_context(error_rail::tag!("database"));
+        .with_context(error_rail::group!(message("ctx2"), tag("database")));
 
     // 2. First recovery attempt fails (should preserve contexts)
     let pipeline = pipeline.recover(|_| Err("first recovery failed"));

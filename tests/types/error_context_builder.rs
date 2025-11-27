@@ -8,14 +8,15 @@ fn builder_creates_group_context() {
         .metadata("host", "localhost")
         .build();
 
-    assert_eq!(ctx.message(), "connection failed");
+    assert_eq!(
+        ctx.message(),
+        "[network] connection failed (host=localhost)"
+    );
 
     if let ErrorContext::Group(g) = ctx {
         assert_eq!(g.message, Some("connection failed".into()));
         assert!(g.tags.contains(&"network".into()));
-        assert!(g
-            .metadata
-            .contains(&("host".into(), "localhost".into())));
+        assert!(g.metadata.contains(&("host".into(), "localhost".into())));
     } else {
         panic!("Expected Group context");
     }
@@ -49,7 +50,7 @@ fn group_factory_method_starts_builder() {
         .tag("important")
         .build();
 
-    assert_eq!(ctx.message(), "error occurred");
+    assert_eq!(ctx.message(), "[important] error occurred");
     if let ErrorContext::Group(g) = ctx {
         assert!(g.tags.contains(&"important".into()));
     } else {

@@ -48,7 +48,7 @@
 //!
 //! if let Err(err) = result {
 //!     eprintln!("{}", err.error_chain());
-//!     // Output: user_id: 42 -> operation: load_config -> failed
+//!     // Output: (user_id=42) -> (operation=load_config) -> failed
 //! }
 //! ```
 #![cfg_attr(not(feature = "std"), no_std)]

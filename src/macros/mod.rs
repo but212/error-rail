@@ -9,7 +9,9 @@
 //! - [`macro@crate::location`] - Automatically captures the current file path and line number
 //!   using `file!()` and `line!()`.
 //! - [`macro@crate::tag`] - Attaches a short categorical label for filtering and searching.
-//! - [`macro@crate::metadata`] - Adds arbitrary key-value pairs for structured logging.
+//! - [`macro@crate::group`] - Creates a lazily-evaluated grouped context that combines
+//!   multiple fields (message, tags, location, metadata) into one cohesive unit while deferring
+//!   all formatting until the error occurs.
 //!
 //! # Examples
 //!
@@ -115,6 +117,7 @@ macro_rules! context {
 ///     .with_context(location!());
 /// ```
 #[macro_export]
+#[deprecated]
 macro_rules! location {
     () => {
         $crate::types::ErrorContext::location(file!(), line!())
@@ -139,6 +142,7 @@ macro_rules! location {
 ///     .with_context(tag!("network"));
 /// ```
 #[macro_export]
+#[deprecated]
 macro_rules! tag {
     ($tag:expr) => {
         $crate::types::ErrorContext::tag($tag)
@@ -164,6 +168,7 @@ macro_rules! tag {
 ///     .with_context(metadata!("retry_after", "60"));
 /// ```
 #[macro_export]
+#[deprecated]
 macro_rules! metadata {
     ($key:expr, $value:expr) => {
         $crate::types::ErrorContext::metadata($key, $value)
@@ -210,6 +215,84 @@ macro_rules! impl_error_context {
                 $crate::types::ErrorContext::new(self.to_string())
             }
         }
+    };
+}
+
+/// Creates a grouped error context that combines multiple context types.
+///
+/// This macro creates a lazily-evaluated grouped context that combines message,
+/// tags, location, and metadata into a single cohesive unit. All formatting is
+/// deferred until the error actually occurs, avoiding unnecessary allocations
+/// on the success path.
+///
+/// # Arguments
+///
+/// The macro accepts function-call style arguments:
+/// * `message("format string", args...)` - Optional formatted message
+/// * `tag("label")` - Categorical tags (can be repeated)
+/// * `location(file, line)` - Source file and line number
+/// * `metadata("key", "value")` - Key-value pairs (can be repeated)
+///
+/// # Examples
+///
+/// ```
+/// use error_rail::{group, ComposableError};
+///
+/// let attempts = 3;
+/// let err = ComposableError::<&str>::new("auth failed")
+///     .with_context(group!(
+///         message("user_id: {}", attempts),
+///         tag("auth"),
+///         location(file!(), line!()),
+///         metadata("retry_count", "3"),
+///         metadata("timeout", "30s")
+///     ));
+/// ```
+#[macro_export]
+macro_rules! group {
+    // Empty group
+    () => {
+        $crate::types::LazyGroupContext::new(move || {
+            $crate::types::ErrorContext::Group($crate::types::GroupContext::default())
+        })
+    };
+
+    // With fields - use function-call style
+    (
+        $($field:ident($($arg:tt)*)),* $(,)?
+    ) => {
+        $crate::types::LazyGroupContext::new(move || {
+            let mut builder = $crate::types::ErrorContext::builder();
+            $(
+                $crate::__group_field!(builder, $field, $($arg)*);
+            )*
+            builder.build()
+        })
+    };
+}
+
+/// Internal macro for processing individual group fields
+#[macro_export]
+#[doc(hidden)]
+macro_rules! __group_field {
+    // Message field
+    ($builder:expr, message, $($arg:tt)*) => {
+        $builder = $builder.message(format!($($arg)*));
+    };
+
+    // Tag field
+    ($builder:expr, tag, $tag:expr) => {
+        $builder = $builder.tag($tag);
+    };
+
+    // Location field
+    ($builder:expr, location, $file:expr, $line:expr) => {
+        $builder = $builder.location($file, $line);
+    };
+
+    // Metadata field
+    ($builder:expr, metadata, $key:expr, $value:expr) => {
+        $builder = $builder.metadata($key, $value);
     };
 }
 

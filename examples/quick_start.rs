@@ -4,8 +4,7 @@
 //! Run with: cargo run --example quick_start
 
 use error_rail::{
-    context, location, metadata, rail, tag, ComposableError, ComposableResult, ErrorPipeline,
-    Validation,
+    context, group, rail, ComposableError, ComposableResult, ErrorPipeline, Validation,
 };
 
 // =============================================================================
@@ -28,9 +27,11 @@ fn step1_basic_composable_error() {
 
 fn read_config() -> Result<String, Box<ComposableError<std::io::Error>>> {
     ErrorPipeline::new(std::fs::read_to_string("config.toml"))
-        .with_context(location!())
-        .with_context(tag!("config"))
-        .with_context(context!("reading app configuration"))
+        .with_context(group!(
+            location(file!(), line!()),
+            tag("config"),
+            message("reading app configuration")
+        ))
         .finish_boxed()
 }
 
@@ -53,9 +54,11 @@ fn step3_context_macros() {
     println!("\n=== Step 3: Context Macros ===\n");
 
     let err = ComposableError::<&str>::new("timeout")
-        .with_context(tag!("http"))
-        .with_context(location!())
-        .with_context(metadata!("endpoint", "/api/users"))
+        .with_context(group!(
+            tag("http"),
+            location(file!(), line!()),
+            metadata("endpoint", "/api/users")
+        ))
         .with_context(context!("request failed after {} retries", 3));
 
     println!("Error chain: {}", err.error_chain());
@@ -117,8 +120,7 @@ fn step5_error_codes() {
     println!("\n=== Step 5: Error Codes ===\n");
 
     let err = ComposableError::<&str>::new("unauthorized")
-        .with_context(tag!("auth"))
-        .with_context(context!("invalid credentials"))
+        .with_context(group!(tag("auth"), message("invalid credentials")))
         .set_code(401);
 
     println!("Error chain: {}", err.error_chain());
