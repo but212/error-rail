@@ -71,7 +71,16 @@ fn backtrace_lazy_evaluation_works() {
         "Closure was called before context access"
     );
 
-    // Access the context, which should trigger the lazy evaluation.
+    // Use context_iter() to avoid triggering evaluation through context() which returns owned ErrorVec
+    let _iter = err.context_iter();
+
+    // Still should not be called since we're just iterating, not accessing the message
+    assert!(
+        !was_called.load(Ordering::SeqCst),
+        "Closure was called during context iteration"
+    );
+
+    // Now access the actual context message which should trigger lazy evaluation
     let _message = err.context()[0].message();
 
     // Now the closure should have been called.
