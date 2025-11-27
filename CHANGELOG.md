@@ -1,5 +1,25 @@
 # CHANGELOG
 
+## [Unreleased]
+
+### Added - Unreleased
+
+- **Enhanced documentation**: Added comprehensive decision trees, quick reference tables, and common pitfalls guide to README
+- **Improved Quick Start guide**: Added concept map showing three levels of complexity (Basic Usage, Validation, Advanced)
+- **Migration guide**: Added "Migrating from anyhow" section with side-by-side comparisons
+- **Performance tips**: Added quick decision guide and performance optimization recommendations
+
+### Changed - Unreleased
+
+- **Deprecated redundant type aliases**: `SimpleComposableError<E>` and `TaggedComposableError<E>` now marked as deprecated with clear migration guidance
+- **Enhanced error messages**: Added `#[diagnostic::on_unimplemented]` to `IntoErrorContext` trait for better compiler guidance when trait bounds are not satisfied
+- **Improved DX**: Added helpful implementation examples and links to documentation in trait documentation
+
+### Deprecated - Unreleased
+
+- `SimpleComposableError<E>` - Use `ComposableError<E>` directly (scheduled for removal in 0.5.0)
+- `TaggedComposableError<E>` - Use `ComposableError<E>` with `ErrorContext::tag()` instead (scheduled for removal in 0.5.0)
+
 ## [0.4.0]
 
 ### Breaking Changes - 0.4.0

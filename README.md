@@ -178,6 +178,69 @@ fn parse_config() -> ComposableResult<Config, ParseError> { /* ... */ }
 fn load_file() -> BoxedComposableResult<String, std::io::Error> { /* ... */ }
 ```
 
+## When to Use What?
+
+### Quick Reference
+
+| Scenario | Recommended Type | Example |
+|----------|------------------|---------|
+| **Simple error wrapping** | `ComposableError<E>` | Internal error handling |
+| **Function return type** | `BoxedComposableResult<T, E>` | Public API boundaries |
+| **Adding context to Result** | `ErrorPipeline` | Wrapping I/O operations |
+| **Form/input validation** | `Validation<E, T>` | Collecting all field errors |
+| **Error chaining** | `ErrorPipeline` + `finish_boxed()` | Multi-step operations |
+
+### Validation vs Result
+
+| Feature | `Result<T, E>` | `Validation<E, T>` |
+|---------|---------------|-------------------|
+| **Short-circuit** | ✅ Yes (stops at first error) | ❌ No (collects all) |
+| **Use case** | Sequential operations | Parallel validation |
+| **Error count** | Single | Multiple |
+| **Iterator support** | `?` operator | `.collect()` |
+
+## Common Pitfalls
+
+### 1. Forgetting to Box for Return Types
+
+```rust
+// ❌ Large stack size (48+ bytes per Result)
+fn process() -> Result<Data, ComposableError<MyError>> { ... }
+
+// ✅ Reduced stack size (8 bytes pointer)
+fn process() -> BoxedComposableResult<Data, MyError> { ... }
+```
+
+### 2. Excessive Context Depth
+
+```rust
+// ❌ Adding context at every layer (O(n) performance)
+db_call()
+    .with_context(ctx1)
+    .and_then(|x| validate(x).with_context(ctx2))
+    .and_then(|x| transform(x).with_context(ctx3))
+    // ... 20 more layers
+
+// ✅ Add context at boundaries only
+let result = db_call()
+    .and_then(validate)
+    .and_then(transform);
+
+ErrorPipeline::new(result)
+    .with_context(context!("user_id: {}", id))
+    .finish_boxed()
+```
+
+### 3. Eager vs Lazy Context
+
+```rust
+// ❌ Eager: format! runs even on success
+.with_context(ErrorContext::new(format!("data: {:?}", large_struct)))
+
+// ✅ Lazy: format! only runs on error
+.with_context(context!("data: {:?}", large_struct))
+```
+
 ## Module Reference
 
 | Module | Description |

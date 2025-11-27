@@ -26,6 +26,34 @@ use crate::types::error_context::ErrorContext;
 ///
 /// This trait is used throughout the error handling pipeline to accept
 /// flexible context types when building composable errors.
+///
+/// # Implementing for Custom Types
+///
+/// If you need to use a custom type as error context, you have two options:
+///
+/// 1. Use the [`impl_error_context!`](crate::impl_error_context) macro for types implementing `Display`:
+///    ```ignore
+///    impl_error_context!(MyCustomError);
+///    ```
+///
+/// 2. Implement the trait manually:
+///    ```
+///    use error_rail::{traits::IntoErrorContext, ErrorContext};
+///
+///    struct MyContext { user_id: u64 }
+///
+///    impl IntoErrorContext for MyContext {
+///        fn into_error_context(self) -> ErrorContext {
+///            ErrorContext::metadata("user_id", self.user_id.to_string())
+///        }
+///    }
+///    ```
+#[diagnostic::on_unimplemented(
+    message = "`{Self}` cannot be used as error context",
+    label = "this type does not implement `IntoErrorContext`",
+    note = "implement `IntoErrorContext` manually or use `impl_error_context!({Self})` macro",
+    note = "see: https://docs.rs/error-rail/latest/error_rail/macro.impl_error_context.html"
+)]
 pub trait IntoErrorContext {
     /// Converts `self` into an [`ErrorContext`].
     fn into_error_context(self) -> ErrorContext;

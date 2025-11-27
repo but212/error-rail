@@ -46,13 +46,26 @@ pub type ComposableResult<T, E> = Result<T, ComposableError<E>>;
 
 /// Convenience alias for `ComposableError`.
 ///
-/// Kept for backward compatibility.
+/// # Deprecated
+///
+/// This alias is redundant and will be removed in a future version.
+/// Use [`ComposableError`] directly instead.
+#[deprecated(
+    since = "0.5.0",
+    note = "Use `ComposableError<E>` directly. This alias provides no additional functionality."
+)]
 pub type SimpleComposableError<E> = ComposableError<E>;
 
 /// Convenience alias for `ComposableError`.
 ///
-/// Kept for backward compatibility. Note that string codes are no longer supported via generic C.
-/// Use `ErrorContext::tag` instead.
+/// # Deprecated
+///
+/// This alias is redundant and will be removed in a future version.
+/// Use [`ComposableError`] directly with [`ErrorContext::tag`] for tagging.
+#[deprecated(
+    since = "0.5.0",
+    note = "Use `ComposableError<E>` with `ErrorContext::tag()` instead. String codes are no longer supported."
+)]
 pub type TaggedComposableError<E> = ComposableError<E>;
 
 /// Boxed [`ComposableError`] for reduced stack size.
