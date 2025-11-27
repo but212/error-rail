@@ -4,8 +4,8 @@
 
 ### Breaking Changes
 
-- **Library is now `no_std` by default**: The crate is now always built with `#![no_std]` attribute, even when the `std` feature is enabled. The `std` feature now only controls whether `std` types are re-exported alongside `alloc` types, rather than changing the core compilation mode.
-  - **Migration**: Code that relied on `std`-specific functionality should continue to work when the `std` feature is enabled, but the library itself compiles in `no_std` mode.
+- **Library is `no_std`-compatible by default**: The crate builds without `std` when the `std` feature is disabled, and uses standard library types when the `std` feature is explicitly enabled. The default configuration (`default = []`) provides `no_std` compatibility.
+  - **Migration**: Code that relies on `std`-specific functionality should continue to work when the `std` feature is enabled. In `no_std` mode, the library uses `alloc` types for heap allocations.
   
 - **`ComposableError::context()` method signature changed**:
   - **Before**: `pub fn context(&self) -> &ErrorVec<ErrorContext>` (returns a reference)
@@ -20,6 +20,7 @@
 ### Changed
 
 - Replaced `std` usage with `core` and `alloc` across `context`, `convert`, `types`, and `validation` modules for `no_std` compatibility.
+- **Introduced `types::alloc_type` module with conditional type aliases**: Added unified `Box`, `String`, `Cow`, and `Vec` type aliases that automatically use `std` types when the `std` feature is enabled or `alloc` types in `no_std` mode, eliminating direct `alloc::` prefixes throughout the codebase.
 - `collect_errors` and `Validation::from_iter` now use `ErrorVec` / `SmallVec` internally to reduce heap allocations.
 - `split_validation_errors` is now lazy, avoiding immediate vector allocation.
 - `std::error::Error` -> `core::error::Error`.
@@ -32,7 +33,6 @@
 ### Fixed
 
 - Restored `ErrorPipeline::finish_boxed()` method which was temporarily missing.
-- Fixed doctests in `src/validation/traits.rs` to remove unnecessary `fn main()` wrappers.
 
 ## [0.3.1]
 

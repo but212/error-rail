@@ -24,26 +24,10 @@ criterion = "0.7.0"
 
 [features]
 default = []
+std = []
 serde = ["dep:serde", "smallvec/serde"]
-full = ["serde"]
+full = ["serde", "std"]
 
 [[bench]]
 name = "benchmark"
 harness = false
-
-
-[[example]]
-name = "quick_start"
-path = "examples/quick_start.rs"
-
-[[example]]
-name = "readme_features"
-path = "examples/readme_features.rs"
-
-[[example]]
-name = "pipeline"
-path = "examples/pipeline.rs"
-
-[[example]]
-name = "validation_collect"
-path = "examples/validation_collect.rs"

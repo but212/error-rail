@@ -18,6 +18,8 @@
 //! ```
 use smallvec::SmallVec;
 
+pub mod alloc_type;
+
 pub mod composable_error;
 pub mod error_context;
 pub mod error_pipeline;
@@ -52,12 +54,13 @@ pub type SimpleComposableError<E> = ComposableError<E>;
 /// Kept for backward compatibility. Note that string codes are no longer supported via generic C.
 /// Use `ErrorContext::tag` instead.
 pub type TaggedComposableError<E> = ComposableError<E>;
+
 /// Boxed [`ComposableError`] for reduced stack size.
 ///
 /// # Type Parameters
 ///
 /// * `E` - The core error type
-pub type BoxedComposableError<E> = alloc::boxed::Box<ComposableError<E>>;
+pub type BoxedComposableError<E> = alloc_type::Box<ComposableError<E>>;
 
 /// Result alias with boxed [`ComposableError`] for reduced stack size.
 ///

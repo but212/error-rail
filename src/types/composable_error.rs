@@ -21,9 +21,15 @@
 use core::fmt::{Debug, Display};
 
 use crate::traits::IntoErrorContext;
+use crate::types::alloc_type::String;
 use crate::types::{ErrorContext, ErrorVec};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+
+#[cfg(not(feature = "std"))]
+use alloc::string::ToString;
+#[cfg(feature = "std")]
+use std::string::ToString;
 
 /// Error wrapper that stores the original error plus structured contexts and an optional code.
 ///
@@ -373,11 +379,10 @@ impl<E> ComposableError<E> {
     /// assert!(chain.contains("[db] -> fetching user -> database error (code: 500)"));
     /// ```
     #[must_use]
-    pub fn error_chain(&self) -> alloc::string::String
+    pub fn error_chain(&self) -> String
     where
         E: Display,
     {
-        use alloc::string::ToString;
         self.fmt().to_string()
     }
 }

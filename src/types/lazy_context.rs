@@ -20,7 +20,9 @@
 //!     .with_context(LazyContext::new(expensive_debug_info))
 //!     .finish_boxed();
 //! ```
-use crate::{traits::IntoErrorContext, types::error_context::ErrorContext};
+use crate::{
+    traits::IntoErrorContext, types::alloc_type::String, types::error_context::ErrorContext,
+};
 
 /// A lazily-evaluated error context that defers string generation until needed.
 ///
@@ -69,7 +71,7 @@ impl<F> LazyContext<F> {
 
 impl<F> IntoErrorContext for LazyContext<F>
 where
-    F: FnOnce() -> alloc::string::String,
+    F: FnOnce() -> String,
 {
     /// Evaluates the lazy closure and converts the result into an [`ErrorContext`].
     ///

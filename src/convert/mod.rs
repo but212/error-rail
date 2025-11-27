@@ -20,6 +20,7 @@
 //! let composable = wrap_in_composable_result(result);
 //! ```
 
+use crate::types::alloc_type::Box;
 use crate::types::BoxedComposableResult;
 use crate::validation::core::Validation;
 use crate::{types::composable_error::ComposableError, ErrorVec};
@@ -224,7 +225,7 @@ pub fn wrap_in_composable_result<T, E>(result: Result<T, E>) -> Result<T, Compos
 /// ```
 #[inline]
 pub fn wrap_in_composable_result_boxed<T, E>(result: Result<T, E>) -> BoxedComposableResult<T, E> {
-    result.map_err(|e| alloc::boxed::Box::new(core_to_composable(e)))
+    result.map_err(|e| Box::new(core_to_composable(e)))
 }
 
 /// Collects multiple errors into a single `Validation`.

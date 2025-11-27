@@ -1,3 +1,4 @@
+use crate::types::alloc_type::Box;
 use crate::types::composable_error::ComposableError;
 use crate::{ComposableResult, ErrorContext, ErrorVec, IntoErrorContext};
 
@@ -308,7 +309,7 @@ impl<T, E> ErrorPipeline<T, E> {
             Ok(v) => Ok(v),
             Err(e) => {
                 let composable = ComposableError::new(e).with_contexts(self.pending_contexts);
-                Err(alloc::boxed::Box::new(composable))
+                Err(Box::new(composable))
             }
         }
     }

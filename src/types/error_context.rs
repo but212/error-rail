@@ -25,11 +25,16 @@
 //! let tag = ErrorContext::tag("db");
 //! let meta = ErrorContext::metadata("retry_count", "3");
 //! ```
-use alloc::borrow::Cow;
+use crate::types::alloc_type::{Cow, Vec};
 use core::fmt::Display;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
+
+#[cfg(not(feature = "std"))]
+use alloc::format;
+#[cfg(feature = "std")]
+use std::format;
 
 /// Structured metadata attached to a [`ComposableError`](crate::types::ComposableError).
 ///
@@ -205,17 +210,17 @@ impl ErrorContext {
                     return Cow::Borrowed(msg.as_ref());
                 }
                 if let Some(loc) = &g.location {
-                    return Cow::Owned(alloc::format!("at {}:{}", loc.file, loc.line));
+                    return Cow::Owned(format!("at {}:{}", loc.file, loc.line));
                 }
                 if !g.tags.is_empty() {
-                    return Cow::Owned(alloc::format!("[{}]", g.tags.join(", ")));
+                    return Cow::Owned(format!("[{}]", g.tags.join(", ")));
                 }
                 if !g.metadata.is_empty() {
                     let meta_str = g
                         .metadata
                         .iter()
-                        .map(|(k, v)| alloc::format!("{}={}", k, v))
-                        .collect::<alloc::vec::Vec<_>>()
+                        .map(|(k, v)| format!("{}={}", k, v))
+                        .collect::<Vec<_>>()
                         .join(", ");
                     return Cow::Owned(meta_str);
                 }

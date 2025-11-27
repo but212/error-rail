@@ -37,7 +37,7 @@ jobs:
       - name: Run tests (full features)
         run: cargo test --verbose --features full
 
-  feature-matrix:
+  feature-combinations:
     name: Feature ${{ matrix.features }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -46,6 +46,7 @@ jobs:
         features:
           - "--no-default-features"
           - "--features serde"
+          - "--features std"
           - "--features full"
       fail-fast: false
     steps:
@@ -153,7 +154,7 @@ jobs:
   publish:
     name: Publish to crates.io
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [test, feature-matrix, msrv, security, docs]
+    needs: [test, feature-combinations, msrv, security, docs]
     runs-on: ubuntu-latest
     permissions:
       contents: read

@@ -11,6 +11,7 @@
 //! See the crate-level docs for a high-level overview of when to prefer these
 //! utilities over bare `Result` transformations.
 
+use crate::types::alloc_type::{Box, String};
 use crate::types::composable_error::ComposableError;
 use crate::types::BoxedComposableResult;
 use crate::types::{ErrorContext, ErrorPipeline};
@@ -66,7 +67,7 @@ pub fn with_context_result<T, E, C>(result: Result<T, E>, context: C) -> BoxedCo
 where
     C: IntoErrorContext,
 {
-    result.map_err(|e| alloc::boxed::Box::new(with_context(e, context)))
+    result.map_err(|e| Box::new(with_context(e, context)))
 }
 
 /// Creates a reusable closure that wraps errors with a fixed context.
@@ -191,7 +192,7 @@ where
 /// let chain = format_error_chain(&err);
 /// assert!(chain.contains("failed"));
 /// ```
-pub fn format_error_chain<E>(error: &ComposableError<E>) -> alloc::string::String
+pub fn format_error_chain<E>(error: &ComposableError<E>) -> String
 where
     E: Display,
 {

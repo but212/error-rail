@@ -19,9 +19,8 @@
 //! let ctx2 = String::from("owned message").into_error_context();
 //! let ctx3 = ErrorContext::tag("network").into_error_context();
 //! ```
+use crate::types::alloc_type::{Cow, String};
 use crate::types::error_context::ErrorContext;
-use alloc::borrow::Cow;
-use alloc::string::String;
 
 /// Converts a type into an [`ErrorContext`] for error annotation.
 ///
