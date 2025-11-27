@@ -4,10 +4,15 @@
 
 ### Added - Unreleased
 
-- **Enhanced documentation**: Added comprehensive decision trees, quick reference tables, and common pitfalls guide to README
-- **Improved Quick Start guide**: Added concept map showing three levels of complexity (Basic Usage, Validation, Advanced)
-- **Migration guide**: Added "Migrating from anyhow" section with side-by-side comparisons
-- **Performance tips**: Added quick decision guide and performance optimization recommendations
+- **`ResultExt` trait**: New ergonomic extension trait for adding context to `Result` types
+  - `.ctx(msg)` - Add static context message
+  - `.ctx_with(|| format!(...))` - Add lazily-evaluated context (2.1x faster on success)
+- **`BoxedResultExt` trait**: Chain contexts on already-boxed `ComposableError` results
+  - `.ctx_boxed(msg)` - Add context to boxed error
+  - `.ctx_boxed_with(|| ...)` - Add lazy context to boxed error
+- **`prelude` module**: Convenient re-exports for quick starts
+  - Import everything with `use error_rail::prelude::*;`
+  - Includes `BoxedResult<T, E>` type alias for ergonomic return types
 
 ### Changed - Unreleased
 

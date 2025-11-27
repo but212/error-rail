@@ -5,9 +5,29 @@
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/but212/error-rail)
 
-**Composable, metadata-friendly error utilities for Rust.**
+```rust
+use error_rail::prelude::*;
 
-`error-rail` bridges the gap between simple string errors and full tracing systems. Attach rich, structured context to errors and collect multiple validation failures—all with zero-cost abstractions on the success path.
+fn load_config() -> BoxedResult<String, std::io::Error> {
+    std::fs::read_to_string("config.toml")
+        .ctx("loading configuration")
+}
+```
+
+---
+
+## Why error-rail?
+
+Most error handling libraries format context eagerly—even on success paths where the context is never used. **error-rail** uses lazy evaluation, deferring string formatting until an error actually occurs.
+
+**Benchmark Results** ([full details](docs/BENCHMARKS.md)):
+
+| Scenario | error-rail | Eager formatting | Speedup |
+|----------|------------|------------------|---------|
+| Success path | 637 ns | 1,351 ns | **2.1x faster** |
+| Error path | 941 ns | 835 ns | ~same |
+
+Since most operations succeed (95%+), lazy evaluation provides significant real-world performance gains.
 
 ## Installation
 
@@ -15,30 +35,33 @@
 cargo add error-rail
 ```
 
-## Quick Start
-
-> **New to error-rail?** Check out the [Quick Start Guide](docs/QUICK_START.md) for step-by-step examples.
+## 30-Second Quick Start
 
 ```rust
-use error_rail::{ComposableError, ErrorPipeline, context, location, tag};
+use error_rail::prelude::*;
 
-// Wrap any error with rich context
-fn load_config() -> Result<String, Box<ComposableError<std::io::Error>>> {
-    ErrorPipeline::new(std::fs::read_to_string("config.toml"))
-        .with_context(location!())           // Capture file:line
-        .with_context(tag!("config"))        // Categorical tag
-        .with_context(context!("loading application config"))
-        .finish_boxed()
+// Add context to any Result with .ctx()
+fn read_config() -> BoxedResult<String, std::io::Error> {
+    std::fs::read_to_string("config.toml")
+        .ctx("loading configuration")
+}
+
+// Chain multiple contexts
+fn process() -> BoxedResult<(), std::io::Error> {
+    let config = read_config()?;
+    parse_config(&config)
+        .ctx("parsing configuration")
 }
 
 fn main() {
-    match load_config() {
-        Ok(content) => println!("Loaded: {} bytes", content.len()),
-        Err(e) => eprintln!("Error chain: {}", e.error_chain()),
-        // Output: loading application config -> [config] -> src/main.rs:6 -> No such file...
+    if let Err(e) = process() {
+        eprintln!("{}", e.error_chain());
+        // Output: parsing configuration -> loading configuration -> No such file...
     }
 }
 ```
+
+> **New to error-rail?** See the [Quick Start Guide](docs/QUICK_START.md) for step-by-step examples.
 
 ## Key Features
 
@@ -245,10 +268,11 @@ ErrorPipeline::new(result)
 
 | Module | Description |
 |--------|-------------|
-| `context` | Context attachment functions: `with_context`, `accumulate_context`, `format_error_chain` |
+| `prelude` | **Start here!** Common imports: `ResultExt`, `BoxedResult`, macros |
+| `context` | Context attachment: `with_context`, `accumulate_context`, `format_error_chain` |
 | `convert` | Conversions between `Result`, `Validation`, and `ComposableError` |
 | `macros` | `context!`, `location!`, `tag!`, `metadata!`, `rail!`, `impl_error_context!` |
-| `traits` | `IntoErrorContext`, `ErrorOps`, `WithError` |
+| `traits` | `ResultExt`, `BoxedResultExt`, `IntoErrorContext`, `ErrorOps`, `WithError` |
 | `types` | `ComposableError`, `ErrorContext`, `ErrorPipeline`, `LazyContext` |
 | `validation` | `Validation<E, A>` type with collectors and iterators |
 
@@ -276,6 +300,10 @@ cargo run --example readme_features   # All features from this README
 cargo run --example pipeline          # Error pipeline chaining
 cargo run --example validation_collect # Validation accumulation
 ```
+
+## Integration Guides
+
+- **[Quick Start Guide](docs/QUICK_START.md)** - Step-by-step tutorial
 
 ## License
 
