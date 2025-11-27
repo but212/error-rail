@@ -79,7 +79,6 @@ impl<T, E> ErrorPipeline<T, E> {
     /// let pipeline: ErrorPipeline<&str, &str> = ErrorPipeline::new(Err("error"))
     ///     .with_context(ErrorContext::tag("db"));
     /// ```
-    #[must_use]
     #[inline]
     pub fn with_context<C>(mut self, context: C) -> Self
     where
@@ -110,7 +109,6 @@ impl<T, E> ErrorPipeline<T, E> {
     /// let pipeline = ErrorPipeline::<&str, &str>::new(Err("text error"))
     ///     .map_error(|e| e.len());
     /// ```
-    #[must_use]
     #[inline]
     pub fn map_error<F, NewE>(self, f: F) -> ErrorPipeline<T, NewE>
     where
@@ -143,7 +141,6 @@ impl<T, E> ErrorPipeline<T, E> {
     /// let pipeline = ErrorPipeline::new(Err("error"))
     ///     .recover(|_| Ok(42));
     /// ```
-    #[must_use]
     #[inline]
     pub fn recover<F>(self, recovery: F) -> ErrorPipeline<T, E>
     where
@@ -187,7 +184,6 @@ impl<T, E> ErrorPipeline<T, E> {
     /// let pipeline = ErrorPipeline::<i32, &str>::new(Err("error"))
     ///     .fallback(42);
     /// ```
-    #[must_use]
     #[inline]
     pub fn fallback(self, value: T) -> ErrorPipeline<T, E> {
         match self.result {
@@ -219,7 +215,6 @@ impl<T, E> ErrorPipeline<T, E> {
     /// let pipeline = ErrorPipeline::<i32, &str>::new(Err("error"))
     ///     .recover_safe(|_| 42);
     /// ```
-    #[must_use]
     #[inline]
     pub fn recover_safe<F>(self, f: F) -> ErrorPipeline<T, E>
     where
@@ -254,7 +249,6 @@ impl<T, E> ErrorPipeline<T, E> {
     /// let pipeline = ErrorPipeline::<i32, &str>::new(Ok(5))
     ///     .and_then(|x| Ok(x * 2));
     /// ```
-    #[must_use]
     #[inline]
     pub fn and_then<U, F>(self, f: F) -> ErrorPipeline<U, E>
     where
@@ -283,7 +277,6 @@ impl<T, E> ErrorPipeline<T, E> {
     /// let pipeline = ErrorPipeline::<i32, &str>::new(Ok(5))
     ///     .map(|x| x * 2);
     /// ```
-    #[must_use]
     #[inline]
     pub fn map<U, F>(self, f: F) -> ErrorPipeline<U, E>
     where
@@ -309,7 +302,6 @@ impl<T, E> ErrorPipeline<T, E> {
     ///     .with_context(context!("operation failed"))
     ///     .finish_boxed();
     /// ```
-    #[must_use]
     #[inline]
     pub fn finish_boxed(self) -> BoxedComposableResult<T, E> {
         match self.result {
@@ -335,7 +327,6 @@ impl<T, E> ErrorPipeline<T, E> {
     ///     .with_context(context!("operation failed"))
     ///     .finish();
     /// ```
-    #[must_use]
     #[inline]
     #[allow(clippy::result_large_err)]
     pub fn finish(self) -> ComposableResult<T, E> {

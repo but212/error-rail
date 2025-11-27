@@ -37,7 +37,7 @@ fn test_composable_error_display_multiline() {
 #[test]
 fn test_error_trait_impl() {
     // Verify ComposableError<io::Error> implements core::error::Error
-    let io_err = io::Error::new(io::ErrorKind::Other, "root cause");
+    let io_err = io::Error::other("root cause");
     let err = ComposableError::<io::Error>::new(io_err).with_context("context");
 
     assert!(err.source().is_some());

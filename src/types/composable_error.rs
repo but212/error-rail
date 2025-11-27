@@ -147,7 +147,6 @@ impl<E> ComposableError<E> {
     ///
     /// assert_eq!(err.context().len(), 2);
     /// ```
-    #[must_use]
     #[inline]
     pub fn with_context<Ctx>(mut self, ctx: Ctx) -> Self
     where
@@ -180,7 +179,6 @@ impl<E> ComposableError<E> {
     ///
     /// assert_eq!(err.context().len(), 2);
     /// ```
-    #[must_use]
     #[inline]
     pub fn with_contexts<I>(mut self, contexts: I) -> Self
     where
@@ -292,7 +290,6 @@ impl<E> ComposableError<E> {
     ///
     /// assert_eq!(err.error_code(), Some(500));
     /// ```
-    #[must_use]
     #[inline]
     pub fn set_code(mut self, code: u32) -> Self {
         self.error_code = Some(code);
@@ -322,7 +319,6 @@ impl<E> ComposableError<E> {
     /// assert_eq!(mapped.error_code(), Some(500));
     /// assert_eq!(mapped.context().len(), 1);
     /// ```
-    #[must_use]
     #[inline]
     pub fn map_core<F, T>(self, f: F) -> ComposableError<T>
     where
