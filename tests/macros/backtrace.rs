@@ -1,4 +1,7 @@
+use error_rail::types::LazyContext;
 use error_rail::{backtrace, backtrace_force, ComposableError, ErrorPipeline};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 #[test]
 fn backtrace_macro_attaches_non_empty_context_for_composable_error() {
@@ -39,24 +42,43 @@ fn backtrace_macro_respects_environment() {
     let message = ctx.message();
     let backtrace_str = message.as_ref();
 
-    // When environment variables are not set, should return "disabled backtrace"
-    // This test might fail if RUST_BACKTRACE is set in the test environment
-    // but demonstrates the intended behavior
-    assert!(!backtrace_str.is_empty());
+    // Should either be disabled backtrace (when env vars not set) or contain actual stack frames
+    assert!(
+        backtrace_str.contains("disabled backtrace") || backtrace_str.lines().count() > 1,
+        "Expected either 'disabled backtrace' or multiple stack frame lines, got: {}",
+        backtrace_str
+    );
 }
 
 #[test]
 fn backtrace_lazy_evaluation_works() {
-    // Verify that the backtrace is only generated when the error occurs
-    let mut capture_count = 0;
+    // Verify that the lazy context is only evaluated when the context is accessed.
+    let was_called = Arc::new(AtomicBool::new(false));
+    let was_called_clone = was_called.clone();
 
-    let err = ComposableError::<&str>::new("test error").with_context(backtrace_force!());
+    // We can't easily observe the side-effect of `backtrace_force!` itself,
+    // so we create a custom lazy context to test the lazy evaluation mechanism it relies on.
+    let lazy_context = LazyContext::new(move || {
+        was_called_clone.store(true, Ordering::SeqCst);
+        "lazy message".to_string()
+    });
 
-    // The backtrace should be captured when we access the context
-    let _message = err.context()[0].message().as_ref();
-    capture_count += 1;
+    let err = ComposableError::<&str>::new("test error").with_context(lazy_context);
 
-    assert!(capture_count > 0);
+    // The closure should not have been called yet.
+    assert!(
+        !was_called.load(Ordering::SeqCst),
+        "Closure was called before context access"
+    );
+
+    // Access the context, which should trigger the lazy evaluation.
+    let _message = err.context()[0].message();
+
+    // Now the closure should have been called.
+    assert!(
+        was_called.load(Ordering::SeqCst),
+        "Closure was not called after context access"
+    );
 }
 
 #[test]
