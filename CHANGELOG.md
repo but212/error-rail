@@ -4,8 +4,18 @@
 
 ### Breaking Changes
 
-- `extract_context` and `ComposableError::context()` now return `ErrorVec<ErrorContext>` instead of `Vec<ErrorContext>`.
-- `split_validation_errors` now returns `SplitValidationIter` (a lazy iterator) instead of `Vec<Result<T, E>>`. This allows for zero-allocation iteration over validation results.
+- **Library is now `no_std` by default**: The crate is now always built with `#![no_std]` attribute, even when the `std` feature is enabled. The `std` feature now only controls whether `std` types are re-exported alongside `alloc` types, rather than changing the core compilation mode.
+  - **Migration**: Code that relied on `std`-specific functionality should continue to work when the `std` feature is enabled, but the library itself compiles in `no_std` mode.
+  
+- **`ComposableError::context()` method signature changed**:
+  - **Before**: `pub fn context(&self) -> &ErrorVec<ErrorContext>` (returns a reference)
+  - **After**: `pub fn context(&self) -> ErrorVec<ErrorContext>` (returns an owned value in LIFO order)
+  - **Migration**: Code that previously used `error.context()` should continue to work, but may need adjustment if it relied on the borrowed reference. The method now allocates and returns a reversed copy of the context stack.
+
+- **`extract_context` now returns owned `ErrorVec`**: Changed from `Vec<ErrorContext>` to `ErrorVec<ErrorContext>` (already noted above, now consistent with `context()` method).
+
+- **`split_validation_errors` returns lazy iterator**: Now returns `SplitValidationIter` instead of `Vec<Result<T, E>>`. This allows for zero-allocation iteration over validation results.
+  - **Migration**: Code that previously collected results into a `Vec` should use `.collect()` on the returned iterator.
 
 ### Changed
 
@@ -22,8 +32,7 @@
 ### Fixed
 
 - Restored `ErrorPipeline::finish_boxed()` method which was temporarily missing.
-- Fixed `ComposableError::context()` to return `ErrorVec` in LIFO order (matching previous behavior) instead of a reference.
-- Fixed doctests in `src/validation/traits.rs` by wrapping examples in `fn main()`.
+- Fixed doctests in `src/validation/traits.rs` to remove unnecessary `fn main()` wrappers.
 
 ## [0.3.1]
 

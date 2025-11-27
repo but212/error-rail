@@ -51,7 +51,7 @@
 //!     // Output: user_id: 42 -> operation: load_config -> failed
 //! }
 //! ```
-#![cfg_attr(not(feature = "std"), no_std)]
+#![no_std]
 
 extern crate alloc;
 
