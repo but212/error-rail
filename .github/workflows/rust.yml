@@ -57,7 +57,12 @@ jobs:
       - name: Check ${{ matrix.features }}
         run: cargo check ${{ matrix.features }}
       - name: Test ${{ matrix.features }}
-        run: cargo test ${{ matrix.features }}
+        run: |
+          if [[ "${{ matrix.features }}" == "--features std" || "${{ matrix.features }}" == "--features full" ]]; then
+            RUST_BACKTRACE=1 cargo test ${{ matrix.features }}
+          else
+            cargo test ${{ matrix.features }}
+          fi
       - name: Clippy ${{ matrix.features }}
         run: cargo clippy ${{ matrix.features }} -- -D warnings
       - name: Check benchmarks compilation ${{ matrix.features }}
