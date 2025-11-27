@@ -16,14 +16,16 @@
 //! # Examples
 //!
 //! ```
-//! use error_rail::{context, location, rail, tag, metadata, ErrorPipeline};
+//! use error_rail::{context, rail, group, ErrorPipeline};
 //!
 //! let result: Result<(), &str> = Err("failed");
 //! let pipeline = ErrorPipeline::new(result)
 //!     .with_context(context!("user_id: {}", 123))
-//!     .with_context(location!())
-//!     .with_context(tag!("auth"))
-//!     .with_context(metadata!("retry_count", "3"))
+//!     .with_context(group!(
+//!         tag("auth"),
+//!         location(file!(), line!()),
+//!         metadata("retry_count", "3")
+//!     ))
 //!     .finish_boxed();
 //!
 //! // Equivalent rail! shorthand that also returns a boxed composable result
@@ -52,8 +54,8 @@
 ///
 /// # Examples
 ///
-/// ```
-/// use error_rail::{rail, ErrorContext};
+/// ```rust
+/// use error_rail::{rail, group};
 ///
 /// // Simple expression
 /// let result = rail!(Err::<(), &str>("failed"));
@@ -65,9 +67,15 @@
 ///     value
 /// });
 ///
-/// // Chaining with context after rail!
-/// let result = rail!(Err::<(), &str>("io error"))
-///     .map_err(|e| e.with_context(ErrorContext::tag("disk")));
+/// // Using with group! macro for structured context
+/// let result = rail!({
+///     std::fs::read_to_string("config.txt")
+/// })
+/// .map_err(|e| e.with_context(group!(
+///     tag("config"),
+///     location(file!(), line!()),
+///     metadata("file", "config.txt")
+/// )));
 /// ```
 #[macro_export]
 macro_rules! rail {

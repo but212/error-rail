@@ -368,15 +368,20 @@ impl<E> ComposableError<E> {
     /// # Examples
     ///
     /// ```
-    /// use error_rail::{ComposableError, ErrorContext};
+    /// use error_rail::{ComposableError, ErrorContext, group};
     ///
     /// let err = ComposableError::new("database error")
-    ///     .with_context("fetching user")
-    ///     .with_context(ErrorContext::tag("db"))
+    ///     .with_context(group!(
+    ///         message("fetching user"),
+    ///         tag("db")
+    ///     ))
     ///     .set_code(500);
     ///
     /// let chain = err.error_chain();
-    /// assert!(chain.contains("[db] -> fetching user -> database error (code: 500)"));
+    /// assert!(chain.contains("[db]"));
+    /// assert!(chain.contains("fetching user"));
+    /// assert!(chain.contains("database error"));
+    /// assert!(chain.contains("(code: 500)"));
     /// ```
     #[must_use]
     pub fn error_chain(&self) -> String
