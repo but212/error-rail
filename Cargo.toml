@@ -28,6 +28,10 @@ std = []
 serde = ["dep:serde", "smallvec/serde"]
 full = ["serde", "std"]
 
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs", "--generate-link-to-definition"]
+
 [[bench]]
 name = "benchmark"
 harness = false

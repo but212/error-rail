@@ -231,6 +231,7 @@ macro_rules! impl_error_context {
 ///     .with_context(backtrace!());
 /// ```
 #[macro_export]
+#[cfg(feature = "std")]
 macro_rules! backtrace {
     () => {{
         $crate::types::LazyContext::new(|| std::backtrace::Backtrace::capture().to_string())
