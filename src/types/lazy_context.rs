@@ -69,6 +69,79 @@ impl<F> LazyContext<F> {
     }
 }
 
+/// A lazily-evaluated grouped error context that defers GroupContext creation until needed.
+///
+/// Wraps a closure that produces an `ErrorContext` only when the error actually occurs,
+/// avoiding unnecessary allocations and computations on the success path while
+/// providing the benefits of grouped context display.
+///
+/// # Type Parameters
+///
+/// * `F` - A closure type that implements `FnOnce() -> ErrorContext`.
+///
+/// # Examples
+///
+/// ```rust
+/// use error_rail::{LazyGroupContext, ErrorContext};
+///
+/// let lazy = LazyGroupContext::new(|| {
+///     ErrorContext::builder()
+///         .tag("database")
+///         .metadata("host", "localhost")
+///         .build()
+/// });
+/// // The closure is not called until `into_error_context` is invoked
+/// ```
+#[repr(transparent)]
+pub struct LazyGroupContext<F> {
+    generator: F,
+}
+
+impl<F> LazyGroupContext<F> {
+    /// Creates a new `LazyGroupContext` from a closure.
+    ///
+    /// The provided closure will be invoked only when the context is converted
+    /// into an [`ErrorContext`], typically when an error is being processed.
+    ///
+    /// # Arguments
+    ///
+    /// * `generator` - A closure that returns an `ErrorContext` when called.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use error_rail::{LazyGroupContext, ErrorContext};
+    ///
+    /// let ctx = LazyGroupContext::new(|| ErrorContext::tag("lazy"));
+    /// ```
+    #[inline]
+    pub fn new(generator: F) -> Self {
+        Self { generator }
+    }
+}
+
+impl<F> IntoErrorContext for LazyGroupContext<F>
+where
+    F: FnOnce() -> ErrorContext,
+{
+    /// Evaluates the lazy closure and returns the resulting [`ErrorContext`].
+    ///
+    /// This is called automatically by the error pipeline when an error occurs.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use error_rail::{LazyGroupContext, traits::IntoErrorContext, ErrorContext};
+    ///
+    /// let lazy = LazyGroupContext::new(|| ErrorContext::tag("computed"));
+    /// let ctx = lazy.into_error_context();
+    /// ```
+    #[inline]
+    fn into_error_context(self) -> ErrorContext {
+        (self.generator)()
+    }
+}
+
 impl<F> IntoErrorContext for LazyContext<F>
 where
     F: FnOnce() -> String,

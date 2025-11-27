@@ -65,6 +65,8 @@ pub mod context;
 pub mod convert;
 /// Error handling macros for context creation
 pub mod macros;
+/// Convenience re-exports for quick starts
+pub mod prelude;
 /// Core traits for error handling and composition
 pub mod traits;
 /// ComposableError and error context structures

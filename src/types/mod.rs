@@ -44,17 +44,6 @@ pub type ErrorVec<E> = SmallVec<[E; 2]>;
 /// * `E` - The core error type
 pub type ComposableResult<T, E> = Result<T, ComposableError<E>>;
 
-/// Convenience alias for `ComposableError`.
-///
-/// Kept for backward compatibility.
-pub type SimpleComposableError<E> = ComposableError<E>;
-
-/// Convenience alias for `ComposableError`.
-///
-/// Kept for backward compatibility. Note that string codes are no longer supported via generic C.
-/// Use `ErrorContext::tag` instead.
-pub type TaggedComposableError<E> = ComposableError<E>;
-
 /// Boxed [`ComposableError`] for reduced stack size.
 ///
 /// # Type Parameters

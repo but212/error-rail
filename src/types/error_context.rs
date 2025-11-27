@@ -25,7 +25,9 @@
 //! let tag = ErrorContext::tag("db");
 //! let meta = ErrorContext::metadata("retry_count", "3");
 //! ```
+use crate::alloc_type::String;
 use crate::types::alloc_type::{Cow, Vec};
+use crate::ErrorVec;
 use core::fmt::Display;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -33,8 +35,12 @@ use smallvec::SmallVec;
 
 #[cfg(not(feature = "std"))]
 use alloc::format;
+#[cfg(not(feature = "std"))]
+use alloc::string::ToString;
 #[cfg(feature = "std")]
 use std::format;
+#[cfg(feature = "std")]
+use std::string::ToString;
 
 /// Structured metadata attached to a [`ComposableError`](crate::types::ComposableError).
 ///
@@ -175,7 +181,7 @@ impl ErrorContext {
     /// use error_rail::ErrorContext;
     ///
     /// let ctx = ErrorContext::metadata("user_id", "42");
-    /// assert_eq!(ctx.message(), "user_id=42");
+    /// assert_eq!(ctx.message(), "(user_id=42)");
     /// ```
     #[inline]
     pub fn metadata<K: Into<Cow<'static, str>>, V: Into<Cow<'static, str>>>(
@@ -192,29 +198,55 @@ impl ErrorContext {
     ///
     /// Each variant is formatted differently:
     /// - `Simple`: Returns the message as-is.
-    /// - `Group`: Formats the content based on what's available.
+    /// - `Group`: Combines all available fields into one cohesive unit.
     ///
     /// # Examples
-    /// ```
+    ///
+    /// Single field contexts remain unchanged:
+    /// ```rust
     /// use error_rail::ErrorContext;
     ///
     /// let ctx = ErrorContext::location("main.rs", 10);
     /// assert_eq!(ctx.message(), "at main.rs:10");
+    /// ```
+    ///
+    /// Multiple fields are combined into one unit:
+    /// ```rust
+    /// use error_rail::ErrorContext;
+    ///
+    /// let ctx = ErrorContext::builder()
+    ///     .tag("db")
+    ///     .tag("network")
+    ///     .location("main.rs", 42)
+    ///     .message("connection failed")
+    ///     .metadata("retry_count", "3")
+    ///     .build();
+    ///     
+    /// assert_eq!(ctx.message(), "[db, network] at main.rs:42: connection failed (retry_count=3)");
     /// ```
     #[inline]
     pub fn message(&self) -> Cow<'_, str> {
         match self {
             Self::Simple(s) => Cow::Borrowed(s.as_ref()),
             Self::Group(g) => {
-                if let Some(msg) = &g.message {
-                    return Cow::Borrowed(msg.as_ref());
-                }
-                if let Some(loc) = &g.location {
-                    return Cow::Owned(format!("at {}:{}", loc.file, loc.line));
-                }
+                let mut parts = ErrorVec::new();
+
+                // Add tags if present
                 if !g.tags.is_empty() {
-                    return Cow::Owned(format!("[{}]", g.tags.join(", ")));
+                    parts.push(format!("[{}]", g.tags.join(", ")));
                 }
+
+                // Add location if present
+                if let Some(loc) = &g.location {
+                    parts.push(format!("at {}:{}", loc.file, loc.line));
+                }
+
+                // Add message if present
+                if let Some(msg) = &g.message {
+                    Self::add_message_to_parts(&mut parts, msg.as_ref(), g.location.is_some());
+                }
+
+                // Add metadata if present
                 if !g.metadata.is_empty() {
                     let meta_str = g
                         .metadata
@@ -222,10 +254,33 @@ impl ErrorContext {
                         .map(|(k, v)| format!("{}={}", k, v))
                         .collect::<Vec<_>>()
                         .join(", ");
-                    return Cow::Owned(meta_str);
+                    parts.push(format!("({})", meta_str));
                 }
-                Cow::Borrowed("")
+
+                if parts.is_empty() {
+                    Cow::Borrowed("")
+                } else {
+                    Cow::Owned(parts.join(" "))
+                }
             }
+        }
+    }
+
+    /// Helper function to add message to parts with proper location formatting
+    fn add_message_to_parts(parts: &mut ErrorVec<String>, msg: &str, has_location: bool) {
+        if has_location {
+            // Try to append to the last location part
+            if let Some(last_part) = parts.last_mut() {
+                if last_part.starts_with("at ") {
+                    *last_part = format!("{}: {}", last_part, msg);
+                } else {
+                    parts.push(msg.to_string());
+                }
+            } else {
+                parts.push(msg.to_string());
+            }
+        } else {
+            parts.push(msg.to_string());
         }
     }
 }

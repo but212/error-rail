@@ -1,5 +1,88 @@
 # CHANGELOG
 
+## [0.5.0]
+
+### Breaking Changes - 0.5.0
+
+- **`GroupContext::message()` now combines all available fields**:
+  - **Before**: Displayed only the first available field in priority order (message → location → tags → metadata)
+  - **After**: Combines all fields into one cohesive unit with format `[tag1, tag2] at file:line: message (key1=value1, key2=value2)`
+  - **Rationale**: Improves readability by presenting each context as a unified information unit rather than fragmented parts separated by "->" arrows
+  - **Migration**: Code parsing `ErrorContext::message()` output needs to be updated to handle the new combined format. Single-field contexts remain unchanged.
+  - **Recommended**: Use `ErrorContext::builder()` to create grouped contexts that display as cohesive units in error chains:
+
+    ```rust
+    // Before: Multiple separate contexts
+    err.with_context(tag!("database"))
+       .with_context(location!())
+       .with_context(metadata!("host", "localhost"))
+    // Output: -> [database] -> at main.rs:42 -> (host=localhost)
+    
+    // After: Single grouped context  
+    err.with_context(ErrorContext::builder()
+        .tag("database")
+        .location(file!(), line!())
+        .metadata("host", "localhost")
+        .build())
+    // Output: -> [database] at main.rs:42 (host=localhost)
+    ```
+
+### Added - 0.5.0
+
+- **`ResultExt` trait**: New ergonomic extension trait for adding context to `Result` types
+  - `.ctx(msg)` - Add static context message
+  - `.ctx_with(|| format!(...))` - Add lazily-evaluated context (2.1x faster on success)
+- **`BoxedResultExt` trait**: Chain contexts on already-boxed `ComposableError` results
+  - `.ctx_boxed(msg)` - Add context to boxed error
+  - `.ctx_boxed_with(|| ...)` - Add lazy context to boxed error
+- **`prelude` module**: Convenient re-exports for quick starts
+  - Import everything with `use error_rail::prelude::*;`
+  - Includes `BoxedResult<T, E>` type alias for ergonomic return types
+
+### Changed - 0.5.0
+
+- **Removed redundant type aliases**: `SimpleComposableError<E>` and `TaggedComposableError<E>` have been completely removed
+  - **Rationale**: These aliases provided no additional functionality over `ComposableError<E>` and created unnecessary complexity
+  - **Migration**: Use `ComposableError<E>` directly - these were simple type aliases with no behavior change
+  - **Impact**: Code using these aliases will need to be updated to use `ComposableError<E>` instead
+- **Enhanced error messages**: Added `#[diagnostic::on_unimplemented]` to `IntoErrorContext` trait for better compiler guidance when trait bounds are not satisfied
+- **Improved DX**: Added helpful implementation examples and links to documentation in trait documentation
+- **Deprecated individual context macros**: `location!()`, `tag!()`, and `metadata!()` macros are now deprecated in favor of the new `group!` macro
+  - **Rationale**: The new `group!` macro provides lazy evaluation for grouped contexts, combining multiple fields into a single cohesive unit while maintaining performance benefits
+  - **Migration**: Replace individual macro calls with function-call style `group!()`:
+
+    ```rust
+    // Before: Multiple separate contexts (eager allocation)
+    err.with_context(location!())
+       .with_context(tag!("database"))
+       .with_context(metadata!("host", "localhost"));
+    // Output: -> at main.rs:42 -> [database] -> (host=localhost)
+    
+    // After: Single grouped context (lazy evaluation)
+    err.with_context(group!(
+        location(file!(), line!()),
+        tag("database"),
+        metadata("host", "localhost")
+    ));
+    // Output: -> [database] at main.rs:42 (host=localhost)
+    ```
+
+  - **Benefits**:
+    - Lazy evaluation: No string formatting until error occurs
+    - Unified display: All fields appear as one cohesive context unit
+    - Better performance: Reduced allocations on success paths
+  - **Removal timeline**: Deprecated macros will be removed in version 0.6.0
+  - **New exports**: `group!` macro and `LazyGroupContext` type added to prelude
+
+### Deprecated - 0.5.0
+
+- `location!()`, `tag!()`, and `metadata!()` macros - Use `group!` macro instead (scheduled for removal in 0.6.0)
+
+### Removed - 0.5.0
+
+- `SimpleComposableError<E>` - Use `ComposableError<E>` directly (completely removed)
+- `TaggedComposableError<E>` - Use `ComposableError<E>` with `ErrorContext::tag()` instead (completely removed)
+
 ## [0.4.0]
 
 ### Breaking Changes - 0.4.0

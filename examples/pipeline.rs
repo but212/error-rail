@@ -1,4 +1,4 @@
-use error_rail::{context, location, tag, ErrorPipeline};
+use error_rail::{context, group, ErrorPipeline};
 
 fn do_http_call() -> Result<&'static str, &'static str> {
     Err("timeout")
@@ -11,8 +11,7 @@ fn parse_payload(_payload: &str) -> Result<&'static str, &'static str> {
 fn main() {
     let result = ErrorPipeline::new(do_http_call())
         .with_context(context!("calling upstream service"))
-        .with_context(location!())
-        .with_context(tag!("http"))
+        .with_context(group!(location(file!(), line!()), tag("http")))
         .and_then(parse_payload)
         .finish_boxed();
 

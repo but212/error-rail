@@ -8,6 +8,40 @@ Welcome to `error-rail`! This guide walks you through composable error handling 
 > cargo run --example quick_start
 > ```
 
+## Concept Map
+
+Before diving in, here's a mental model of `error-rail`:
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│                     error-rail at a Glance                      │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  Level 1: Basic Usage (95% of cases)                            │
+│  ─────────────────────────────────────                          │
+│  ErrorPipeline::new(result)                                     │
+│      .with_context(context!("what happened"))                   │
+│      .finish_boxed()                                            │
+│                                                                 │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  Level 2: Validation (form/input validation)                    │
+│  ───────────────────────────────────────────                    │
+│  let results: Validation<E, Vec<T>> =                           │
+│      inputs.into_iter().map(validate).collect();                │
+│                                                                 │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  Level 3: Advanced (library authors)                            │
+│  ────────────────────────────────────                           │
+│  impl IntoErrorContext for MyType { ... }                       │
+│  Custom ErrorCategory implementations                           │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Start at Level 1** — you can build complete applications without ever touching Level 2 or 3.
+
 ## Step 1: Your First ComposableError
 
 The core type is `ComposableError<E>`. It wraps any error and lets you attach context.
@@ -56,22 +90,22 @@ fn main() {
 | Macro | What it does | Example |
 |-------|--------------|---------|
 | `context!` | Lazy formatted message | `context!("user_id: {}", 42)` |
-| `location!` | Source file and line | `location!()` |
-| `tag!` | Categorical label | `tag!("database")` |
-| `metadata!` | Key-value pair | `metadata!("host", "localhost")` |
+| `group!` | Combined grouped context (lazy) | `group!(tag("db"), location(file!(), line!()), metadata("host", "localhost"))` |
 | `rail!` | Quick pipeline wrapper | `rail!(fs::read("file"))` |
 
 ```rust
-use error_rail::{ComposableError, context, location, tag, metadata};
+use error_rail::{ComposableError, context, group};
 
 let err = ComposableError::<&str>::new("timeout")
-    .with_context(tag!("http"))
-    .with_context(location!())
-    .with_context(metadata!("endpoint", "/api/users"))
-    .with_context(context!("request failed after {} retries", 3));
+    .with_context(context!("request failed after {} retries", 3))
+    .with_context(group!(
+        tag("http"),
+        location(file!(), line!()),
+        metadata("endpoint", "/api/users")
+    ));
 
 println!("{}", err.error_chain());
-// Output: request failed after 3 retries -> endpoint=/api/users -> src/main.rs:5 -> [http] -> timeout
+// Output: request failed after 3 retries -> [http] at src/main.rs:5 (endpoint=/api/users) -> timeout
 ```
 
 ### The `rail!` Shortcut
@@ -188,9 +222,33 @@ You've learned the basics! Here's what to explore next:
   cargo run --example readme_features    # All README examples
   ```
 
+### Quick Decision Guide
+
+| Question | Answer |
+|----------|--------|
+| **Which type for function returns?** | `BoxedComposableResult<T, E>` (8 bytes stack) |
+| **Which type for internal handling?** | `ComposableResult<T, E>` (zero-copy) |
+| **Need to collect all errors?** | Use `Validation<E, T>` |
+| **Adding context to existing Result?** | Use `ErrorPipeline` |
+
+### Performance Tips
+
+1. **Use `context!` macro** — It's lazy and only formats on error
+2. **Box at boundaries** — Use `finish_boxed()` for function returns
+3. **Limit context depth** — Add context at module boundaries, not every function
+
 ### Advanced Topics
 
 - **`IntoErrorContext` trait** - Convert custom types to error context
 - **`ErrorOps` trait** - Recovery and mapping operations
 - **`WithError` trait** - Transform error types while preserving success values
 - **`backtrace!` macro** - Capture stack traces (requires `std` feature)
+
+### Migrating from anyhow
+
+| anyhow | error-rail |
+|--------|------------|
+| `anyhow::Result<T>` | `BoxedComposableResult<T, E>` |
+| `.context("msg")` | `.with_context(context!("msg"))` |
+| `anyhow!("error")` | `ComposableError::new("error")` |
+| `bail!("error")` | `return Err(Box::new(ComposableError::new("error")))` |

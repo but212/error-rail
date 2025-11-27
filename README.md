@@ -5,9 +5,29 @@
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/but212/error-rail)
 
-**Composable, metadata-friendly error utilities for Rust.**
+```rust
+use error_rail::prelude::*;
 
-`error-rail` bridges the gap between simple string errors and full tracing systems. Attach rich, structured context to errors and collect multiple validation failures—all with zero-cost abstractions on the success path.
+fn load_config() -> BoxedResult<String, std::io::Error> {
+    std::fs::read_to_string("config.toml")
+        .ctx("loading configuration")
+}
+```
+
+---
+
+## Why error-rail?
+
+Most error handling libraries format context eagerly—even on success paths where the context is never used. **error-rail** uses lazy evaluation, deferring string formatting until an error actually occurs.
+
+**Benchmark Results** ([full details](docs/BENCHMARKS.md)):
+
+| Scenario | error-rail | Eager formatting | Speedup |
+|----------|------------|------------------|---------|
+| Success path | 637 ns | 1,351 ns | **2.1x faster** |
+| Error path | 941 ns | 835 ns | 1.1x slower |
+
+Since most operations succeed (95%+), lazy evaluation provides significant real-world performance gains.
 
 ## Installation
 
@@ -15,30 +35,33 @@
 cargo add error-rail
 ```
 
-## Quick Start
-
-> **New to error-rail?** Check out the [Quick Start Guide](docs/QUICK_START.md) for step-by-step examples.
+## 30-Second Quick Start
 
 ```rust
-use error_rail::{ComposableError, ErrorPipeline, context, location, tag};
+use error_rail::prelude::*;
 
-// Wrap any error with rich context
-fn load_config() -> Result<String, Box<ComposableError<std::io::Error>>> {
-    ErrorPipeline::new(std::fs::read_to_string("config.toml"))
-        .with_context(location!())           // Capture file:line
-        .with_context(tag!("config"))        // Categorical tag
-        .with_context(context!("loading application config"))
-        .finish_boxed()
+// Add context to any Result with .ctx()
+fn read_config() -> BoxedResult<String, std::io::Error> {
+    std::fs::read_to_string("config.toml")
+        .ctx("loading configuration")
+}
+
+// Chain multiple contexts
+fn process() -> BoxedResult<(), std::io::Error> {
+    let config = read_config()?;
+    parse_config(&config)
+        .ctx("parsing configuration")
 }
 
 fn main() {
-    match load_config() {
-        Ok(content) => println!("Loaded: {} bytes", content.len()),
-        Err(e) => eprintln!("Error chain: {}", e.error_chain()),
-        // Output: loading application config -> [config] -> src/main.rs:6 -> No such file...
+    if let Err(e) = process() {
+        eprintln!("{}", e.error_chain());
+        // Output: parsing configuration -> loading configuration -> No such file...
     }
 }
 ```
+
+> **New to error-rail?** See the [Quick Start Guide](docs/QUICK_START.md) for step-by-step examples.
 
 ## Key Features
 
@@ -47,17 +70,19 @@ fn main() {
 Wrap any error in `ComposableError` and attach layered metadata.
 
 ```rust
-use error_rail::{ComposableError, context, location, tag, metadata};
+use error_rail::{ComposableError, context, group};
 
 let err = ComposableError::<&str>::new("connection failed")
-    .with_context(tag!("database"))
-    .with_context(location!())
-    .with_context(metadata!("host", "localhost:5432"))
     .with_context(context!("retry attempt {}", 3))
+    .with_context(group!(
+        tag("database"),
+        location(file!(), line!()),
+        metadata("host", "localhost:5432")
+    ))
     .set_code(500);
 
 println!("{}", err.error_chain());
-// Output: retry attempt 3 -> host=localhost:5432 -> src/main.rs:7 -> [database] -> connection failed (code: 500)
+// Output: retry attempt 3 -> [database] at src/main.rs:7 (host=localhost:5432) -> connection failed (code: 500)
 ```
 
 ### 2. Error Pipeline
@@ -178,14 +203,78 @@ fn parse_config() -> ComposableResult<Config, ParseError> { /* ... */ }
 fn load_file() -> BoxedComposableResult<String, std::io::Error> { /* ... */ }
 ```
 
+## When to Use What?
+
+### Quick Reference
+
+| Scenario | Recommended Type | Example |
+|----------|------------------|---------|
+| **Simple error wrapping** | `ComposableError<E>` | Internal error handling |
+| **Function return type** | `BoxedComposableResult<T, E>` | Public API boundaries |
+| **Adding context to Result** | `ErrorPipeline` | Wrapping I/O operations |
+| **Form/input validation** | `Validation<E, T>` | Collecting all field errors |
+| **Error chaining** | `ErrorPipeline` + `finish_boxed()` | Multi-step operations |
+
+### Validation vs Result
+
+| Feature | `Result<T, E>` | `Validation<E, T>` |
+|---------|---------------|-------------------|
+| **Short-circuit** | ✅ Yes (stops at first error) | ❌ No (collects all) |
+| **Use case** | Sequential operations | Parallel validation |
+| **Error count** | Single | Multiple |
+| **Iterator support** | `?` operator | `.collect()` |
+
+## Common Pitfalls
+
+### 1. Forgetting to Box for Return Types
+
+```rust
+// ❌ Large stack size (48+ bytes per Result)
+fn process() -> Result<Data, ComposableError<MyError>> { ... }
+
+// ✅ Reduced stack size (8 bytes pointer)
+fn process() -> BoxedComposableResult<Data, MyError> { ... }
+```
+
+### 2. Excessive Context Depth
+
+```rust
+// ❌ Adding context at every layer (O(n) performance)
+db_call()
+    .with_context(ctx1)
+    .and_then(|x| validate(x).with_context(ctx2))
+    .and_then(|x| transform(x).with_context(ctx3))
+    // ... 20 more layers
+
+// ✅ Add context at boundaries only
+let result = db_call()
+    .and_then(validate)
+    .and_then(transform);
+
+ErrorPipeline::new(result)
+    .with_context(context!("user_id: {}", id))
+    .finish_boxed()
+```
+
+### 3. Eager vs Lazy Context
+
+```rust
+// ❌ Eager: format! runs even on success
+.with_context(ErrorContext::new(format!("data: {:?}", large_struct)))
+
+// ✅ Lazy: format! only runs on error
+.with_context(context!("data: {:?}", large_struct))
+```
+
 ## Module Reference
 
 | Module | Description |
 |--------|-------------|
-| `context` | Context attachment functions: `with_context`, `accumulate_context`, `format_error_chain` |
+| `prelude` | **Start here!** Common imports: `ResultExt`, `BoxedResult`, macros |
+| `context` | Context attachment: `with_context`, `accumulate_context`, `format_error_chain` |
 | `convert` | Conversions between `Result`, `Validation`, and `ComposableError` |
-| `macros` | `context!`, `location!`, `tag!`, `metadata!`, `rail!`, `impl_error_context!` |
-| `traits` | `IntoErrorContext`, `ErrorOps`, `WithError` |
+| `macros` | `context!`, `group!`, `rail!`, `impl_error_context!` |
+| `traits` | `ResultExt`, `BoxedResultExt`, `IntoErrorContext`, `ErrorOps`, `WithError` |
 | `types` | `ComposableError`, `ErrorContext`, `ErrorPipeline`, `LazyContext` |
 | `validation` | `Validation<E, A>` type with collectors and iterators |
 
@@ -213,6 +302,10 @@ cargo run --example readme_features   # All features from this README
 cargo run --example pipeline          # Error pipeline chaining
 cargo run --example validation_collect # Validation accumulation
 ```
+
+## Integration Guides
+
+- **[Quick Start Guide](docs/QUICK_START.md)** - Step-by-step tutorial
 
 ## License
 

@@ -3,9 +3,7 @@
 //! This example demonstrates all the key features shown in README.md.
 //! Run with: cargo run --example readme_features
 
-use error_rail::{
-    context, location, metadata, rail, tag, ComposableError, ErrorPipeline, Validation,
-};
+use error_rail::{context, group, rail, ComposableError, ErrorContext, ErrorPipeline, Validation};
 
 // =============================================================================
 // Feature 1: Structured Error Context
@@ -15,14 +13,18 @@ fn feature1_structured_context() {
     println!("=== Feature 1: Structured Error Context ===\n");
 
     let err = ComposableError::<&str>::new("connection failed")
-        .with_context(tag!("database"))
-        .with_context(location!())
-        .with_context(metadata!("host", "localhost:5432"))
         .with_context(context!("retry attempt {}", 3))
+        .with_context(
+            ErrorContext::builder()
+                .tag("database")
+                .location(file!(), line!())
+                .metadata("host", "localhost:5432")
+                .build(),
+        )
         .set_code(500);
 
     println!("{}", err.error_chain());
-    // Output: retry attempt 3 -> host=localhost:5432 -> ... -> [database] -> connection failed (code: 500)
+    // Output: retry attempt 3 -> [database] at examples\readme_features.rs:19 (host=localhost:5432) -> connection failed (code: 500)
 }
 
 // =============================================================================
@@ -37,9 +39,11 @@ fn feature2_error_pipeline() {
     println!("\n=== Feature 2: Error Pipeline ===\n");
 
     let result = ErrorPipeline::new(fetch_user(42))
-        .with_context(tag!("user-service"))
-        .with_context(context!("user_id: {}", 42))
-        .with_context(location!())
+        .with_context(group!(
+            tag("user-service"),
+            message("user_id: {}", 42),
+            location(file!(), line!())
+        ))
         .map_error(|e| format!("Fetch failed: {}", e))
         .finish_boxed();
 
@@ -151,17 +155,17 @@ fn feature5_macros() {
     let err1 = ComposableError::<&str>::new("error").with_context(context!("user_id: {}", 123));
     println!("context!: {}", err1.error_chain());
 
-    // location! - source file and line
-    let err2 = ComposableError::<&str>::new("error").with_context(location!());
-    println!("location!: {}", err2.error_chain());
+    // group! - combined grouped context
+    let err2 =
+        ComposableError::<&str>::new("error").with_context(group!(location(file!(), line!())));
+    println!("group! (location): {}", err2.error_chain());
 
-    // tag! - categorical label
-    let err3 = ComposableError::<&str>::new("error").with_context(tag!("database"));
-    println!("tag!: {}", err3.error_chain());
+    let err3 = ComposableError::<&str>::new("error").with_context(group!(tag("database")));
+    println!("group! (tag): {}", err3.error_chain());
 
-    // metadata! - key-value pair
-    let err4 = ComposableError::<&str>::new("error").with_context(metadata!("host", "localhost"));
-    println!("metadata!: {}", err4.error_chain());
+    let err4 =
+        ComposableError::<&str>::new("error").with_context(group!(metadata("host", "localhost")));
+    println!("group! (metadata): {}", err4.error_chain());
 
     // rail! - quick pipeline wrapper
     println!("\nrail! macro:");
@@ -177,9 +181,11 @@ fn feature5_macros() {
 
 fn load_config() -> Result<String, Box<ComposableError<std::io::Error>>> {
     ErrorPipeline::new(std::fs::read_to_string("config.toml"))
-        .with_context(location!())
-        .with_context(tag!("config"))
-        .with_context(context!("loading application config"))
+        .with_context(group!(
+            tag("config"),
+            message("loading application config"),
+            location(file!(), line!())
+        ))
         .finish_boxed()
 }
 
