@@ -40,7 +40,7 @@ fn demonstrate_serde_logging() {
             metadata("host", "db-primary-01"),
             metadata("retry_count", "3"),
             location(file!(), line!()),
-            context!("database connection failed after retries")
+            message("database connection failed after retries")
         ))
         .set_code(503);
 
