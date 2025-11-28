@@ -25,25 +25,6 @@
   - Prevents error information loss in multi-error scenarios
   - Uses `ErrorVec<E>` (SmallVec) for no_std compatibility and performance
 
-### Changed - Unreleased
-
-- **Enhanced `rail!` macro documentation**: Clear warnings that it always returns boxed errors
-  - Added prominent notice about boxed return type
-  - Cross-references `rail_unboxed!` for unboxed alternatives
-  - Updated examples to show error type explicitly
-
-- **Enhanced ErrorPipeline method documentation**: Cross-referenced with macro usage
-  - `finish_boxed()` documents its use by `rail!` macro and recommendation for public APIs
-  - `finish()` documents its use by `rail_unboxed!` macro and use for internal code
-  - Added guidance on stack size differences (8 bytes vs larger unboxed)
-
-- **Updated prelude exports**: Added `rail_unboxed!` to `prelude` module for discoverability
-  - Users can now import both macros with `use error_rail::prelude::*;`
-
-- **Updated tests**: Migrated from deprecated `to_result()` to explicit methods
-  - All tests now use `to_result_first()` instead of deprecated `to_result()`
-  - Eliminates deprecation warnings while maintaining test coverage
-
 ## [0.5.1]
 
 ### Fixed - 0.5.1
