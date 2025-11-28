@@ -359,9 +359,56 @@ impl<E> ComposableError<E> {
         }
     }
 
-    /// Formats the error chain as `ctx1 -> ctx2 -> core_error (code: ...)`.
+    /// Formats the error chain using a custom formatter.
     ///
-    /// Contexts are displayed in LIFO order (most recent first), followed by the core error.
+    /// This method allows you to customize how the error chain is formatted
+    /// by providing a custom [`crate::ErrorFormatter`] implementation or using
+    /// one of the built-in configurations.
+    ///
+    /// # Arguments
+    ///
+    /// * `formatter` - Any type implementing [`crate::ErrorFormatter`]
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use error_rail::{ComposableError, ErrorFormatConfig};
+    ///
+    /// let err = ComposableError::new("database error")
+    ///     .with_context("fetching user");
+    ///
+    /// // Use pretty format
+    /// println!("{}", err.error_chain_with(ErrorFormatConfig::pretty()));
+    /// ```
+    #[must_use]
+    pub fn error_chain_with<F>(&self, formatter: F) -> String
+    where
+        E: Display,
+        F: crate::types::error_formatter::ErrorFormatter,
+    {
+        use crate::types::alloc_type::Vec;
+
+        // Collect contexts and error as Display trait objects
+        let mut items: Vec<&dyn Display> = Vec::new();
+
+        // Add contexts in LIFO order (most recent first)
+        for ctx in self.context.iter().rev() {
+            items.push(ctx as &dyn Display);
+        }
+
+        // Add the main error
+        items.push(&self.core_error);
+
+        // Format using the provided formatter
+        formatter.format_chain(items.iter().copied())
+    }
+
+    /// Returns the complete error chain as a formatted string.
+    ///
+    /// This is a convenience method that uses the default formatter to create
+    /// a human-readable representation of the entire error chain, including
+    /// all contexts and the original error.
+    ///
     /// If an error code is present, it's appended at the end.
     ///
     /// # Examples

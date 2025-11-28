@@ -363,6 +363,7 @@ cargo run --example validation_collect # Validation accumulation
 ## Integration Guides
 
 - **[Quick Start Guide](docs/QUICK_START.md)** - Step-by-step tutorial
+- **[Error Handling Patterns](docs/PATTERNS.md)** - Real-world usage patterns and best practices
 
 ## Glossary
 

@@ -18,6 +18,28 @@
 - **`WithError::to_result_first()` method**: Explicit method for first-error-only conversion
   - Returns `Result<T, E>` with only the first error from multi-error scenarios
   - Clearer intent than the deprecated `to_result()` method
+
+- **ErrorFormatter System**: New flexible error chain formatting
+  - Added `ErrorFormatter` trait for custom error chain formatting implementations
+  - Added `ErrorFormatConfig` with built-in formatting configurations (pretty, compact, etc.)
+  - Added `ComposableError::error_chain_with()` method for custom formatting
+  - Supports both simple configuration and advanced custom formatters
+  - Enables JSON, uppercase, prefixed, and other custom output formats
+
+- **Error Handling Pattern Examples**: New runnable demonstration examples
+  - Added `examples/pattern_cli_app.rs` - CLI error handling with user-friendly messages
+  - Added `examples/pattern_http_api.rs` - HTTP API error responses with status codes
+  - Added `examples/pattern_library_dev.rs` - Library development with public API boundaries
+  - Added `examples/pattern_service_layer.rs` - Service layer error context addition
+  - All examples use proper ErrorPipeline pattern and compile without warnings
+  - Include comprehensive test coverage for library development pattern
+
+- **Error Handling Patterns Documentation**: New comprehensive patterns guide
+  - Added `docs/PATTERNS.md` with real-world usage patterns and best practices
+  - Includes 4 practical patterns: Service Layer, HTTP API, CLI Applications, Library Development
+  - Features working examples using ErrorPipeline for proper error composition
+  - Demonstrates correct ErrorPipeline approach instead of problematic .ctx() chaining
+  - Updated README.md to reference the new patterns guide
   - Maintains backward compatibility with existing behavior
 
 - **`WithError::to_result_all()` method**: New method for preserving all errors
