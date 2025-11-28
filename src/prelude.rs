@@ -63,7 +63,7 @@
 //! ```
 
 // Macros
-pub use crate::{context, group, rail};
+pub use crate::{context, group, rail, rail_unboxed};
 
 // Core types
 pub use crate::types::lazy_context::LazyGroupContext;

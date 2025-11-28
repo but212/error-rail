@@ -1,5 +1,49 @@
 # CHANGELOG
 
+## [Unreleased]
+
+### Deprecated - Unreleased
+
+- **`WithError::to_result()` method deprecated**: Will be removed in future versions
+  - **Migration**: Use `to_result_first()` for first-error-only or `to_result_all()` for all errors
+  - **Rationale**: Provides explicit error handling choices to prevent accidental error information loss
+
+### Added - Unreleased
+
+- **`rail_unboxed!` macro**: New macro for unboxed composable results
+  - Returns `ComposableResult<T, E>` instead of `BoxedComposableResult<T, E>`
+  - Use when you need to avoid heap allocation or for internal/performance-critical code
+  - Complements existing `rail!` macro which always returns boxed results
+
+- **`WithError::to_result_first()` method**: Explicit method for first-error-only conversion
+  - Returns `Result<T, E>` with only the first error from multi-error scenarios
+  - Clearer intent than the deprecated `to_result()` method
+  - Maintains backward compatibility with existing behavior
+
+- **`WithError::to_result_all()` method**: New method for preserving all errors
+  - Returns `Result<T, ErrorVec<E>>` with all accumulated errors
+  - Prevents error information loss in multi-error scenarios
+  - Uses `ErrorVec<E>` (SmallVec) for no_std compatibility and performance
+
+### Changed - Unreleased
+
+- **Enhanced `rail!` macro documentation**: Clear warnings that it always returns boxed errors
+  - Added prominent notice about boxed return type
+  - Cross-references `rail_unboxed!` for unboxed alternatives
+  - Updated examples to show error type explicitly
+
+- **Enhanced ErrorPipeline method documentation**: Cross-referenced with macro usage
+  - `finish_boxed()` documents its use by `rail!` macro and recommendation for public APIs
+  - `finish()` documents its use by `rail_unboxed!` macro and use for internal code
+  - Added guidance on stack size differences (8 bytes vs larger unboxed)
+
+- **Updated prelude exports**: Added `rail_unboxed!` to `prelude` module for discoverability
+  - Users can now import both macros with `use error_rail::prelude::*;`
+
+- **Updated tests**: Migrated from deprecated `to_result()` to explicit methods
+  - All tests now use `to_result_first()` instead of deprecated `to_result()`
+  - Eliminates deprecation warnings while maintaining test coverage
+
 ## [0.5.1]
 
 ### Fixed - 0.5.1
@@ -77,12 +121,12 @@
     - Lazy evaluation: No string formatting until error occurs
     - Unified display: All fields appear as one cohesive context unit
     - Better performance: Reduced allocations on success paths
-  - **Removal timeline**: Deprecated macros will be removed in version 0.6.0
+  - **Removal timeline**: Deprecated macros will be removed in version Unreleased
   - **New exports**: `group!` macro and `LazyGroupContext` type added to prelude
 
 ### Deprecated - 0.5.0
 
-- `location!()`, `tag!()`, and `metadata!()` macros - Use `group!` macro instead (scheduled for removal in 0.6.0)
+- `location!()`, `tag!()`, and `metadata!()` macros - Use `group!` macro instead (scheduled for removal in Unreleased)
 
 ### Removed - 0.5.0
 

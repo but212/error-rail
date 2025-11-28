@@ -1,6 +1,7 @@
 use crate::traits::ErrorCategory;
 use crate::traits::WithError;
 use crate::validation::core::Validation;
+use crate::ErrorVec;
 
 /// Implementation of [`ErrorCategory`] for [`Validation`] types.
 ///
@@ -67,10 +68,73 @@ impl<T, E> WithError<E> for Validation<E, T> {
         }
     }
 
+    /// Converts the validation to a result, taking only the first error if invalid.
+    ///
+    /// **⚠️ DEPRECATED**: Use [`to_result_first()`](Self::to_result_first) or
+    /// [`to_result_all()`](Self::to_result_all) for explicit error handling.
+    /// This method loses additional errors in multi-error scenarios.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(value)` if validation is valid
+    /// * `Err(first_error)` if validation is invalid (only the first error)
     fn to_result(self) -> Result<Self::Success, E> {
+        self.to_result_first()
+    }
+
+    /// Converts the validation to a result, taking only the first error if invalid.
+    ///
+    /// This method explicitly indicates that only the first error will be returned,
+    /// potentially losing additional errors in multi-error scenarios.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(value)` if validation is valid
+    /// * `Err(first_error)` if validation is invalid (only the first error)
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use error_rail::validation::Validation;
+    ///
+    /// let valid = Validation::<&str, i32>::valid(42);
+    /// assert_eq!(valid.to_result_first(), Ok(42));
+    ///
+    /// let invalid = Validation::<&str, i32>::invalid_many(vec!["error1", "error2"]);
+    /// assert_eq!(invalid.to_result_first(), Err("error1"));
+    /// ```
+    fn to_result_first(self) -> Result<Self::Success, E> {
         match self {
             Validation::Valid(t) => Ok(t),
             Validation::Invalid(e) => Err(e.into_iter().next().unwrap()),
+        }
+    }
+
+    /// Converts the validation to a result, preserving all errors if invalid.
+    ///
+    /// This method returns all accumulated errors in a `Vec<E>`, ensuring no error
+    /// information is lost during the conversion.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(value)` if validation is valid
+    /// * `Err(all_errors)` if validation is invalid (all errors in a Vec)
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use error_rail::validation::Validation;
+    ///
+    /// let valid = Validation::<&str, i32>::valid(42);
+    /// assert_eq!(valid.to_result_all(), Ok(42));
+    ///
+    /// let invalid = Validation::<&str, i32>::invalid_many(vec!["error1", "error2"]);
+    /// assert_eq!(invalid.to_result_all(), Err(vec!["error1", "error2"]));
+    /// ```
+    fn to_result_all(self) -> Result<Self::Success, ErrorVec<E>> {
+        match self {
+            Validation::Valid(t) => Ok(t),
+            Validation::Invalid(e) => Err(e),
         }
     }
 }

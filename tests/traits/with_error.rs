@@ -8,7 +8,7 @@ fn test_with_error_fmap_error_ok() {
 }
 
 #[test]
-fn test_with_error_to_result_ok() {
+fn test_with_error_to_result_first_ok() {
     let result: Result<i32, &str> = Ok(42);
-    assert_eq!(result.to_result(), Ok(42));
+    assert_eq!(result.to_result_first(), Ok(42));
 }

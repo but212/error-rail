@@ -294,7 +294,11 @@ impl<T, E> ErrorPipeline<T, E> {
     /// Finalizes the pipeline into a boxed [`ComposableResult`].
     ///
     /// On `Ok`, returns the success value. On `Err`, creates a [`ComposableError`]
-    /// with all pending contexts attached and boxes it.
+    /// with all pending contexts attached and boxes it to reduce stack size.
+    ///
+    /// **Note**: This method is used by the [`rail!`](crate::rail) macro and is
+    /// recommended for public APIs due to the smaller stack footprint (8 bytes).
+    /// For internal code, consider using [`finish()`](Self::finish) to avoid heap allocation.
     ///
     /// # Examples
     ///
@@ -316,10 +320,13 @@ impl<T, E> ErrorPipeline<T, E> {
         }
     }
 
-    /// Finalizes the pipeline into a [`ComposableResult`].
+    /// Finalizes the pipeline into an unboxed [`ComposableResult`].
     ///
-    /// Similar to `finish_boxed`, but returns the error directly without boxing.
-    /// Use this when you need to avoid heap allocation.
+    /// This is the default method that returns errors directly without boxing.
+    /// Use this when you need to avoid heap allocation or are working with internal APIs.
+    ///
+    /// **Note**: This method is used by the [`rail_unboxed!`](crate::rail_unboxed) macro.
+    /// For public APIs, consider using [`finish_boxed()`](Self::finish_boxed) instead.
     ///
     /// # Examples
     ///

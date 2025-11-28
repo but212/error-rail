@@ -39,19 +39,19 @@ fn with_error_fmap_error_keeps_valid_unchanged() {
 }
 
 #[test]
-fn with_error_to_result_valid_uses_trait_signature() {
+fn with_error_to_result_first_valid_uses_trait_signature() {
     let v: Validation<&str, i32> = Validation::valid(42);
 
-    let result: Result<i32, &str> = <Validation<&str, i32> as WithError<&str>>::to_result(v);
+    let result: Result<i32, &str> = <Validation<&str, i32> as WithError<&str>>::to_result_first(v);
 
     assert_eq!(result, Ok(42));
 }
 
 #[test]
-fn with_error_to_result_invalid_returns_first_error() {
+fn with_error_to_result_first_invalid_returns_first_error() {
     let v: Validation<&str, i32> = Validation::invalid_many(["first", "second"]);
 
-    let result: Result<i32, &str> = <Validation<&str, i32> as WithError<&str>>::to_result(v);
+    let result: Result<i32, &str> = <Validation<&str, i32> as WithError<&str>>::to_result_first(v);
 
     assert_eq!(result, Err("first"));
 }
