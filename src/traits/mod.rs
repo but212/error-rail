@@ -16,10 +16,12 @@
 //!
 //! // Using ErrorCategory to lift values
 //! let success: Result<i32, String> = <Result<(), String>>::lift(42);
+//! assert_eq!(success, Ok(42));
 //!
 //! // Using IntoErrorContext for structured contexts
 //! let err = ComposableError::<&str>::new("failed")
 //!     .with_context("operation context");
+//! assert_eq!(err.context().len(), 1);
 //! ```
 
 pub mod error_category;

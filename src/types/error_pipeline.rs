@@ -25,6 +25,8 @@ use crate::{ComposableResult, ErrorContext, ErrorVec, IntoErrorContext};
 ///     .with_context(context!("step 1"))
 ///     .with_context(context!("step 2"))
 ///     .finish_boxed();
+///
+/// assert!(result.is_err());
 /// ```
 #[must_use]
 pub struct ErrorPipeline<T, E> {

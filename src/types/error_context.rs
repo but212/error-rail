@@ -20,13 +20,15 @@
 //! ```
 //! use error_rail::ErrorContext;
 //!
-//!
 //! let msg = ErrorContext::new("database connection failed");
 //! let ctx = ErrorContext::group("context")
 //!     .tag("db")
 //!     .location("main.rs", 42)
 //!     .metadata("retry_count", "3")
 //!     .build();
+//!
+//! assert_eq!(msg.message(), "database connection failed");
+//! assert!(ctx.message().contains("[db]"));
 //! ```
 use crate::alloc_type::String;
 use crate::types::alloc_type::{Cow, Vec};

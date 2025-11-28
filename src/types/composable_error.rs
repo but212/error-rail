@@ -12,11 +12,10 @@
 //!
 //! let err = ComposableError::new("database connection failed")
 //!     .with_context(ErrorContext::tag("db"))
-//!     .with_context(ErrorContext::location(file!(), line!()))
 //!     .set_code(500);
 //!
-//! println!("{}", err.error_chain());
-//! // Output: [db] -> main.rs:42 -> database connection failed (code: 500)
+//! assert!(err.to_string().contains("database connection failed"));
+//! assert_eq!(err.error_code(), Some(500));
 //! ```
 use core::fmt::{Debug, Display};
 

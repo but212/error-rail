@@ -1,4 +1,4 @@
-//! Conversion helpers between `Result`, `Validation`, and `ComposableError`.
+//! Conversion helpers between [`Result`], [`Validation`], and [`ComposableError`].
 //!
 //! These adapters make it straightforward to incrementally adopt `error-rail`
 //! by wrapping legacy results or by flattening composable errors back into core
@@ -18,6 +18,7 @@
 //! // Wrap errors in ComposableError
 //! let result: Result<i32, &str> = Err("failed");
 //! let composable = wrap_in_composable_result(result);
+//! assert!(composable.is_err());
 //! ```
 
 use crate::types::alloc_type::Box;

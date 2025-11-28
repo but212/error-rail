@@ -28,6 +28,8 @@
 //!     ))
 //!     .finish_boxed();
 //!
+//! assert!(pipeline.is_err());
+//!
 //! // Equivalent rail! shorthand that also returns a boxed composable result
 //! let _ = rail!({
 //!     Err::<(), &str>("failed")

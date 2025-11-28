@@ -19,6 +19,8 @@
 //! let pipeline = ErrorPipeline::new(result)
 //!     .with_context(LazyContext::new(expensive_debug_info))
 //!     .finish_boxed();
+//!
+//! assert!(pipeline.is_err());
 //! ```
 use crate::{
     traits::IntoErrorContext, types::alloc_type::String, types::error_context::ErrorContext,

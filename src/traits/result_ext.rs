@@ -12,6 +12,8 @@
 //!     std::fs::read_to_string("config.toml")
 //!         .ctx("loading configuration file")
 //! }
+//!
+//! assert!(load_config().is_err());
 //! ```
 
 use crate::traits::IntoErrorContext;

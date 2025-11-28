@@ -2,7 +2,7 @@ use crate::traits::ErrorCategory;
 use crate::traits::WithError;
 use crate::validation::core::Validation;
 
-/// Implementation of `ErrorCategory` for `Validation` types.
+/// Implementation of [`ErrorCategory`] for [`Validation`] types.
 ///
 /// This allows `Validation<E, ()>` to act as an error category, where:
 /// - `lift` creates `Valid` values

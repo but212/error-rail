@@ -4,7 +4,7 @@
 //! - [`with_context`] / [`with_context_result`] wrap any `Result` while preserving
 //!   structured [`ErrorContext`] values.
 //! - [`ErrorPipeline`] enables chaining operations, collecting pending contexts,
-//!   and mapping/recovering errors before finalizing into a `ComposableError`.
+//!   and mapping/recovering errors before finalizing into a [`ComposableError`].
 //! - Convenience builders such as [`context_fn`], [`accumulate_context`], and
 //!   [`context_accumulator`] let you compose context-aware closures.
 //!
