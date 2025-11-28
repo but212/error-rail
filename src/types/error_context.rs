@@ -20,10 +20,13 @@
 //! ```
 //! use error_rail::ErrorContext;
 //!
+//!
 //! let msg = ErrorContext::new("database connection failed");
-//! let loc = ErrorContext::location("main.rs", 42);
-//! let tag = ErrorContext::tag("db");
-//! let meta = ErrorContext::metadata("retry_count", "3");
+//! let ctx = ErrorContext::group("context")
+//!     .tag("db")
+//!     .location("main.rs", 42)
+//!     .metadata("retry_count", "3")
+//!     .build();
 //! ```
 use crate::alloc_type::String;
 use crate::types::alloc_type::{Cow, Vec};
@@ -58,10 +61,13 @@ use std::string::ToString;
 /// ```
 /// use error_rail::ErrorContext;
 ///
+///
 /// let msg = ErrorContext::new("database connection failed");
-/// let loc = ErrorContext::location("main.rs", 42);
-/// let tag = ErrorContext::tag("db");
-/// let meta = ErrorContext::metadata("retry_count", "3");
+/// let ctx = ErrorContext::group("context")
+///     .tag("db")
+///     .location("main.rs", 42)
+///     .metadata("retry_count", "3")
+///     .build();
 /// ```
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[allow(clippy::large_enum_variant)]

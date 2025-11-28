@@ -17,11 +17,14 @@
 //! ## Basic Error with Context
 //!
 //! ```
-//! use error_rail::{ComposableError, ErrorContext, context, location, tag};
+//! use error_rail::{ComposableError, ErrorContext, group};
 //!
 //! let err = ComposableError::new("database connection failed")
-//!     .with_context(tag!("db"))
-//!     .with_context(location!())
+//!     .with_context(group!(
+//!         tag("db"),
+//!         location(file!(), line!()),
+//!         metadata("retry_count", "3")
+//!     ))
 //!     .set_code(500);
 //! ```
 //!

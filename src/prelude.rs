@@ -22,7 +22,10 @@
 //!
 //! fn load_config() -> BoxedResult<String, std::io::Error> {
 //!     std::fs::read_to_string("config.toml")
-//!         .ctx("loading configuration")
+//!         .ctx(group!(
+//!             message("loading configuration"),
+//!             location(file!(), line!())
+//!         ))
 //! }
 //! ```
 //!

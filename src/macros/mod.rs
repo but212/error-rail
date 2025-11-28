@@ -113,21 +113,11 @@ macro_rules! context {
 /// Captures the current source file and line number as error context.
 ///
 /// This macro creates an [`ErrorContext::location`](crate::types::ErrorContext::location)
-/// using the `file!()` and `line!()` built-in macros, providing precise source location
-/// information for debugging.
+/// using the `file!()` and `line!()` built-in macros.
 ///
 /// # Deprecated
 ///
 /// Use [`group!`](crate::group) instead since version 0.5.0.
-///
-/// # Examples
-///
-/// ```
-/// use error_rail::{location, ComposableError};
-///
-/// let err = ComposableError::<&str>::new("io error")
-///     .with_context(location!());
-/// ```
 #[macro_export]
 #[deprecated(since = "0.5.0", note = "Use `group!` instead")]
 macro_rules! location {
@@ -139,7 +129,7 @@ macro_rules! location {
 /// Creates a categorical tag for error classification.
 ///
 /// This macro creates an [`ErrorContext::tag`](crate::types::ErrorContext::tag) that can be
-/// used to categorize and filter errors by domain (e.g., "db", "auth", "network").
+/// used to categorize and filter errors.
 ///
 /// # Deprecated
 ///
@@ -148,15 +138,6 @@ macro_rules! location {
 /// # Arguments
 ///
 /// * `$tag` - A string or expression that can be converted into a tag
-///
-/// # Examples
-///
-/// ```
-/// use error_rail::{tag, ComposableError};
-///
-/// let err = ComposableError::<&str>::new("connection failed")
-///     .with_context(tag!("network"));
-/// ```
 #[macro_export]
 #[deprecated(since = "0.5.0", note = "Use `group!` instead")]
 macro_rules! tag {
@@ -168,7 +149,7 @@ macro_rules! tag {
 /// Creates a key-value metadata pair for structured error context.
 ///
 /// This macro creates an [`ErrorContext::metadata`](crate::types::ErrorContext::metadata)
-/// entry that can be used for structured logging, filtering, or monitoring.
+/// entry.
 ///
 /// # Deprecated
 ///
@@ -178,15 +159,6 @@ macro_rules! tag {
 ///
 /// * `$key` - The metadata key
 /// * `$value` - The metadata value
-///
-/// # Examples
-///
-/// ```
-/// use error_rail::{metadata, ComposableError};
-///
-/// let err = ComposableError::<&str>::new("rate limit exceeded")
-///     .with_context(metadata!("retry_after", "60"));
-/// ```
 #[macro_export]
 #[deprecated(since = "0.5.0", note = "Use `group!` instead")]
 macro_rules! metadata {
