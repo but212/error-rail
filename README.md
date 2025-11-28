@@ -326,6 +326,10 @@ ErrorPipeline::new(result)
 [dependencies]
 error-rail = "0.5"
 
+# With std library support (e.g., for backtraces)
+[dependencies]
+error-rail = { version = "0.5", features = ["std"] }
+
 # With serialization support
 [dependencies]
 error-rail = { version = "0.5", features = ["serde"] }
