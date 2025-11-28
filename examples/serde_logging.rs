@@ -6,7 +6,7 @@
 //! This is useful for sending error reports to logging
 //! infrastructure (e.g., ELK stack, Splunk, CloudWatch).
 
-use error_rail::{ComposableError, ErrorContext};
+use error_rail::{group, ComposableError};
 #[cfg(feature = "serde")]
 use serde::Serialize;
 
@@ -33,12 +33,15 @@ fn demonstrate_serde_logging() {
         details: "Database connection timeout".to_string(),
     };
 
-    // 2. Wrap it in ComposableError and add rich context
+    // 2. Wrap it in ComposableError and add rich context using group!
     let error = ComposableError::<MyError>::new(base_error)
-        .with_context(ErrorContext::tag("database"))
-        .with_context(ErrorContext::metadata("host", "db-primary-01"))
-        .with_context(ErrorContext::metadata("retry_count", "3"))
-        .with_context(ErrorContext::location(file!(), line!()))
+        .with_context(group!(
+            tag("database"),
+            metadata("host", "db-primary-01"),
+            metadata("retry_count", "3"),
+            location(file!(), line!()),
+            context!("database connection failed after retries")
+        ))
         .set_code(503);
 
     // 3. Serialize to JSON
@@ -67,10 +70,13 @@ fn demonstrate_basic_logging() {
     };
 
     let error = ComposableError::<MyError>::new(base_error)
-        .with_context(ErrorContext::tag("database"))
-        .with_context(ErrorContext::metadata("host", "db-primary-01"))
-        .with_context(ErrorContext::metadata("retry_count", "3"))
-        .with_context(ErrorContext::location(file!(), line!()))
+        .with_context(group!(
+            tag("database"),
+            metadata("host", "db-primary-01"),
+            metadata("retry_count", "3"),
+            location(file!(), line!()),
+            message("database connection failed after retries")
+        ))
         .set_code(503);
 
     println!("Error chain: {}", error.error_chain());
