@@ -1,5 +1,5 @@
-use error_rail::ComposableError;
 use core::error::Error;
+use error_rail::ComposableError;
 use std::io;
 
 #[test]
