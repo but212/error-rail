@@ -96,6 +96,7 @@ impl<T, E> WithError<E> for Validation<E, T> {
     ///
     /// ```
     /// use error_rail::validation::Validation;
+    /// use error_rail::traits::WithError;
     ///
     /// let valid = Validation::<&str, i32>::valid(42);
     /// assert_eq!(valid.to_result_first(), Ok(42));
@@ -124,12 +125,13 @@ impl<T, E> WithError<E> for Validation<E, T> {
     ///
     /// ```
     /// use error_rail::validation::Validation;
+    /// use error_rail::traits::WithError;
     ///
     /// let valid = Validation::<&str, i32>::valid(42);
     /// assert_eq!(valid.to_result_all(), Ok(42));
     ///
     /// let invalid = Validation::<&str, i32>::invalid_many(vec!["error1", "error2"]);
-    /// assert_eq!(invalid.to_result_all(), Err(vec!["error1", "error2"]));
+    /// assert_eq!(invalid.to_result_all(), Err(vec!["error1", "error2"].into()));
     /// ```
     fn to_result_all(self) -> Result<Self::Success, ErrorVec<E>> {
         match self {
