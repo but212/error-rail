@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [0.5.1]
+
+### Fixed - 0.5.1
+
+- Fixed inconsistencies in README documentation
+
 ## [0.5.0]
 
 ### Breaking Changes - 0.5.0
