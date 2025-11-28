@@ -53,8 +53,37 @@ pub type BoxedComposableError<E> = alloc_type::Box<ComposableError<E>>;
 
 /// Result alias with boxed [`ComposableError`] for reduced stack size.
 ///
+/// This is identical to [`BoxedResult`] but with a more explicit name.
+/// For new code, prefer using [`BoxedResult`] from the prelude for brevity.
+///
 /// # Type Parameters
 ///
 /// * `T` - The success value type
 /// * `E` - The core error type
+///
+/// # See Also
+///
+/// * [`crate::prelude::BoxedResult`] - Shorter alias (recommended)
 pub type BoxedComposableResult<T, E> = Result<T, BoxedComposableError<E>>;
+
+/// Shorter alias for [`BoxedComposableResult`].
+///
+/// This is the recommended type alias for function return types.
+/// It has minimal stack footprint (8 bytes) while providing full error context.
+///
+/// # Type Parameters
+///
+/// * `T` - The success value type
+/// * `E` - The core error type
+///
+/// # Examples
+///
+/// ```
+/// use error_rail::BoxedResult;
+///
+/// fn read_file(path: &str) -> BoxedResult<String, std::io::Error> {
+///     // ...
+///     # Ok(String::new())
+/// }
+/// ```
+pub type BoxedResult<T, E> = BoxedComposableResult<T, E>;
