@@ -342,12 +342,12 @@ impl ErrorFormatter for ErrorFormatConfig {
             }
 
             // Middle items (contexts)
-            for i in 1..item_count.saturating_sub(1) {
+            for item in items.iter().take(item_count.saturating_sub(1)).skip(1) {
                 result.push_str(&self.separator);
                 if let Some(prefix) = &self.context_prefix {
                     result.push_str(prefix);
                 }
-                result.push_str(&items[i].to_string());
+                result.push_str(&item.to_string());
             }
 
             // Last item (root error)
