@@ -54,7 +54,7 @@ use core::time::Duration;
 /// Rather than implementing full retry logic, we provide this classification
 /// trait that works seamlessly with:
 ///
-/// - [`ErrorPipeline::retry_if`](crate::ErrorPipeline::retry_if)
+/// - [`ErrorPipeline::should_retry`](crate::ErrorPipeline::should_retry)
 /// - External crates like `backoff`, `retry`, `again`
 /// - Custom retry implementations
 ///
