@@ -67,3 +67,19 @@ fn test_retry_if_transient() {
     });
     assert!(permanent_err.retry_if_transient().is_none());
 }
+
+#[derive(Debug)]
+struct DefaultHintError;
+
+impl TransientError for DefaultHintError {
+    fn is_transient(&self) -> bool {
+        true
+    }
+}
+
+#[test]
+fn test_default_hints() {
+    let err = DefaultHintError;
+    assert_eq!(err.retry_after_hint(), None);
+    assert_eq!(err.max_retries_hint(), None);
+}

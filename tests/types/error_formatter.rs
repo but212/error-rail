@@ -76,3 +76,9 @@ fn test_custom_prefix_suffix() {
     let result = config.format_chain(items.into_iter());
     assert_eq!(result, "[CTX] context | [ERR] error");
 }
+
+#[test]
+fn test_no_code_config() {
+    let config = ErrorFormatConfig::no_code();
+    assert!(!config.show_code);
+}

@@ -55,3 +55,34 @@ fn with_error_to_result_first_invalid_returns_first_error() {
 
     assert_eq!(result, Err("first"));
 }
+
+#[test]
+#[allow(deprecated)]
+fn test_validation_to_result() {
+    let valid: Validation<&str, i32> = Validation::valid(42);
+    assert_eq!(
+        <Validation<&str, i32> as WithError<&str>>::to_result(valid),
+        Ok(42)
+    );
+
+    let invalid: Validation<&str, i32> = Validation::invalid("error");
+    assert_eq!(
+        <Validation<&str, i32> as WithError<&str>>::to_result(invalid),
+        Err("error")
+    );
+}
+
+#[test]
+fn test_validation_to_result_all() {
+    let valid: Validation<&str, i32> = Validation::valid(42);
+    assert_eq!(
+        <Validation<&str, i32> as WithError<&str>>::to_result_all(valid),
+        Ok(42)
+    );
+
+    let invalid: Validation<&str, i32> = Validation::invalid_many(["e1", "e2"]);
+    let result = <Validation<&str, i32> as WithError<&str>>::to_result_all(invalid);
+    assert!(result.is_err());
+    let errors = result.unwrap_err();
+    assert_eq!(errors.len(), 2);
+}

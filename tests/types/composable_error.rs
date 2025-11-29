@@ -208,3 +208,20 @@ fn test_fingerprint_tag_order_independence() {
 
     assert_eq!(err1.fingerprint(), err2.fingerprint());
 }
+
+#[test]
+fn test_error_chain_with_custom_formatter() {
+    use error_rail::ErrorFormatter;
+
+    struct CustomFormatter;
+    impl ErrorFormatter for CustomFormatter {
+        fn separator(&self) -> &str {
+            " >> "
+        }
+    }
+
+    let err = ComposableError::new("error").with_context("ctx");
+
+    let chain = err.error_chain_with(CustomFormatter);
+    assert_eq!(chain, "ctx >> error");
+}

@@ -97,3 +97,24 @@ fn test_validation_serde() {
         serde_json::from_str(&serialized_err).unwrap();
     assert_eq!(invalid, deserialized_err);
 }
+
+#[test]
+fn test_zip_valid_valid() {
+    let v1: Validation<&str, i32> = Validation::valid(42);
+    let v2: Validation<&str, i32> = Validation::valid(10);
+    let result = v1.zip(v2);
+    assert!(result.is_valid());
+    assert_eq!(result.into_value(), Some((42, 10)));
+}
+
+#[test]
+fn test_zip_invalid_invalid() {
+    let v1: Validation<&str, i32> = Validation::invalid("error1");
+    let v2: Validation<&str, i32> = Validation::invalid("error2");
+    let result = v1.zip(v2);
+    assert!(result.is_invalid());
+    let errors = result.into_errors().unwrap();
+    assert_eq!(errors.len(), 2);
+    assert_eq!(errors[0], "error1");
+    assert_eq!(errors[1], "error2");
+}

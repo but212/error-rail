@@ -52,6 +52,7 @@ fn context_macro_integrates_with_composable_error() {
 }
 
 pub mod error_ops;
+pub mod into_error_context;
 pub mod result_ext;
 pub mod transient;
 pub mod with_error;

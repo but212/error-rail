@@ -307,3 +307,35 @@ fn test_pipeline_with_retry_context_on_ok_is_noop() {
 
     assert!(result.is_ok());
 }
+
+#[test]
+fn test_recover_on_ok() {
+    let pipeline = ErrorPipeline::<i32, &str>::new(Ok(42)).recover(|_| Ok(0));
+    assert_eq!(pipeline.finish_boxed().unwrap(), 42);
+}
+
+#[test]
+fn test_recover_transient_on_ok() {
+    let pipeline =
+        ErrorPipeline::<i32, TestTransientError>::new(Ok(42)).recover_transient(|_| Ok(0));
+    assert_eq!(pipeline.finish_boxed().unwrap(), 42);
+}
+
+#[test]
+fn test_recover_transient_failure() {
+    let pipeline: ErrorPipeline<i32, TestTransientError> =
+        ErrorPipeline::new(Err(TestTransientError {
+            transient: true,
+            retry_after: None,
+        }))
+        .recover_transient(|_| {
+            Err(TestTransientError {
+                transient: false,
+                retry_after: None,
+            })
+        });
+
+    let result = pipeline.finish();
+    assert!(result.is_err());
+    assert!(!result.unwrap_err().core_error().is_transient());
+}
