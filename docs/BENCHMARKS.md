@@ -2,7 +2,7 @@
 
 This document summarizes performance benchmarks for `error-rail` using realistic production scenarios.
 
-> **Last Updated**: 2025-11-27
+> **Last Updated**: 2025-11-29
 > **Rust Version**: 1.90.0
 > **Platform**: Windows 11 (x86_64)
 > **CPU**: Intel(R) Core(TM) i5-9400F CPU @ 2.90GHz
@@ -48,8 +48,8 @@ The benchmarks demonstrate that `error-rail` provides excellent performance char
 ### Results
 
 ```text
-composable_error_creation     → 292.53 ns/iter
-composable_error_serialization → 682.48 ns/iter
+composable_error_creation     → 272.24 ns/iter
+composable_error_serialization → 751.44 ns/iter
 ```
 
 ### Analysis
@@ -66,14 +66,14 @@ composable_error_serialization → 682.48 ns/iter
 
 ```text
 Success Path:
-- context_lazy_success    → 637.49 ns/iter
-- context_eager_success   → 1.3513 µs/iter  (2.1x slower)
-- context_baseline_success → 714.46 ns/iter
+- context_lazy_success    → 615.34 ns/iter
+- context_eager_success   → 1.3185 µs/iter  (2.1x slower)
+- context_baseline_success → 700.37 ns/iter
 
 Error Path:
-- context_lazy_error      → 940.72 ns/iter
-- context_eager_error     → 835.01 ns/iter
-- context_baseline_error  → 83.215 ns/iter
+- context_lazy_error      → 933.22 ns/iter
+- context_eager_error     → 826.92 ns/iter
+- context_baseline_error  → 83.338 ns/iter
 ```
 
 ### Context Evaluation Analysis
@@ -87,10 +87,10 @@ Error Path:
 ### Context Depth Results
 
 ```text
-context_depth_1   → 420.47 ns/iter
-context_depth_3   → 986.83 ns/iter
-context_depth_10  → 2.7987 µs/iter
-context_depth_30  → 7.3782 µs/iter
+context_depth_1   → 420.90 ns/iter
+context_depth_3   → 966.91 ns/iter
+context_depth_10  → 2.7713 µs/iter
+context_depth_30  → 7.3524 µs/iter
 ```
 
 ### Context Depth Analysis
@@ -109,14 +109,14 @@ Realistic user service with database → validation → authentication flow
 
 ```text
 Success Path:
-- pipeline_success              → 773.42 ns/iter
-- result_with_context_success   → 715.99 ns/iter
-- result_baseline_success       → 712.50 ns/iter
+- pipeline_success              → 773.20 ns/iter
+- result_with_context_success   → 720.12 ns/iter
+- result_baseline_success       → 712.28 ns/iter
 
 Error Path:
-- pipeline_error                → 643.32 ns/iter
-- result_with_context_error     → 63.195 ns/iter
-- result_baseline_error         → 56.733 ns/iter
+- pipeline_error                → 676.77 ns/iter
+- result_with_context_error     → 64.883 ns/iter
+- result_baseline_error         → 59.516 ns/iter
 ```
 
 ### Pipeline Comparison Analysis
@@ -130,14 +130,14 @@ Error Path:
 ### Validation Collection Results
 
 ```text
-validation_collect_realistic_mixed → 957.83 ns/iter
-manual_collect_realistic_mixed     → 914.91 ns/iter
+validation_collect_realistic_mixed → 969.01 ns/iter
+manual_collect_realistic_mixed     → 939.57 ns/iter
 ```
 
 ### Heterogeneous Validation Results
 
 ```text
-validation_collect_heterogeneous → 1.7303 µs/iter
+validation_collect_heterogeneous → 1.7298 µs/iter
 ```
 
 ### Validation Performance Analysis
@@ -151,8 +151,8 @@ validation_collect_heterogeneous → 1.7303 µs/iter
 ### Error Operations Results
 
 ```text
-error_ops_recover → 1.3137 ns/iter
-error_ops_bimap   → 1.5736 ns/iter
+error_ops_recover → 1.2904 ns/iter
+error_ops_bimap   → 1.5918 ns/iter
 ```
 
 ### Error Operations Analysis
@@ -166,8 +166,8 @@ error_ops_bimap   → 1.5736 ns/iter
 ### Concurrency Performance Results
 
 ```text
-error_clone    → 142.66 ns/iter
-error_arc_wrap → 209.83 ns/iter
+error_clone    → 146.96 ns/iter
+error_arc_wrap → 209.16 ns/iter
 ```
 
 ### Concurrency Performance Analysis
@@ -181,8 +181,8 @@ error_arc_wrap → 209.83 ns/iter
 ### Mixed Ratio Results
 
 ```text
-mixed_95percent_success → 119.65 µs/iter (100 operations)
-mixed_50percent_success → 139.23 µs/iter  (100 operations)
+mixed_95percent_success → 106.94 µs/iter (100 operations)
+mixed_50percent_success → 94.315 µs/iter  (100 operations)
 ```
 
 ### Mixed Ratio Analysis
@@ -196,8 +196,8 @@ mixed_50percent_success → 139.23 µs/iter  (100 operations)
 ### Type Conversion Results
 
 ```text
-std_io_error_conversion → 337.19 ns/iter
-serde_error_conversion  → 463.85 ns/iter
+std_io_error_conversion → 324.36 ns/iter
+serde_error_conversion  → 469.06 ns/iter
 ```
 
 ### Type Conversion Analysis
@@ -211,8 +211,8 @@ serde_error_conversion  → 463.85 ns/iter
 ### Backtrace Performance Results
 
 ```text
-backtrace_lazy_success → 714.36 ns/iter
-backtrace_lazy_error   → 195.79 ns/iter
+backtrace_lazy_success → 723.23 ns/iter
+backtrace_lazy_error   → 193.34 ns/iter
 ```
 
 ### Backtrace Performance Analysis
@@ -253,13 +253,13 @@ High outlier percentages (5-14%) in some benchmarks indicate:
 
 | Benchmark Category | Key Metric | Performance | Recommendation |
 |-------------------|------------|-------------|----------------|
-| Error Creation | 293 ns | Excellent | Use freely in hot paths |
-| Lazy Context | 637 ns vs 1.35µs | 2.1x faster | Always prefer lazy evaluation |
-| Context Depth (30) | 7.38µs | Linear scaling | Deep context is practical |
-| Pipeline Success | 773 ns | 9% overhead | Excellent ergonomics trade-off |
-| Validation | 958 ns | 4.7% overhead | Better than manual collection |
-| Error Clone | 143 ns | Very fast | Safe for concurrent use |
-| Serialization | 682 ns | Sub-microsecond | Great for API responses |
+| Error Creation | 272 ns | Excellent | Use freely in hot paths |
+| Lazy Context | 615 ns vs 1.32µs | 2.1x faster | Always prefer lazy evaluation |
+| Context Depth (30) | 7.35µs | Linear scaling | Deep context is practical |
+| Pipeline Success | 773 ns | 8.5% overhead | Excellent ergonomics trade-off |
+| Validation | 969 ns | 3.1% overhead | Better than manual collection |
+| Error Clone | 147 ns | Very fast | Safe for concurrent use |
+| Serialization | 751 ns | Sub-microsecond | Great for API responses |
 
 ### Performance Tips
 
