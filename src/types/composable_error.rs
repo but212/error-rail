@@ -26,7 +26,11 @@ use crate::types::{ErrorContext, ErrorVec};
 use serde::{Deserialize, Serialize};
 
 #[cfg(not(feature = "std"))]
+use alloc::format;
+#[cfg(not(feature = "std"))]
 use alloc::string::ToString;
+#[cfg(feature = "std")]
+use std::format;
 #[cfg(feature = "std")]
 use std::string::ToString;
 
@@ -436,6 +440,171 @@ impl<E> ComposableError<E> {
     {
         self.fmt().to_string()
     }
+
+    /// Generates a unique fingerprint for this error.
+    ///
+    /// The fingerprint is computed from:
+    /// - All tags attached to the error
+    /// - The error code (if present)
+    /// - The core error message
+    ///
+    /// This fingerprint can be used for:
+    /// - Deduplicating similar errors in error tracking systems (e.g., Sentry)
+    /// - Grouping related errors in logs
+    /// - Creating stable error identifiers for alerting
+    ///
+    /// # Algorithm
+    ///
+    /// Uses a simple but stable hash algorithm (FNV-1a inspired) to generate
+    /// a 64-bit fingerprint. The fingerprint is deterministic for the same
+    /// input values.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use error_rail::{ComposableError, ErrorContext};
+    ///
+    /// let err1 = ComposableError::new("database error")
+    ///     .with_context(ErrorContext::tag("db"))
+    ///     .set_code(500);
+    ///
+    /// let err2 = ComposableError::new("database error")
+    ///     .with_context(ErrorContext::tag("db"))
+    ///     .set_code(500);
+    ///
+    /// // Same configuration produces same fingerprint
+    /// assert_eq!(err1.fingerprint(), err2.fingerprint());
+    ///
+    /// let err3 = ComposableError::new("different error")
+    ///     .with_context(ErrorContext::tag("db"))
+    ///     .set_code(500);
+    ///
+    /// // Different message produces different fingerprint
+    /// assert_ne!(err1.fingerprint(), err3.fingerprint());
+    /// ```
+    #[must_use]
+    pub fn fingerprint(&self) -> u64
+    where
+        E: Display,
+    {
+        self.compute_fingerprint()
+    }
+
+    /// Generates a hex string representation of the fingerprint.
+    ///
+    /// This is useful for logging and integration with external systems
+    /// that expect string-based identifiers.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use error_rail::{ComposableError, ErrorContext};
+    ///
+    /// let err = ComposableError::new("timeout")
+    ///     .with_context(ErrorContext::tag("network"))
+    ///     .set_code(504);
+    ///
+    /// let fp = err.fingerprint_hex();
+    /// assert_eq!(fp.len(), 16); // 64-bit hex = 16 characters
+    /// println!("Error fingerprint: {}", fp);
+    /// ```
+    #[must_use]
+    pub fn fingerprint_hex(&self) -> String
+    where
+        E: Display,
+    {
+        format!("{:016x}", self.fingerprint())
+    }
+
+    /// Internal fingerprint computation using FNV-1a-like algorithm.
+    ///
+    /// This is a simple, fast hash suitable for fingerprinting.
+    /// Not cryptographically secure, but stable and deterministic.
+    fn compute_fingerprint(&self) -> u64
+    where
+        E: Display,
+    {
+        // FNV-1a constants for 64-bit
+        const FNV_OFFSET: u64 = 0xcbf29ce484222325;
+        const FNV_PRIME: u64 = 0x100000001b3;
+
+        let mut hash = FNV_OFFSET;
+
+        // Hash helper
+        let mut hash_bytes = |bytes: &[u8]| {
+            for byte in bytes {
+                hash ^= *byte as u64;
+                hash = hash.wrapping_mul(FNV_PRIME);
+            }
+        };
+
+        // Include tags in sorted order for consistency
+        let mut tags: crate::types::alloc_type::Vec<_> = self
+            .context
+            .iter()
+            .filter_map(|ctx| {
+                if let ErrorContext::Group(g) = ctx {
+                    Some(
+                        g.tags
+                            .iter()
+                            .cloned()
+                            .collect::<crate::types::alloc_type::Vec<_>>(),
+                    )
+                } else {
+                    None
+                }
+            })
+            .flatten()
+            .collect();
+        tags.sort();
+
+        for tag in &tags {
+            hash_bytes(b"tag:");
+            hash_bytes(tag.as_bytes());
+        }
+
+        // Include error code
+        if let Some(code) = self.error_code {
+            hash_bytes(b"code:");
+            hash_bytes(&code.to_le_bytes());
+        }
+
+        // Include core error message
+        hash_bytes(b"msg:");
+        hash_bytes(self.core_error.to_string().as_bytes());
+
+        hash
+    }
+
+    /// Creates a fingerprint configuration for customizing fingerprint generation.
+    ///
+    /// This allows fine-grained control over which components are included
+    /// in the fingerprint calculation.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use error_rail::{ComposableError, ErrorContext};
+    ///
+    /// let err = ComposableError::new("timeout")
+    ///     .with_context(ErrorContext::tag("network"))
+    ///     .set_code(504);
+    ///
+    /// // Generate fingerprint with only tags and code (ignoring message)
+    /// let fp = err.fingerprint_config()
+    ///     .include_message(false)
+    ///     .compute();
+    /// ```
+    #[must_use]
+    pub fn fingerprint_config(&self) -> FingerprintConfig<'_, E> {
+        FingerprintConfig {
+            error: self,
+            include_tags: true,
+            include_code: true,
+            include_message: true,
+            include_metadata: false,
+        }
+    }
 }
 
 /// Formatter for customizing error display output.
@@ -586,5 +755,184 @@ impl<E> From<E> for ComposableError<E> {
     #[inline]
     fn from(error: E) -> Self {
         Self::new(error)
+    }
+}
+
+/// Configuration builder for customizing fingerprint generation.
+///
+/// This struct allows fine-grained control over which error components
+/// are included when computing the fingerprint.
+///
+/// # Examples
+///
+/// ```
+/// use error_rail::{ComposableError, ErrorContext};
+///
+/// let err = ComposableError::new("database timeout")
+///     .with_context(ErrorContext::tag("db"))
+///     .with_context(ErrorContext::metadata("table", "users"))
+///     .set_code(504);
+///
+/// // Include only tags and code, ignore message for broader grouping
+/// let fp1 = err.fingerprint_config()
+///     .include_message(false)
+///     .compute();
+///
+/// // Include everything for precise matching
+/// let fp2 = err.fingerprint_config()
+///     .include_metadata(true)
+///     .compute();
+///
+/// // Different configurations produce different fingerprints
+/// assert_ne!(fp1, fp2);
+/// ```
+pub struct FingerprintConfig<'a, E> {
+    error: &'a ComposableError<E>,
+    include_tags: bool,
+    include_code: bool,
+    include_message: bool,
+    include_metadata: bool,
+}
+
+impl<'a, E> FingerprintConfig<'a, E> {
+    /// Whether to include tags in the fingerprint (default: true).
+    ///
+    /// Tags are useful for categorizing errors by subsystem (e.g., "db", "network").
+    #[must_use]
+    pub fn include_tags(mut self, include: bool) -> Self {
+        self.include_tags = include;
+        self
+    }
+
+    /// Whether to include the error code in the fingerprint (default: true).
+    ///
+    /// Error codes provide semantic meaning (e.g., HTTP status codes).
+    #[must_use]
+    pub fn include_code(mut self, include: bool) -> Self {
+        self.include_code = include;
+        self
+    }
+
+    /// Whether to include the core error message in the fingerprint (default: true).
+    ///
+    /// Excluding the message creates broader groupings useful when error
+    /// messages contain variable data (e.g., timestamps, IDs).
+    #[must_use]
+    pub fn include_message(mut self, include: bool) -> Self {
+        self.include_message = include;
+        self
+    }
+
+    /// Whether to include metadata in the fingerprint (default: false).
+    ///
+    /// Metadata often contains variable data, so it's excluded by default.
+    #[must_use]
+    pub fn include_metadata(mut self, include: bool) -> Self {
+        self.include_metadata = include;
+        self
+    }
+
+    /// Computes the fingerprint using the configured options.
+    #[must_use]
+    pub fn compute(&self) -> u64
+    where
+        E: Display,
+    {
+        // FNV-1a constants for 64-bit
+        const FNV_OFFSET: u64 = 0xcbf29ce484222325;
+        const FNV_PRIME: u64 = 0x100000001b3;
+
+        let mut hash = FNV_OFFSET;
+
+        // Hash helper
+        let mut hash_bytes = |bytes: &[u8]| {
+            for byte in bytes {
+                hash ^= *byte as u64;
+                hash = hash.wrapping_mul(FNV_PRIME);
+            }
+        };
+
+        // Include tags in sorted order
+        if self.include_tags {
+            let mut tags: crate::types::alloc_type::Vec<_> = self
+                .error
+                .context
+                .iter()
+                .filter_map(|ctx| {
+                    if let ErrorContext::Group(g) = ctx {
+                        Some(
+                            g.tags
+                                .iter()
+                                .cloned()
+                                .collect::<crate::types::alloc_type::Vec<_>>(),
+                        )
+                    } else {
+                        None
+                    }
+                })
+                .flatten()
+                .collect();
+            tags.sort();
+
+            for tag in &tags {
+                hash_bytes(b"tag:");
+                hash_bytes(tag.as_bytes());
+            }
+        }
+
+        // Include error code
+        if self.include_code {
+            if let Some(code) = self.error.error_code {
+                hash_bytes(b"code:");
+                hash_bytes(&code.to_le_bytes());
+            }
+        }
+
+        // Include core error message
+        if self.include_message {
+            hash_bytes(b"msg:");
+            hash_bytes(self.error.core_error.to_string().as_bytes());
+        }
+
+        // Include metadata
+        if self.include_metadata {
+            let mut metadata: crate::types::alloc_type::Vec<_> = self
+                .error
+                .context
+                .iter()
+                .filter_map(|ctx| {
+                    if let ErrorContext::Group(g) = ctx {
+                        Some(
+                            g.metadata
+                                .iter()
+                                .cloned()
+                                .collect::<crate::types::alloc_type::Vec<_>>(),
+                        )
+                    } else {
+                        None
+                    }
+                })
+                .flatten()
+                .collect();
+            metadata.sort_by(|a, b| a.0.cmp(&b.0));
+
+            for (key, value) in &metadata {
+                hash_bytes(b"meta:");
+                hash_bytes(key.as_bytes());
+                hash_bytes(b"=");
+                hash_bytes(value.as_bytes());
+            }
+        }
+
+        hash
+    }
+
+    /// Computes the fingerprint and returns it as a hex string.
+    #[must_use]
+    pub fn compute_hex(&self) -> String
+    where
+        E: Display,
+    {
+        format!("{:016x}", self.compute())
     }
 }

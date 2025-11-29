@@ -29,7 +29,7 @@ pub mod lazy_context;
 pub use error_formatter::{ErrorFormatConfig, ErrorFormatter};
 
 // Re-export from composable_error (excluding ErrorFormatter struct to avoid ambiguity)
-pub use composable_error::ComposableError;
+pub use composable_error::{ComposableError, FingerprintConfig};
 
 // Re-export everything else
 pub use error_context::*;

@@ -10,6 +10,35 @@
 
 ### Added - Unreleased
 
+- **Transient Error Classification** (`TransientError` trait): New trait for classifying errors as transient or permanent
+  - `is_transient()` / `is_permanent()` - Classify error recoverability
+  - `retry_after_hint()` - Optional duration hint for retry backoff
+  - `max_retries_hint()` - Optional maximum retry count
+  - `TransientErrorExt` extension trait with `retry_if_transient()` for Result types
+  - Blanket implementation for `std::io::Error` (with `std` feature)
+  - Enables integration with external retry libraries (backoff, retry, again, tokio-retry)
+
+- **ErrorPipeline Retry Utilities**: New methods for retry pattern integration
+  - `is_transient()` - Check if current error is transient (borrows)
+  - `recover_transient()` - Attempt recovery only for transient errors
+  - `should_retry()` - Returns `Option<Self>` for retry loop control (consumes)
+  - `retry_after_hint()` - Get retry delay hint from error
+  - `with_retry_context(attempt)` - Add retry attempt metadata to error context
+
+- **Error Fingerprinting**: Automatic fingerprint generation for error deduplication
+  - `ComposableError::fingerprint()` - Generate u64 fingerprint from tags + code + message
+  - `ComposableError::fingerprint_hex()` - Get fingerprint as 16-character hex string
+  - `ComposableError::fingerprint_config()` - Customizable fingerprint builder
+  - `FingerprintConfig` - Configure which components to include (tags, code, message, metadata)
+  - Useful for Sentry issue grouping, log deduplication, and alert throttling
+
+- **Integration Example**: New `examples/retry_integration.rs` demonstrating:
+  - Implementing `TransientError` for domain errors
+  - Manual retry loops with `ErrorPipeline`
+  - Using `recover_transient()` for single retry attempts
+  - Integration patterns with external retry libraries
+  - Error fingerprinting for deduplication
+
 - **`rail_unboxed!` macro**: New macro for unboxed composable results
   - Returns `ComposableResult<T, E>` instead of `BoxedComposableResult<T, E>`
   - Use when you need to avoid heap allocation or for internal/performance-critical code

@@ -1,6 +1,12 @@
+use crate::traits::TransientError;
 use crate::types::alloc_type::Box;
 use crate::types::composable_error::ComposableError;
 use crate::{ComposableResult, ErrorContext, ErrorVec, IntoErrorContext};
+
+#[cfg(not(feature = "std"))]
+use alloc::format;
+#[cfg(feature = "std")]
+use std::format;
 
 /// A builder for composing error transformations with accumulated context.
 ///
@@ -346,6 +352,225 @@ impl<T, E> ErrorPipeline<T, E> {
                 let composable = ComposableError::new(e).with_contexts(self.pending_contexts);
                 Err(composable)
             }
+        }
+    }
+
+    /// Checks if the current error (if any) is transient and may be retried.
+    ///
+    /// This method integrates with the [`TransientError`] trait to help determine
+    /// whether a retry operation might succeed.
+    ///
+    /// # Returns
+    ///
+    /// - `true` if the pipeline contains a transient error
+    /// - `false` if the pipeline is `Ok` or contains a permanent error
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use error_rail::{ErrorPipeline, traits::TransientError};
+    ///
+    /// #[derive(Debug)]
+    /// struct NetworkError { timeout: bool }
+    ///
+    /// impl TransientError for NetworkError {
+    ///     fn is_transient(&self) -> bool { self.timeout }
+    /// }
+    ///
+    /// let timeout_err: ErrorPipeline<(), NetworkError> = ErrorPipeline::new(Err(NetworkError { timeout: true }));
+    /// assert!(timeout_err.is_transient());
+    ///
+    /// let auth_err: ErrorPipeline<(), NetworkError> = ErrorPipeline::new(Err(NetworkError { timeout: false }));
+    /// assert!(!auth_err.is_transient());
+    /// ```
+    #[inline]
+    pub fn is_transient(&self) -> bool
+    where
+        E: TransientError,
+    {
+        match &self.result {
+            Ok(_) => false,
+            Err(e) => e.is_transient(),
+        }
+    }
+
+    /// Attempts recovery only if the error is transient.
+    ///
+    /// This method combines [`TransientError`] classification with recovery logic,
+    /// making it easy to implement retry patterns with external libraries.
+    ///
+    /// # Arguments
+    ///
+    /// * `recovery` - Function that attempts to recover from a transient error
+    ///
+    /// # Behavior
+    ///
+    /// - If `Ok`: Returns the pipeline unchanged
+    /// - If `Err` and transient: Calls recovery function
+    /// - If `Err` and permanent: Skips recovery, preserves error
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use error_rail::{ErrorPipeline, traits::TransientError};
+    ///
+    /// #[derive(Debug, Clone)]
+    /// struct ApiError { code: u16 }
+    ///
+    /// impl TransientError for ApiError {
+    ///     fn is_transient(&self) -> bool { self.code == 503 || self.code == 429 }
+    /// }
+    ///
+    /// let retry_count = std::cell::Cell::new(0);
+    ///
+    /// let result = ErrorPipeline::new(Err(ApiError { code: 503 }))
+    ///     .recover_transient(|_| {
+    ///         retry_count.set(retry_count.get() + 1);
+    ///         Ok(42) // Simulated successful retry
+    ///     });
+    ///
+    /// assert!(result.finish().is_ok());
+    /// assert_eq!(retry_count.get(), 1);
+    /// ```
+    #[inline]
+    pub fn recover_transient<F>(self, recovery: F) -> ErrorPipeline<T, E>
+    where
+        E: TransientError,
+        F: FnOnce(E) -> Result<T, E>,
+    {
+        match self.result {
+            Ok(v) => ErrorPipeline {
+                result: Ok(v),
+                pending_contexts: self.pending_contexts,
+            },
+            Err(e) if e.is_transient() => match recovery(e) {
+                Ok(v) => ErrorPipeline {
+                    result: Ok(v),
+                    pending_contexts: ErrorVec::new(),
+                },
+                Err(e) => ErrorPipeline {
+                    result: Err(e),
+                    pending_contexts: self.pending_contexts,
+                },
+            },
+            Err(e) => ErrorPipeline {
+                result: Err(e),
+                pending_contexts: self.pending_contexts,
+            },
+        }
+    }
+
+    /// Prepares the error for external retry libraries by classifying it.
+    ///
+    /// Returns `Some(pipeline)` if retry should be attempted (error is transient),
+    /// or `None` if retry should stop (success or permanent error).
+    ///
+    /// This method is designed for easy integration with retry libraries that
+    /// use `Option`-based continuation patterns.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use error_rail::{ErrorPipeline, traits::TransientError};
+    ///
+    /// #[derive(Debug)]
+    /// struct DbError { is_deadlock: bool }
+    ///
+    /// impl TransientError for DbError {
+    ///     fn is_transient(&self) -> bool { self.is_deadlock }
+    /// }
+    ///
+    /// // Transient error: continue retrying
+    /// let deadlock: ErrorPipeline<(), DbError> = ErrorPipeline::new(Err(DbError { is_deadlock: true }));
+    /// assert!(deadlock.should_retry().is_some());
+    ///
+    /// // Permanent error: stop retrying
+    /// let constraint: ErrorPipeline<(), DbError> = ErrorPipeline::new(Err(DbError { is_deadlock: false }));
+    /// assert!(constraint.should_retry().is_none());
+    ///
+    /// // Success: stop retrying
+    /// let success = ErrorPipeline::<i32, DbError>::new(Ok(42));
+    /// assert!(success.should_retry().is_none());
+    /// ```
+    #[inline]
+    pub fn should_retry(self) -> Option<Self>
+    where
+        E: TransientError,
+    {
+        match &self.result {
+            Ok(_) => None,
+            Err(e) if e.is_transient() => Some(self),
+            Err(_) => None,
+        }
+    }
+
+    /// Returns the retry-after hint from the error, if available.
+    ///
+    /// This is useful for implementing respectful backoff strategies when
+    /// dealing with rate-limited APIs.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use error_rail::{ErrorPipeline, traits::TransientError};
+    /// use core::time::Duration;
+    ///
+    /// #[derive(Debug)]
+    /// struct RateLimitError { retry_after_secs: u64 }
+    ///
+    /// impl TransientError for RateLimitError {
+    ///     fn is_transient(&self) -> bool { true }
+    ///     fn retry_after_hint(&self) -> Option<Duration> {
+    ///         Some(Duration::from_secs(self.retry_after_secs))
+    ///     }
+    /// }
+    ///
+    /// let err: ErrorPipeline<(), RateLimitError> = ErrorPipeline::new(Err(RateLimitError { retry_after_secs: 60 }));
+    /// assert_eq!(err.retry_after_hint(), Some(Duration::from_secs(60)));
+    /// ```
+    #[inline]
+    pub fn retry_after_hint(&self) -> Option<core::time::Duration>
+    where
+        E: TransientError,
+    {
+        match &self.result {
+            Ok(_) => None,
+            Err(e) => e.retry_after_hint(),
+        }
+    }
+
+    /// Adds a tag indicating this error was retried.
+    ///
+    /// This is useful for tracking retry attempts in logs and error reports.
+    /// Adds metadata about retry count and whether the error was transient.
+    ///
+    /// # Arguments
+    ///
+    /// * `attempt` - The current retry attempt number (1-indexed)
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use error_rail::{ErrorPipeline, context};
+    ///
+    /// let result = ErrorPipeline::<u32, &str>::new(Err("timeout"))
+    ///     .with_retry_context(3)
+    ///     .finish_boxed();
+    ///
+    /// if let Err(err) = result {
+    ///     let chain = err.error_chain();
+    ///     assert!(chain.contains("retry_attempt=3"));
+    /// }
+    /// ```
+    #[inline]
+    pub fn with_retry_context(self, attempt: u32) -> Self {
+        if self.result.is_err() {
+            self.with_context(ErrorContext::metadata(
+                "retry_attempt",
+                format!("{}", attempt),
+            ))
+        } else {
+            self
         }
     }
 }
