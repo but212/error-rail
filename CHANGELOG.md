@@ -153,12 +153,12 @@
     - Lazy evaluation: No string formatting until error occurs
     - Unified display: All fields appear as one cohesive context unit
     - Better performance: Reduced allocations on success paths
-  - **Removal timeline**: Deprecated macros will be removed in version Unreleased
+  - **Removal timeline**: Deprecated macros will be removed in a future version
   - **New exports**: `group!` macro and `LazyGroupContext` type added to prelude
 
 ### Deprecated - 0.5.0
 
-- `location!()`, `tag!()`, and `metadata!()` macros - Use `group!` macro instead (scheduled for removal in Unreleased)
+- `location!()`, `tag!()`, and `metadata!()` macros - Use `group!` macro instead (scheduled for removal in a future version)
 
 ### Removed - 0.5.0
 

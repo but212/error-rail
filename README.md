@@ -266,7 +266,7 @@ let err = ComposableError::new("database timeout")
 
 // Generate fingerprint for Sentry/logging deduplication
 println!("Fingerprint: {}", err.fingerprint_hex());
-// Output: "a1b2c3d4e5f67890"
+// Example output: "a1b2c3d4e5f67890"
 
 // Customize what's included in fingerprint
 let fp = err.fingerprint_config()

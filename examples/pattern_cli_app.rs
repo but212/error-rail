@@ -4,15 +4,27 @@
 
 use error_rail::{context, ComposableError, ErrorPipeline};
 
+/// Custom error type for parsing operations that implements std::error::Error
+#[derive(Debug)]
+struct ParseError(String);
+
+impl std::fmt::Display for ParseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl std::error::Error for ParseError {}
+
 fn read_config_file(path: &str) -> Result<String, Box<ComposableError<std::io::Error>>> {
     ErrorPipeline::new(std::fs::read_to_string(path))
         .with_context(context!("reading configuration from '{}'", path))
         .finish_boxed()
 }
 
-fn parse_config(content: &str) -> Result<(), Box<ComposableError<String>>> {
+fn parse_config(content: &str) -> Result<(), Box<ComposableError<ParseError>>> {
     if content.is_empty() {
-        return ErrorPipeline::new(Err("configuration is empty".to_string()))
+        return ErrorPipeline::new(Err(ParseError("configuration is empty".to_string())))
             .with_context("parsing configuration")
             .finish_boxed();
     }
@@ -21,13 +33,7 @@ fn parse_config(content: &str) -> Result<(), Box<ComposableError<String>>> {
 
 fn load_and_parse_config(path: &str) -> Result<(), Box<dyn std::error::Error>> {
     let content = read_config_file(path).map_err(|e| e as Box<dyn std::error::Error>)?;
-    // Use a simple error type that implements Error trait
-    parse_config(&content).map_err(|e| {
-        Box::new(std::io::Error::new(
-            std::io::ErrorKind::InvalidData,
-            e.error_chain(),
-        )) as Box<dyn std::error::Error>
-    })?;
+    parse_config(&content)?;
     Ok(())
 }
 
