@@ -1,14 +1,14 @@
 # CHANGELOG
 
-## [Unreleased]
+## [0.6.0]
 
-### Deprecated - Unreleased
+### Deprecated - 0.6.0
 
 - **`WithError::to_result()` method deprecated**: Will be removed in future versions
   - **Migration**: Use `to_result_first()` for first-error-only or `to_result_all()` for all errors
   - **Rationale**: Provides explicit error handling choices to prevent accidental error information loss
 
-### Added - Unreleased
+### Added - 0.6.0
 
 - **Transient Error Classification** (`TransientError` trait): New trait for classifying errors as transient or permanent
   - `is_transient()` / `is_permanent()` - Classify error recoverability
