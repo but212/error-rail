@@ -18,6 +18,10 @@
 //! let ctx1 = "simple message".into_error_context();
 //! let ctx2 = String::from("owned message").into_error_context();
 //! let ctx3 = ErrorContext::tag("network").into_error_context();
+//!
+//! assert_eq!(ctx1.message(), "simple message");
+//! assert_eq!(ctx2.message(), "owned message");
+//! assert!(ctx3.message().contains("[network]"));
 //! ```
 use crate::types::alloc_type::{Cow, String};
 use crate::types::error_context::ErrorContext;

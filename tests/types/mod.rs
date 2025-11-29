@@ -75,4 +75,5 @@ pub mod composable_error;
 pub mod error_context;
 pub mod error_context_builder;
 pub mod error_context_builder_example;
+pub mod error_formatter;
 pub mod error_pipeline;

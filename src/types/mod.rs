@@ -10,11 +10,10 @@
 //!
 //! let err = ComposableError::new("database connection failed")
 //!     .with_context(ErrorContext::tag("db"))
-//!     .with_context(ErrorContext::location(file!(), line!()))
 //!     .set_code(500);
 //!
-//! println!("{}", err.error_chain());
-//! // Output: [db] -> main.rs:42 -> database connection failed (code: 500)
+//! assert!(err.to_string().contains("database connection failed"));
+//! assert_eq!(err.error_code(), Some(500));
 //! ```
 use smallvec::SmallVec;
 
@@ -22,10 +21,17 @@ pub mod alloc_type;
 
 pub mod composable_error;
 pub mod error_context;
+pub mod error_formatter;
 pub mod error_pipeline;
 pub mod lazy_context;
 
-pub use composable_error::*;
+// Re-export from error_formatter (trait and config)
+pub use error_formatter::{ErrorFormatConfig, ErrorFormatter};
+
+// Re-export from composable_error (excluding ErrorFormatter struct to avoid ambiguity)
+pub use composable_error::{ComposableError, FingerprintConfig};
+
+// Re-export everything else
 pub use error_context::*;
 pub use error_pipeline::*;
 pub use lazy_context::*;

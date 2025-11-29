@@ -209,7 +209,73 @@ use error_rail::{rail, ComposableError};
 let result = rail!(std::fs::read_to_string("config.toml"));
 ```
 
-### 6. Type Aliases for Ergonomics
+### 6. Transient Error Classification
+
+Classify errors as transient (retryable) or permanent for integration with retry libraries.
+
+```rust
+use error_rail::{ErrorPipeline, traits::TransientError};
+use std::time::Duration;
+
+#[derive(Debug)]
+enum ApiError {
+    Timeout,           // Transient - retry
+    RateLimited(u64),  // Transient - retry after delay
+    NotFound,          // Permanent - don't retry
+}
+
+impl TransientError for ApiError {
+    fn is_transient(&self) -> bool {
+        matches!(self, ApiError::Timeout | ApiError::RateLimited(_))
+    }
+
+    fn retry_after_hint(&self) -> Option<Duration> {
+        match self {
+            ApiError::RateLimited(secs) => Some(Duration::from_secs(*secs)),
+            ApiError::Timeout => Some(Duration::from_millis(100)),
+            _ => None,
+        }
+    }
+}
+
+// Use with ErrorPipeline
+fn fetch_with_retry() {
+    let result: Result<String, ApiError> = Err(ApiError::Timeout);
+    let pipeline = ErrorPipeline::new(result);
+
+    if pipeline.is_transient() {
+        // Retry logic here
+        println!("Retrying after {:?}", pipeline.retry_after_hint());
+    }
+}
+```
+
+> **Note**: error-rail does not implement retry logic itself. Use external libraries like `backoff`, `retry`, or `tokio-retry`.
+
+### 7. Error Fingerprinting
+
+Generate unique fingerprints for error deduplication in monitoring systems.
+
+```rust
+use error_rail::{ComposableError, ErrorContext};
+
+let err = ComposableError::new("database timeout")
+    .with_context(ErrorContext::tag("db"))
+    .with_context(ErrorContext::tag("users"))
+    .set_code(504);
+
+// Generate fingerprint for Sentry/logging deduplication
+println!("Fingerprint: {}", err.fingerprint_hex());
+// Example output: "a1b2c3d4e5f67890"
+
+// Customize what's included in fingerprint
+let fp = err.fingerprint_config()
+    .include_message(false)  // Ignore variable message content
+    .include_metadata(true)  // Include metadata
+    .compute_hex();
+```
+
+### 8. Type Aliases for Ergonomics
 
 ```rust
 use error_rail::prelude::*;
@@ -247,6 +313,8 @@ fn internal_op() -> ComposableResult<i32, &'static str> {
 | **Adding context to Result** | `ErrorPipeline` | Wrapping I/O operations |
 | **Form/input validation** | `Validation<E, T>` | Collecting all field errors |
 | **Error chaining** | `ErrorPipeline` + `finish_boxed()` | Multi-step operations |
+| **Retry logic** | `TransientError` trait | Network timeouts, rate limiting |
+| **Error deduplication** | `fingerprint()` / `fingerprint_hex()` | Sentry grouping, log dedup |
 
 ### Validation vs Result
 
@@ -307,8 +375,8 @@ ErrorPipeline::new(result)
 | `context` | Context attachment: `with_context`, `accumulate_context`, `format_error_chain` |
 | `convert` | Conversions between `Result`, `Validation`, and `ComposableError` |
 | `macros` | `context!`, `group!`, `rail!`, `impl_error_context!` |
-| `traits` | `ResultExt`, `BoxedResultExt`, `IntoErrorContext`, `ErrorOps`, `WithError` |
-| `types` | `ComposableError`, `ErrorContext`, `ErrorPipeline`, `LazyContext` |
+| `traits` | `ResultExt`, `BoxedResultExt`, `IntoErrorContext`, `ErrorOps`, `WithError`, `TransientError` |
+| `types` | `ComposableError`, `ErrorContext`, `ErrorPipeline`, `LazyContext`, `FingerprintConfig` |
 | `validation` | `Validation<E, A>` type with collectors and iterators |
 
 ## Feature Flags
@@ -354,15 +422,17 @@ error-rail = { version = "0.5", default-features = false }
 ## Examples
 
 ```sh
-cargo run --example quick_start       # Basic usage patterns
-cargo run --example readme_features   # All features from this README
-cargo run --example pipeline          # Error pipeline chaining
-cargo run --example validation_collect # Validation accumulation
+cargo run --example quick_start         # Basic usage patterns
+cargo run --example readme_features     # All features from this README
+cargo run --example pipeline            # Error pipeline chaining
+cargo run --example validation_collect  # Validation accumulation
+cargo run --example retry_integration   # Retry patterns & fingerprinting
 ```
 
 ## Integration Guides
 
 - **[Quick Start Guide](docs/QUICK_START.md)** - Step-by-step tutorial
+- **[Error Handling Patterns](docs/PATTERNS.md)** - Real-world usage patterns and best practices
 
 ## Glossary
 
@@ -374,6 +444,8 @@ cargo run --example validation_collect # Validation accumulation
 | **Boxed Error** | Heap-allocated error via `Box<ComposableError<E>>` for reduced stack size |
 | **Lazy Evaluation** | Deferred computation until actually needed (e.g., `context!` macro) |
 | **Validation** | Accumulating type that collects all errors instead of short-circuiting |
+| **Transient Error** | Temporary failure that may succeed on retry (e.g., timeout, rate limit) |
+| **Fingerprint** | Unique hash of error components for deduplication and grouping |
 
 ## License
 

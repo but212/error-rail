@@ -1,5 +1,81 @@
 # CHANGELOG
 
+## [0.6.0]
+
+### Deprecated - 0.6.0
+
+- **`WithError::to_result()` method deprecated**: Will be removed in future versions
+  - **Migration**: Use `to_result_first()` for first-error-only or `to_result_all()` for all errors
+  - **Rationale**: Provides explicit error handling choices to prevent accidental error information loss
+
+### Added - 0.6.0
+
+- **Transient Error Classification** (`TransientError` trait): New trait for classifying errors as transient or permanent
+  - `is_transient()` / `is_permanent()` - Classify error recoverability
+  - `retry_after_hint()` - Optional duration hint for retry backoff
+  - `max_retries_hint()` - Optional maximum retry count
+  - `TransientErrorExt` extension trait with `retry_if_transient()` for Result types
+  - Blanket implementation for `std::io::Error` (with `std` feature)
+  - Enables integration with external retry libraries (backoff, retry, again, tokio-retry)
+
+- **ErrorPipeline Retry Utilities**: New methods for retry pattern integration
+  - `is_transient()` - Check if current error is transient (borrows)
+  - `recover_transient()` - Attempt recovery only for transient errors
+  - `should_retry()` - Returns `Option<Self>` for retry loop control (consumes)
+  - `retry_after_hint()` - Get retry delay hint from error
+  - `with_retry_context(attempt)` - Add retry attempt metadata to error context
+
+- **Error Fingerprinting**: Automatic fingerprint generation for error deduplication
+  - `ComposableError::fingerprint()` - Generate u64 fingerprint from tags + code + message
+  - `ComposableError::fingerprint_hex()` - Get fingerprint as 16-character hex string
+  - `ComposableError::fingerprint_config()` - Customizable fingerprint builder
+  - `FingerprintConfig` - Configure which components to include (tags, code, message, metadata)
+  - Useful for Sentry issue grouping, log deduplication, and alert throttling
+
+- **Integration Example**: New `examples/retry_integration.rs` demonstrating:
+  - Implementing `TransientError` for domain errors
+  - Manual retry loops with `ErrorPipeline`
+  - Using `recover_transient()` for single retry attempts
+  - Integration patterns with external retry libraries
+  - Error fingerprinting for deduplication
+
+- **`rail_unboxed!` macro**: New macro for unboxed composable results
+  - Returns `ComposableResult<T, E>` instead of `BoxedComposableResult<T, E>`
+  - Use when you need to avoid heap allocation or for internal/performance-critical code
+  - Complements existing `rail!` macro which always returns boxed results
+
+- **`WithError::to_result_first()` method**: Explicit method for first-error-only conversion
+  - Returns `Result<T, E>` with only the first error from multi-error scenarios
+  - Clearer intent than the deprecated `to_result()` method
+
+- **ErrorFormatter System**: New flexible error chain formatting
+  - Added `ErrorFormatter` trait for custom error chain formatting implementations
+  - Added `ErrorFormatConfig` with built-in formatting configurations (pretty, compact, etc.)
+  - Added `ComposableError::error_chain_with()` method for custom formatting
+  - Supports both simple configuration and advanced custom formatters
+  - Enables JSON, uppercase, prefixed, and other custom output formats
+
+- **Error Handling Pattern Examples**: New runnable demonstration examples
+  - Added `examples/pattern_cli_app.rs` - CLI error handling with user-friendly messages
+  - Added `examples/pattern_http_api.rs` - HTTP API error responses with status codes
+  - Added `examples/pattern_library_dev.rs` - Library development with public API boundaries
+  - Added `examples/pattern_service_layer.rs` - Service layer error context addition
+  - All examples use proper ErrorPipeline pattern and compile without warnings
+  - Include comprehensive test coverage for library development pattern
+
+- **Error Handling Patterns Documentation**: New comprehensive patterns guide
+  - Added `docs/PATTERNS.md` with real-world usage patterns and best practices
+  - Includes 4 practical patterns: Service Layer, HTTP API, CLI Applications, Library Development
+  - Features working examples using ErrorPipeline for proper error composition
+  - Demonstrates correct ErrorPipeline approach instead of problematic .ctx() chaining
+  - Updated README.md to reference the new patterns guide
+  - Maintains backward compatibility with existing behavior
+
+- **`WithError::to_result_all()` method**: New method for preserving all errors
+  - Returns `Result<T, ErrorVec<E>>` with all accumulated errors
+  - Prevents error information loss in multi-error scenarios
+  - Uses `ErrorVec<E>` (SmallVec) for no_std compatibility and performance
+
 ## [0.5.1]
 
 ### Fixed - 0.5.1
@@ -77,12 +153,12 @@
     - Lazy evaluation: No string formatting until error occurs
     - Unified display: All fields appear as one cohesive context unit
     - Better performance: Reduced allocations on success paths
-  - **Removal timeline**: Deprecated macros will be removed in version 0.6.0
+  - **Removal timeline**: Deprecated macros will be removed in a future version
   - **New exports**: `group!` macro and `LazyGroupContext` type added to prelude
 
 ### Deprecated - 0.5.0
 
-- `location!()`, `tag!()`, and `metadata!()` macros - Use `group!` macro instead (scheduled for removal in 0.6.0)
+- `location!()`, `tag!()`, and `metadata!()` macros - Use `group!` macro instead (scheduled for removal in a future version)
 
 ### Removed - 0.5.0
 

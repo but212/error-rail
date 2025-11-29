@@ -13,6 +13,21 @@
 //! - **Types**: [`ComposableError`], [`ErrorContext`], [`ErrorPipeline`], [`LazyGroupContext`]
 //! - **Traits**: [`ResultExt`], [`BoxedResultExt`], [`IntoErrorContext`]
 //!
+//! Convenience re-exports for common usage patterns.
+//!
+//! This prelude module provides the most commonly used items for quick starts.
+//! Import everything with:
+//!
+//! ```
+//! use error_rail::prelude::*;
+//! ```
+//!
+//! # What's Included
+//!
+//! - **Macros**: [`context!`], [`group!`], [`rail!`]
+//! - **Types**: [`ComposableError`], [`ErrorContext`], [`ErrorPipeline`], [`LazyGroupContext`]
+//! - **Traits**: [`ResultExt`], [`BoxedResultExt`], [`IntoErrorContext`]
+//!
 //! # Examples
 //!
 //! ## 30-Second Quick Start
@@ -21,9 +36,16 @@
 //! use error_rail::prelude::*;
 //!
 //! fn load_config() -> BoxedResult<String, std::io::Error> {
-//!     std::fs::read_to_string("config.toml")
-//!         .ctx("loading configuration")
+//!     // Simulate an error
+//!     let err = std::io::Error::new(std::io::ErrorKind::NotFound, "config not found");
+//!     Err(err).ctx(group!(
+//!         message("loading configuration"),
+//!         location(file!(), line!())
+//!     ))
 //! }
+//!
+//! let result = load_config();
+//! assert!(result.is_err());
 //! ```
 //!
 //! ## With Lazy Context (2.1x Faster)
@@ -35,10 +57,13 @@
 //!     let result: Result<(), &str> = Err("not found");
 //!     result.ctx_with(|| format!("processing user {}", id))
 //! }
+//!
+//! let result = process_user(100);
+//! assert!(result.is_err());
 //! ```
 
 // Macros
-pub use crate::{context, group, rail};
+pub use crate::{context, group, rail, rail_unboxed};
 
 // Core types
 pub use crate::types::lazy_context::LazyGroupContext;
@@ -61,8 +86,11 @@ use crate::types::alloc_type::Box;
 /// use error_rail::prelude::*;
 ///
 /// fn read_file(path: &str) -> BoxedResult<String, std::io::Error> {
-///     std::fs::read_to_string(path)
+///    // In a real app, this would be std::fs::read_to_string(path)
+///    Err(std::io::Error::new(std::io::ErrorKind::Other, "mock error"))
 ///         .ctx("reading file")
 /// }
+///
+/// assert!(read_file("test.txt").is_err());
 /// ```
 pub type BoxedResult<T, E> = Result<T, Box<ComposableError<E>>>;

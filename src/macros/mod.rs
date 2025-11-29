@@ -3,7 +3,10 @@
 //! These macros provide convenient shortcuts for attaching rich metadata to errors:
 //!
 //! - [`macro@crate::rail`] - Wraps a `Result`-producing block and converts it into a
-//!   [`BoxedComposableResult`](crate::types::BoxedComposableResult) via `ErrorPipeline::finish`.
+//!   [`BoxedComposableResult`](crate::types::BoxedComposableResult) via `ErrorPipeline::finish_boxed`.
+//!   **Always returns boxed errors.**
+//! - [`macro@crate::rail_unboxed`] - Wraps a `Result`-producing block and converts it into an
+//!   unboxed [`ComposableResult`](crate::types::ComposableResult) via `ErrorPipeline::finish`.
 //! - [`macro@crate::context`] - Defers formatting until the context is consumed, avoiding
 //!   unnecessary allocations on the success path.
 //! - [`macro@crate::location`] - Automatically captures the current file path and line number
@@ -16,7 +19,7 @@
 //! # Examples
 //!
 //! ```
-//! use error_rail::{context, rail, group, ErrorPipeline};
+//! use error_rail::{context, rail, rail_unboxed, group, ErrorPipeline};
 //!
 //! let result: Result<(), &str> = Err("failed");
 //! let pipeline = ErrorPipeline::new(result)
@@ -28,18 +31,33 @@
 //!     ))
 //!     .finish_boxed();
 //!
-//! // Equivalent rail! shorthand that also returns a boxed composable result
-//! let _ = rail!({
+//! assert!(pipeline.is_err());
+//!
+//! // rail! - ALWAYS returns boxed error (8 bytes stack size)
+//! let boxed_result = rail!({
 //!     Err::<(), &str>("failed")
-//!         .map_err(|err| err)
+//! });
+//!
+//! // rail_unboxed! - returns unboxed error (larger stack size)
+//! let unboxed_result = rail_unboxed!({
+//!     Err::<(), &str>("failed")
 //! });
 //! ```
+//!
+//! ## Choosing Between rail! and rail_unboxed!
+//!
+//! - **Use `rail!`** for public APIs and most cases - smaller stack footprint (8 bytes)
+//! - **Use `rail_unboxed!`** for internal code or performance-critical paths where you want to avoid heap allocation
 
 /// Wraps a `Result`-producing expression or block and converts it into a
 /// [`BoxedComposableResult`](crate::types::BoxedComposableResult).
 ///
+/// **⚠️ IMPORTANT: This macro ALWAYS returns a boxed composable result.**
+/// The error type is wrapped in a `Box<ComposableError<E>>` to reduce stack size.
+/// If you need an unboxed result, use [`rail_unboxed!`](crate::rail_unboxed) instead.
+///
 /// This macro provides a convenient shorthand for creating an [`ErrorPipeline`](crate::ErrorPipeline)
-/// and immediately calling `finish()` to box the result. It accepts either a single expression
+/// and immediately calling `finish_boxed()` to box the result. It accepts either a single expression
 /// or a block of code that produces a `Result`.
 ///
 /// # Syntax
@@ -50,16 +68,18 @@
 /// # Returns
 ///
 /// A [`BoxedComposableResult<T, E>`](crate::types::BoxedComposableResult) where the error type
-/// is wrapped in a [`ComposableError`](crate::types::ComposableError).
+/// is wrapped in a [`ComposableError`](crate::types::ComposableError) and boxed.
 ///
 /// # Examples
 ///
 /// ```rust
 /// use error_rail::{rail, group};
 ///
-/// // Simple expression
+/// // Simple expression - ALWAYS returns boxed error
 /// let result = rail!(Err::<(), &str>("failed"));
 /// assert!(result.is_err());
+/// // Error type is Box<ComposableError<&str>>
+/// let _: Box<error_rail::ComposableError<&str>> = result.unwrap_err();
 ///
 /// // Block syntax with multiple statements
 /// let result = rail!({
@@ -81,6 +101,47 @@
 macro_rules! rail {
     ($expr:expr $(,)?) => {
         $crate::ErrorPipeline::new($expr).finish_boxed()
+    };
+}
+
+/// Wraps a `Result`-producing expression or block and converts it into an
+/// unboxed [`ComposableResult`](crate::types::ComposableResult).
+///
+/// This macro is similar to [`rail!`](crate::rail) but returns an unboxed error.
+/// Use this when you need to avoid heap allocation or when working with APIs
+/// that expect the unboxed `ComposableError<E>` type.
+///
+/// # Syntax
+///
+/// - `rail_unboxed!(expr)` - Wraps a single `Result`-producing expression
+/// - `rail_unboxed!({ ... })` - Wraps a block that produces a `Result`
+///
+/// # Returns
+///
+/// A [`ComposableResult<T, E>`](crate::types::ComposableResult) where the error type
+/// is wrapped in a [`ComposableError`](crate::types::ComposableError) but not boxed.
+///
+/// # Examples
+///
+/// ```rust
+/// use error_rail::{rail_unboxed, group};
+///
+/// // Simple expression - returns unboxed error
+/// let result = rail_unboxed!(Err::<(), &str>("failed"));
+/// assert!(result.is_err());
+/// // Error type is ComposableError<&str> (not boxed)
+/// let _: error_rail::ComposableError<&str> = result.unwrap_err();
+///
+/// // Block syntax with multiple statements
+/// let result = rail_unboxed!({
+///     let value = std::fs::read_to_string("config.txt");
+///     value
+/// });
+/// ```
+#[macro_export]
+macro_rules! rail_unboxed {
+    ($expr:expr $(,)?) => {
+        $crate::ErrorPipeline::new($expr).finish()
     };
 }
 
@@ -113,21 +174,11 @@ macro_rules! context {
 /// Captures the current source file and line number as error context.
 ///
 /// This macro creates an [`ErrorContext::location`](crate::types::ErrorContext::location)
-/// using the `file!()` and `line!()` built-in macros, providing precise source location
-/// information for debugging.
+/// using the `file!()` and `line!()` built-in macros.
 ///
 /// # Deprecated
 ///
 /// Use [`group!`](crate::group) instead since version 0.5.0.
-///
-/// # Examples
-///
-/// ```
-/// use error_rail::{location, ComposableError};
-///
-/// let err = ComposableError::<&str>::new("io error")
-///     .with_context(location!());
-/// ```
 #[macro_export]
 #[deprecated(since = "0.5.0", note = "Use `group!` instead")]
 macro_rules! location {
@@ -139,7 +190,7 @@ macro_rules! location {
 /// Creates a categorical tag for error classification.
 ///
 /// This macro creates an [`ErrorContext::tag`](crate::types::ErrorContext::tag) that can be
-/// used to categorize and filter errors by domain (e.g., "db", "auth", "network").
+/// used to categorize and filter errors.
 ///
 /// # Deprecated
 ///
@@ -148,15 +199,6 @@ macro_rules! location {
 /// # Arguments
 ///
 /// * `$tag` - A string or expression that can be converted into a tag
-///
-/// # Examples
-///
-/// ```
-/// use error_rail::{tag, ComposableError};
-///
-/// let err = ComposableError::<&str>::new("connection failed")
-///     .with_context(tag!("network"));
-/// ```
 #[macro_export]
 #[deprecated(since = "0.5.0", note = "Use `group!` instead")]
 macro_rules! tag {
@@ -168,7 +210,7 @@ macro_rules! tag {
 /// Creates a key-value metadata pair for structured error context.
 ///
 /// This macro creates an [`ErrorContext::metadata`](crate::types::ErrorContext::metadata)
-/// entry that can be used for structured logging, filtering, or monitoring.
+/// entry.
 ///
 /// # Deprecated
 ///
@@ -178,15 +220,6 @@ macro_rules! tag {
 ///
 /// * `$key` - The metadata key
 /// * `$value` - The metadata value
-///
-/// # Examples
-///
-/// ```
-/// use error_rail::{metadata, ComposableError};
-///
-/// let err = ComposableError::<&str>::new("rate limit exceeded")
-///     .with_context(metadata!("retry_after", "60"));
-/// ```
 #[macro_export]
 #[deprecated(since = "0.5.0", note = "Use `group!` instead")]
 macro_rules! metadata {

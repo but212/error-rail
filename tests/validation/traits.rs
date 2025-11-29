@@ -39,19 +39,50 @@ fn with_error_fmap_error_keeps_valid_unchanged() {
 }
 
 #[test]
-fn with_error_to_result_valid_uses_trait_signature() {
+fn with_error_to_result_first_valid_uses_trait_signature() {
     let v: Validation<&str, i32> = Validation::valid(42);
 
-    let result: Result<i32, &str> = <Validation<&str, i32> as WithError<&str>>::to_result(v);
+    let result: Result<i32, &str> = <Validation<&str, i32> as WithError<&str>>::to_result_first(v);
 
     assert_eq!(result, Ok(42));
 }
 
 #[test]
-fn with_error_to_result_invalid_returns_first_error() {
+fn with_error_to_result_first_invalid_returns_first_error() {
     let v: Validation<&str, i32> = Validation::invalid_many(["first", "second"]);
 
-    let result: Result<i32, &str> = <Validation<&str, i32> as WithError<&str>>::to_result(v);
+    let result: Result<i32, &str> = <Validation<&str, i32> as WithError<&str>>::to_result_first(v);
 
     assert_eq!(result, Err("first"));
+}
+
+#[test]
+#[allow(deprecated)]
+fn test_validation_to_result() {
+    let valid: Validation<&str, i32> = Validation::valid(42);
+    assert_eq!(
+        <Validation<&str, i32> as WithError<&str>>::to_result(valid),
+        Ok(42)
+    );
+
+    let invalid: Validation<&str, i32> = Validation::invalid("error");
+    assert_eq!(
+        <Validation<&str, i32> as WithError<&str>>::to_result(invalid),
+        Err("error")
+    );
+}
+
+#[test]
+fn test_validation_to_result_all() {
+    let valid: Validation<&str, i32> = Validation::valid(42);
+    assert_eq!(
+        <Validation<&str, i32> as WithError<&str>>::to_result_all(valid),
+        Ok(42)
+    );
+
+    let invalid: Validation<&str, i32> = Validation::invalid_many(["e1", "e2"]);
+    let result = <Validation<&str, i32> as WithError<&str>>::to_result_all(invalid);
+    assert!(result.is_err());
+    let errors = result.unwrap_err();
+    assert_eq!(errors.len(), 2);
 }

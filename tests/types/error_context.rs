@@ -52,3 +52,12 @@ fn test_error_context_builder() {
         .build();
     assert_eq!(ctx.message(), "[tag1] at file.rs:10: msg (key=val)");
 }
+
+#[test]
+fn test_location_append_message() {
+    let ctx = ErrorContext::builder()
+        .location("file.rs", 10)
+        .message("appended")
+        .build();
+    assert_eq!(ctx.message(), "at file.rs:10: appended");
+}

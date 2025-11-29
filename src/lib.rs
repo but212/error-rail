@@ -1,14 +1,3 @@
-//! Composable, metadata-friendly error handling utilities.
-//!
-//! `error-rail` focuses on three pillars:
-//! 1. **Structured context** – enrich any error with layered metadata
-//!    using [`context!`] helpers and macros such as [`location!`] and [`tag!`].
-//! 2. **Composable collectors** – aggregate successes/failures with the
-//!    [`validation`] module and convert between `Result`, `Validation`, and
-//!    `ComposableError` via [`convert`].
-//! 3. **Ergonomic traits/macros** – glue traits in [`traits`] and shortcuts
-//!    in [`macros`] keep the API light-weight.
-//!
 //! Each submodule re-exports its public surface from here, so consumers can
 //! simply depend on `error_rail::*` or pick focused pieces as needed.
 //!
@@ -17,12 +6,17 @@
 //! ## Basic Error with Context
 //!
 //! ```
-//! use error_rail::{ComposableError, ErrorContext, context, location, tag};
+//! use error_rail::{ComposableError, ErrorContext, group};
 //!
 //! let err = ComposableError::new("database connection failed")
-//!     .with_context(tag!("db"))
-//!     .with_context(location!())
+//!     .with_context(group!(
+//!         tag("db"),
+//!         metadata("retry_count", "3")
+//!     ))
 //!     .set_code(500);
+//!
+//! assert!(err.to_string().contains("database connection failed"));
+//! assert_eq!(err.error_code(), Some(500));
 //! ```
 //!
 //! ## Validation Accumulation
@@ -33,6 +27,7 @@
 //! let v1: Validation<&str, i32> = Validation::Valid(10);
 //! let v2: Validation<&str, i32> = Validation::invalid("error");
 //! let combined: Validation<&str, Vec<i32>> = vec![v1, v2].into_iter().collect();
+//!
 //! assert!(combined.is_invalid());
 //! ```
 //!
@@ -47,8 +42,10 @@
 //!     .finish_boxed();
 //!
 //! if let Err(err) = result {
-//!     eprintln!("{}", err.error_chain());
-//!     // Output: user_id: 42 -> operation: load_config -> failed
+//!     let chain = err.error_chain();
+//!     assert!(chain.contains("user_id: 42"));
+//!     assert!(chain.contains("operation: load_config"));
+//!     assert!(chain.contains("failed"));
 //! }
 //! ```
 #![cfg_attr(not(feature = "std"), no_std)]

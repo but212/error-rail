@@ -63,3 +63,14 @@ fn test_chaining() {
     assert!(chain.contains("first context"));
     assert!(chain.contains("second context"));
 }
+
+#[test]
+fn test_ctx_boxed_with() {
+    let result: Result<(), Box<error_rail::ComposableError<&str>>> =
+        Err(Box::new(error_rail::ComposableError::new("base")));
+    let with_ctx = result.ctx_boxed_with(|| "lazy context".to_string());
+
+    let err = with_ctx.unwrap_err();
+    assert!(err.error_chain().contains("lazy context"));
+    assert!(err.error_chain().contains("base"));
+}
