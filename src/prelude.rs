@@ -13,21 +13,6 @@
 //! - **Types**: [`ComposableError`], [`ErrorContext`], [`ErrorPipeline`], [`LazyGroupContext`]
 //! - **Traits**: [`ResultExt`], [`BoxedResultExt`], [`IntoErrorContext`]
 //!
-//! Convenience re-exports for common usage patterns.
-//!
-//! This prelude module provides the most commonly used items for quick starts.
-//! Import everything with:
-//!
-//! ```
-//! use error_rail::prelude::*;
-//! ```
-//!
-//! # What's Included
-//!
-//! - **Macros**: [`context!`], [`group!`], [`rail!`]
-//! - **Types**: [`ComposableError`], [`ErrorContext`], [`ErrorPipeline`], [`LazyGroupContext`]
-//! - **Traits**: [`ResultExt`], [`BoxedResultExt`], [`IntoErrorContext`]
-//!
 //! # Examples
 //!
 //! ## 30-Second Quick Start

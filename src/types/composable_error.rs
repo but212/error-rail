@@ -213,6 +213,9 @@ impl<E> ComposableError<E> {
     }
 
     /// Returns the context stack in LIFO order (most recent first).
+    ///
+    /// **Note**: This method allocates a new `ErrorVec` on each call.
+    /// For zero-allocation iteration, prefer [`context_iter()`](Self::context_iter) instead.
     #[inline]
     pub fn context(&self) -> ErrorVec<ErrorContext> {
         self.context.iter().rev().cloned().collect()
@@ -533,64 +536,15 @@ impl<E> ComposableError<E> {
         format!("{:016x}", self.fingerprint())
     }
 
-    /// Internal fingerprint computation using FNV-1a-like algorithm.
+    /// Internal fingerprint computation delegating to FingerprintConfig.
     ///
-    /// This is a simple, fast hash suitable for fingerprinting.
-    /// Not cryptographically secure, but stable and deterministic.
+    /// Uses FingerprintConfig with default settings (include tags, code, message).
+    #[inline]
     fn compute_fingerprint(&self) -> u64
     where
         E: Display,
     {
-        // FNV-1a constants for 64-bit
-        const FNV_OFFSET: u64 = 0xcbf29ce484222325;
-        const FNV_PRIME: u64 = 0x100000001b3;
-
-        let mut hash = FNV_OFFSET;
-
-        // Hash helper
-        let mut hash_bytes = |bytes: &[u8]| {
-            for byte in bytes {
-                hash ^= *byte as u64;
-                hash = hash.wrapping_mul(FNV_PRIME);
-            }
-        };
-
-        // Include tags in sorted order for consistency
-        let mut tags: crate::types::alloc_type::Vec<_> = self
-            .context
-            .iter()
-            .filter_map(|ctx| {
-                if let ErrorContext::Group(g) = ctx {
-                    Some(
-                        g.tags
-                            .iter()
-                            .cloned()
-                            .collect::<crate::types::alloc_type::Vec<_>>(),
-                    )
-                } else {
-                    None
-                }
-            })
-            .flatten()
-            .collect();
-        tags.sort();
-
-        for tag in &tags {
-            hash_bytes(b"tag:");
-            hash_bytes(tag.as_bytes());
-        }
-
-        // Include error code
-        if let Some(code) = self.error_code {
-            hash_bytes(b"code:");
-            hash_bytes(&code.to_le_bytes());
-        }
-
-        // Include core error message
-        hash_bytes(b"msg:");
-        hash_bytes(self.core_error.to_string().as_bytes());
-
-        hash
+        self.fingerprint_config().compute()
     }
 
     /// Creates a fingerprint configuration for customizing fingerprint generation.

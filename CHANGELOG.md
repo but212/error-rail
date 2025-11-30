@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## [0.7.1]
+
+### Changed - 0.7.1
+
+- **Code cleanup and micro-improvements**: Enhanced code maintainability and performance through targeted optimizations
+  - Removed duplicate documentation in `src/prelude.rs` (redundant module doc blocks)
+  - Cleaned up `clippy.toml` by removing unused empty arrays and organizing settings by category
+  - Eliminated code duplication in `ComposableError::compute_fingerprint()` by delegating to `FingerprintConfig::compute()`
+  - Added `#[inline]` attributes to frequently called factory methods:
+    - `ErrorFormatConfig::pretty()`, `compact()`, `no_code()`
+    - `ErrorContextBuilder::new()`
+  - Enhanced `ComposableError::context()` documentation to warn about allocations and recommend `context_iter()` for zero-allocation use cases
+  - Identified and documented unused `src/types/pipeline_ops.rs` file (contains only deprecation notice, not referenced in module system)
+
+### Fixed - 0.7.1
+
+- **Performance optimizations**: Reduced function call overhead through strategic inlining of hot path methods
+- **Documentation clarity**: Improved API guidance by highlighting allocation patterns and providing alternatives
+
 ## [0.7.0]
 
 ### Added - 0.7.0

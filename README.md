@@ -30,23 +30,6 @@ Most error handling libraries format context eagerly—even on success paths whe
 | Validation overhead        | ~5% vs manual collection         |
 | Validation throughput      | 5.37 M elements/sec (5000 items) |
 
-### **Performance Advantages**
-
-| Feature                                | Performance Gain                              | Real-world Impact                          |
-|----------------------------------------|-----------------------------------------------|--------------------------------------------|
-| **Lazy context!() vs eager format!()** | **7x faster** (613ns vs 4,277ns; same library, same API) | Primary benefit - most operations succeed |
-| **Static str vs String allocation** | **13x faster** (static: 4.66ns vs String: 63ns) | Use `&'static str` when possible |
-
-### **Key Performance Insights**
-
-- **Environment**: Rust 1.90.0, Windows 11, Intel i5-9400F, Criterion 0.7.0
-- **Lazy evaluation**: ErrorRail lazy context (613ns) vs eager context (4,277ns) - **7x faster** on success paths
-- **Real-world scenarios**: HTTP request ~933 ns, DB transaction ~881 ns, microservice error propagation ~608 ns
-- **Scaling**: Context depth scales linearly (50 layers = 12µs)
-- **Throughput**: Validation maintains 5.37 M elements/sec at 5000 items
-
-> **Why lazy evaluation matters**: Since most operations succeed (95%+ in production), ErrorRail's lazy context (613ns) vs eager context (4,277ns) provides meaningful real-world performance gains, keeping error handling efficient on the happy path.
-
 ## Requirements
 
 - **Rust**: 1.81.0 or later (MSRV)

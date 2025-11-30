@@ -331,6 +331,7 @@ impl ErrorContextBuilder {
     ///     .message("operation failed")
     ///     .build();
     /// ```
+    #[inline]
     pub fn new() -> Self {
         Self::default()
     }
