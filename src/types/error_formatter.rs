@@ -61,6 +61,7 @@ impl Default for ErrorFormatConfig {
 }
 
 impl ErrorFormatConfig {
+    #[inline]
     pub fn pretty() -> Self {
         Self {
             separator: "\n".into(),
@@ -71,6 +72,7 @@ impl ErrorFormatConfig {
         }
     }
 
+    #[inline]
     pub fn compact() -> Self {
         Self {
             separator: " | ".into(),
@@ -78,6 +80,7 @@ impl ErrorFormatConfig {
         }
     }
 
+    #[inline]
     pub fn no_code() -> Self {
         Self {
             show_code: false,
