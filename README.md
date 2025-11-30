@@ -35,8 +35,7 @@ Most error handling libraries format context eagerly—even on success paths whe
 | Feature                                | Performance Gain                              | Real-world Impact                          |
 |----------------------------------------|-----------------------------------------------|--------------------------------------------|
 | **Lazy context!() vs eager format!()** | **7x faster** on success paths (within error-rail) | Primary benefit - most operations succeed |
-| **Static str vs String**               | **13x faster** allocation                     | Use `&'static str` when possible           |
-| **Permanent error retry**              | **7x faster** than transient                  | Smart error classification matters         |
+| **Static str vs String allocation**    | **13x faster** (within error-rail)           | Use `&'static str` when possible           |
 
 ### **Key Performance Insights**
 
