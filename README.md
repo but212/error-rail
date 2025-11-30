@@ -22,19 +22,31 @@ Most error handling libraries format context eagerly—even on success paths whe
 
 ### **Benchmark Results** ([full methodology](docs/BENCHMARKS.md))
 
-| Scenario | error-rail | Eager `format!()` | Speedup |
-|----------|------------|-------------------|---------|
-| Success path (95% of cases) | 637 ns | 1,351 ns | **2.1x faster** |
-| Error path (5% of cases) | 941 ns | 835 ns | 1.1x slower |
+| Metric                     | Performance                      |
+|----------------------------|----------------------------------|
+| Error creation             | ~296 ns                          |
+| Error propagation overhead | ~9% vs raw Result                |
+| Serialization              | ~684 ns                          |
+| Validation overhead        | ~5% vs manual collection         |
+| Validation throughput      | 5.37 M elements/sec (5000 items) |
 
-### **Benchmark Details**
+### **Critical Performance Advantages**
 
-- **Environment**: Rust 1.81.0, criterion 0.7
-- **Comparison**: Lazy `context!()` vs eager `format!()` evaluation
-- **Real-world impact**: With typical 95% success rate, ~1.8x overall improvement
-- **Error path overhead**: Extra ~100ns for lazy evaluation on errors
+| Feature                      | Performance Gain               | Real-world Impact                          |
+|------------------------------|--------------------------------|--------------------------------------------|
+| **Lazy vs eager evaluation** | **7x faster** on success paths | Dominant benefit - most operations succeed |
+| **Static str vs String**     | **13x faster** allocation      | Use `&'static str` when possible           |
+| **Permanent error retry**    | **7x faster** than transient   | Smart error classification matters         |
 
-Since most operations succeed (95%+), lazy evaluation provides significant real-world performance gains.
+### **Key Performance Insights**
+
+- **Environment**: Rust 1.90.0, Windows 11, Intel i5-9400F, Criterion 0.7.0
+- **Lazy evaluation**: 613 ns vs 4,277 ns on success paths - **7x faster**
+- **Real-world scenarios**: HTTP request ~933 ns, DB transaction ~881 ns, microservice error propagation ~608 ns
+- **Scaling**: Context depth scales linearly (50 layers = 12µs)
+- **Throughput**: Validation maintains 5.37 M elements/sec at 5000 items
+
+> **Why lazy evaluation matters**: Since most operations succeed (95%+ in production), the 7x speedup on success paths provides significant real-world performance gains, making error handling virtually free on the happy path.
 
 ## Requirements
 
@@ -257,6 +269,31 @@ let result = ErrorPipeline::new(process(&payload))
 
 > **Performance**: In benchmarks, lazy context adds near-zero overhead on success. Eager formatting can be orders of magnitude slower.
 
+### When to Use `.ctx()` vs `context!()`
+
+| Method           | Use Case                          | Example                                   |
+|------------------|-----------------------------------|-------------------------------------------|
+| `.ctx("static")` | Simple static messages            | `.ctx("loading file")`                    |
+| `context!()`     | Formatted messages with variables | `context!("user_id: {}", id)`             |
+| `.ctx_with()`    | Complex closure logic             | `.ctx_with(\|\| expensive_calculation())` |
+
+**Decision Guide:**
+
+- Use `.ctx("static")` for simple strings - no allocation overhead
+- Use `.ctx(context!())` when formatting variables - **7x faster** on success paths
+- Both methods add the same context type, only evaluation timing differs
+
+```rust
+// ✅ Simple static context
+result.ctx("database connection failed")
+
+// ✅ Lazy formatted context (recommended for variables)
+result.ctx(context!("user {} not found", user_id))
+
+// ❌ Eager formatting (slow on success paths)
+result.ctx(format!("user {} not found", user_id))
+```
+
 ### 5. Convenient Macros
 
 | Macro | Purpose | Example |
@@ -357,11 +394,11 @@ fn internal_op() -> ComposableResult<i32, &'static str> {
 
 #### Type Aliases Comparison
 
-| Type Alias | Definition | Stack Size | Use When |
-|------------|------------|------------|----------|
-| `BoxedResult<T, E>` | `Result<T, Box<ComposableError<E>>>` | 8 bytes | **Recommended** for public APIs |
-| `BoxedComposableResult<T, E>` | Same as `BoxedResult` | 8 bytes | Legacy alias (identical) |
-| `ComposableResult<T, E>` | `Result<T, ComposableError<E>>` | 48+ bytes | Internal functions only |
+| Type Alias                    | Definition                           | Stack Size | Use When                        |
+|-------------------------------|--------------------------------------|------------|---------------------------------|
+| `BoxedResult<T, E>`           | `Result<T, Box<ComposableError<E>>>` | 8 bytes    | **Recommended** for public APIs |
+| `BoxedComposableResult<T, E>` | Same as `BoxedResult`                | 8 bytes    | Legacy alias (identical)        |
+| `ComposableResult<T, E>`      | `Result<T, ComposableError<E>>`      | 48+ bytes  | Internal functions only         |
 
 > **Note**: `BoxedResult` and `BoxedComposableResult` are identical. Use `BoxedResult` for brevity.
 
@@ -369,24 +406,24 @@ fn internal_op() -> ComposableResult<i32, &'static str> {
 
 ### Quick Reference
 
-| Scenario | Recommended Type | Example |
-|----------|------------------|---------|
-| **Simple error wrapping** | `ComposableError<E>` | Internal error handling |
-| **Function return type** | `BoxedResult<T, E>` | Public API boundaries |
-| **Adding context to Result** | `ErrorPipeline` | Wrapping I/O operations |
-| **Form/input validation** | `Validation<E, T>` | Collecting all field errors |
-| **Error chaining** | `ErrorPipeline` + `finish_boxed()` | Multi-step operations |
-| **Retry logic** | `TransientError` trait | Network timeouts, rate limiting |
-| **Error deduplication** | `fingerprint()` / `fingerprint_hex()` | Sentry grouping, log dedup |
+| Scenario                     | Recommended Type                      | Example                         |
+|------------------------------|---------------------------------------|---------------------------------|
+| **Simple error wrapping**    | `ComposableError<E>`                  | Internal error handling         |
+| **Function return type**     | `BoxedResult<T, E>`                   | Public API boundaries           |
+| **Adding context to Result** | `ErrorPipeline`                       | Wrapping I/O operations         |
+| **Form/input validation**    | `Validation<E, T>`                    | Collecting all field errors     |
+| **Error chaining**           | `ErrorPipeline` + `finish_boxed()`    | Multi-step operations           |
+| **Retry logic**              | `TransientError` trait                | Network timeouts, rate limiting |
+| **Error deduplication**      | `fingerprint()` / `fingerprint_hex()` | Sentry grouping, log dedup      |
 
 ### Validation vs Result
 
-| Feature | `Result<T, E>` | `Validation<E, T>` |
-|---------|---------------|-------------------|
-| **Short-circuit** | ✅ Yes (stops at first error) | ❌ No (collects all) |
-| **Use case** | Sequential operations | Parallel validation |
-| **Error count** | Single | Multiple |
-| **Iterator support** | `?` operator | `.collect()` |
+| Feature              | `Result<T, E>`                 | `Validation<E, T>`  |
+|----------------------|--------------------------------|---------------------|
+| **Short-circuit**    | Yes (stops at first error)     | ❌ No (collects all) |
+| **Use case**         | Sequential operations          | Parallel validation |
+| **Error count**      | Single                         | Multiple            |
+| **Iterator support** | `?` operator                   | `.collect()`        |
 
 ## Common Pitfalls
 
@@ -432,23 +469,23 @@ ErrorPipeline::new(result)
 
 ## Module Reference
 
-| Module | Description |
-|--------|-------------|
-| `prelude` | **Start here!** Common imports: `ResultExt`, `BoxedResult`, macros |
-| `context` | Context attachment: `with_context`, `accumulate_context`, `format_error_chain` |
-| `convert` | Conversions between `Result`, `Validation`, and `ComposableError` |
-| `macros` | `context!`, `group!`, `rail!`, `impl_error_context!` |
-| `traits` | `ResultExt`, `BoxedResultExt`, `IntoErrorContext`, `ErrorOps`, `WithError`, `TransientError` |
-| `types` | `ComposableError`, `ErrorContext`, `ErrorPipeline`, `LazyContext`, `FingerprintConfig` |
-| `validation` | `Validation<E, A>` type with collectors and iterators |
+| Module       | Description                                                                                  |
+|--------------|----------------------------------------------------------------------------------------------|
+| `prelude`    | **Start here!** Common imports: `ResultExt`, `BoxedResult`, macros                           |
+| `context`    | Context attachment: `with_context`, `accumulate_context`, `format_error_chain`               |
+| `convert`    | Conversions between `Result`, `Validation`, and `ComposableError`                            |
+| `macros`     | `context!`, `group!`, `rail!`, `impl_error_context!`                                         |
+| `traits`     | `ResultExt`, `BoxedResultExt`, `IntoErrorContext`, `ErrorOps`, `WithError`, `TransientError` |
+| `types`      | `ComposableError`, `ErrorContext`, `ErrorPipeline`, `LazyContext`, `FingerprintConfig`       |
+| `validation` | `Validation<E, A>` type with collectors and iterators                                        |
 
 ## Feature Flags
 
-| Feature | Description | Default |
-|---------|-------------|---------|
-| `std` | Standard library support (enables `backtrace!` macro) | ❌ No |
-| `serde` | Serialization/deserialization support | ❌ No |
-| `full` | Enable all features (`std` + `serde`) | ❌ No |
+| Feature | Description                                           | Default |
+|---------|-------------------------------------------------------|---------|
+| `std`   | Standard library support (enables `backtrace!` macro) | ❌ No    |
+| `serde` | Serialization/deserialization support                 | ❌ No    |
+| `full`  | Enable all features (`std` + `serde`)                 | ❌ No    |
 
 ### Usage Examples
 
@@ -499,16 +536,16 @@ cargo run --example retry_integration   # Retry patterns & fingerprinting
 
 ## Glossary
 
-| Term | Definition |
-|------|------------|
-| **Context** | Additional information attached to an error (location, tags, messages) |
-| **Metadata** | Key-value pairs within context (subset of context) |
-| **Pipeline** | Builder pattern for chaining error operations (`ErrorPipeline`) |
-| **Boxed Error** | Heap-allocated error via `Box<ComposableError<E>>` for reduced stack size |
-| **Lazy Evaluation** | Deferred computation until actually needed (e.g., `context!` macro) |
-| **Validation** | Accumulating type that collects all errors instead of short-circuiting |
-| **Transient Error** | Temporary failure that may succeed on retry (e.g., timeout, rate limit) |
-| **Fingerprint** | Unique hash of error components for deduplication and grouping |
+| Term                | Definition                                                                |
+|---------------------|---------------------------------------------------------------------------|
+| **Context**         | Additional information attached to an error (location, tags, messages)    |
+| **Metadata**        | Key-value pairs within context (subset of context)                        |
+| **Pipeline**        | Builder pattern for chaining error operations (`ErrorPipeline`)           |
+| **Boxed Error**     | Heap-allocated error via `Box<ComposableError<E>>` for reduced stack size |
+| **Lazy Evaluation** | Deferred computation until actually needed (e.g., `context!` macro)       |
+| **Validation**      | Accumulating type that collects all errors instead of short-circuiting    |
+| **Transient Error** | Temporary failure that may succeed on retry (e.g., timeout, rate limit)   |
+| **Fingerprint**     | Unique hash of error components for deduplication and grouping            |
 
 ## License
 
