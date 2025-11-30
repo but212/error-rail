@@ -1,19 +1,19 @@
 # CHANGELOG
 
-## [unreleased]
+## [0.7.0]
 
-### Added - unreleased
+### Added - 0.7.0
 
-### Changed - unreleased
+### Changed - 0.7.0
 
-### Deprecated - unreleased
+### Deprecated - 0.7.0
 
-### Removed - unreleased
+### Removed - 0.7.0
 
 - **Removed deprecated macros**: `location!`, `tag!`, `metadata!`
 - **Removed deprecated methods**: `WithError::to_result()`, `Validation::to_result()`, `result::to_result()`
 
-### Fixed - unreleased
+### Fixed - 0.7.0
 
 ## [0.6.0]
 
