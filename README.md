@@ -25,7 +25,7 @@ Most error handling libraries format context eagerly—even on success paths whe
 | Metric                     | Performance                      |
 |----------------------------|----------------------------------|
 | Error creation             | ~296 ns                          |
-| Error propagation overhead | ~9% vs raw Result                |
+| Error propagation overhead | ~9% overhead vs plain Rust Result (770ns vs 706ns) |
 | Serialization              | ~684 ns                          |
 | Validation overhead        | ~5% vs manual collection         |
 | Validation throughput      | 5.37 M elements/sec (5000 items) |
@@ -34,19 +34,18 @@ Most error handling libraries format context eagerly—even on success paths whe
 
 | Feature                                | Performance Gain                              | Real-world Impact                          |
 |----------------------------------------|-----------------------------------------------|--------------------------------------------|
-| **Lazy context!() vs eager format!()** | **7x faster** on success paths (within error-rail) | Primary benefit - most operations succeed |
-| **Static str vs String**               | **13x faster** allocation                     | Use `&'static str` when possible           |
-| **Permanent error retry**              | **7x faster** than transient                  | Smart error classification matters         |
+| **Lazy context!() vs eager format!()** | **7x faster** (ErrorRail lazy: 613ns vs eager: 4,277ns) | Primary benefit - most operations succeed |
+| **Static str vs String allocation** | **13x faster** (static: 4.66ns vs String: 63ns) | Use `&'static str` when possible |
 
 ### **Key Performance Insights**
 
 - **Environment**: Rust 1.90.0, Windows 11, Intel i5-9400F, Criterion 0.7.0
-- **Lazy evaluation**: 613 ns vs 4,277 ns on success paths - **7x faster**
+- **Lazy evaluation**: ErrorRail lazy context (613ns) vs eager context (4,277ns) - **7x faster** on success paths
 - **Real-world scenarios**: HTTP request ~933 ns, DB transaction ~881 ns, microservice error propagation ~608 ns
 - **Scaling**: Context depth scales linearly (50 layers = 12µs)
 - **Throughput**: Validation maintains 5.37 M elements/sec at 5000 items
 
-> **Why lazy evaluation matters**: Since most operations succeed (95%+ in production), the 7x speedup of `context!()` vs `format!()` within error-rail provides meaningful real-world performance gains, keeping error handling efficient on the happy path.
+> **Why lazy evaluation matters**: Since most operations succeed (95%+ in production), ErrorRail's lazy context (613ns) vs eager context (4,277ns) provides meaningful real-world performance gains, keeping error handling efficient on the happy path.
 
 ## Requirements
 
@@ -267,7 +266,7 @@ let result = ErrorPipeline::new(process(&payload))
     .finish_boxed();
 ```
 
-> **Performance**: In benchmarks, lazy context adds minimal overhead on success. Eager formatting can be significantly slower.
+> **Performance**: In benchmarks, lazy context adds minimal overhead on success. Eager formatting (4,277ns) is significantly slower than lazy context (613ns) on success paths.
 
 ### When to Use `.ctx()` vs `context!()`
 
@@ -280,7 +279,7 @@ let result = ErrorPipeline::new(process(&payload))
 **Decision Guide:**
 
 - Use `.ctx("static")` for simple strings - no allocation overhead
-- Use `.ctx(context!())` when formatting variables - **7x faster** on success paths
+- Use `.ctx(context!())` when formatting variables - **7x faster** than eager formatting on success paths
 - Both methods add the same context type, only evaluation timing differs
 
 ```rust
