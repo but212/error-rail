@@ -89,7 +89,7 @@ fn test_accumulator_iter() {
 fn test_accumulator_iter_empty() {
     let acc: Accumulator<i32> = Accumulator::new();
     let items: Vec<i32> = acc.iter().copied().collect();
-    assert_eq!(items, vec![]);
+    assert_eq!(items, Vec::<i32>::new());
 }
 
 #[test]
@@ -263,7 +263,7 @@ fn test_accumulator_into_iterator() {
 fn test_accumulator_into_iterator_empty() {
     let acc: Accumulator<i32> = Accumulator::new();
     let items: Vec<i32> = acc.into_iter().collect();
-    assert_eq!(items, vec![]);
+    assert_eq!(items, Vec::<i32>::new());
 }
 
 #[test]
