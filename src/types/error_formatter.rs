@@ -203,16 +203,6 @@ impl<'a, E> ErrorFormatBuilder<'a, E> {
         self.config = ErrorFormatConfig::compact();
         self
     }
-
-    pub fn show_tags(self) -> Self {
-        // TODO: Implement tag showing in config
-        self
-    }
-
-    pub fn hide_metadata(self) -> Self {
-        // TODO: Implement metadata hiding in config
-        self
-    }
 }
 
 impl<'a, E> Display for ErrorFormatBuilder<'a, E>

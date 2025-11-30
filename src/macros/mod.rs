@@ -399,7 +399,7 @@ macro_rules! validate {
                 let mut errors = $crate::ErrorVec::new();
                 $(
                     if let $crate::validation::Validation::Invalid(e) = $key {
-                        errors.extend(e.clone().into_inner());
+                        errors.extend(e.iter().cloned());
                     }
                 )+
                 $crate::validation::Validation::Invalid(errors.into())

@@ -24,7 +24,6 @@ pub mod error_context;
 pub mod error_formatter;
 pub mod error_pipeline;
 pub mod lazy_context;
-pub mod pipeline_ops;
 pub mod retry;
 
 pub use alloc_type::*;

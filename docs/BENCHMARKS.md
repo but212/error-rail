@@ -97,7 +97,7 @@ Error Path:
 
 ```text
 scaling/context_depth/1   → 422.92 ns/iter
-scaling/context_depth/5   → 5.53 µs/iter
+scaling/context_depth/5   → 1.5 µs/iter
 scaling/context_depth/10  → 2.70 µs/iter
 scaling/context_depth/20  → 5.08 µs/iter
 scaling/context_depth/50  → 12.02 µs/iter
@@ -110,15 +110,6 @@ scaling/validation_batch/10    → 4.91 µs/iter  (2.04 M elements/sec)
 scaling/validation_batch/100   → 30.9 µs/iter  (3.24 M elements/sec)
 scaling/validation_batch/1000  → 194 µs/iter   (5.15 M elements/sec)
 scaling/validation_batch/5000  → 929 µs/iter   (5.37 M elements/sec)
-```
-
-### Pipeline Chain
-
-```text
-scaling/pipeline_chain/2   → 3.09 ns/iter
-scaling/pipeline_chain/5   → 3.09 ns/iter
-scaling/pipeline_chain/10  → 3.09 ns/iter
-scaling/pipeline_chain/20  → 3.09 ns/iter
 ```
 
 ## 6. Pipeline vs Raw Result

@@ -48,45 +48,56 @@ fn test_retry_ops_is_transient_true() {
     let pipeline: ErrorPipeline<u32, RetryTestError> =
         ErrorPipeline::new(Err(RetryTestError::new("timeout", true)));
 
-    // Note: RetryOps doesn't have direct public constructor,
-    // so we test through ErrorPipeline methods that use it
-    assert!(pipeline.is_transient());
+    // Test RetryOps API correctly
+    let retry_ops = pipeline.retry();
+    assert!(retry_ops.is_transient());
 }
 
 #[test]
 fn test_retry_ops_is_transient_false() {
     let pipeline: ErrorPipeline<u32, RetryTestError> =
         ErrorPipeline::new(Err(RetryTestError::new("auth error", false)));
-    assert!(!pipeline.is_transient());
+
+    // Test RetryOps API correctly
+    let retry_ops = pipeline.retry();
+    assert!(!retry_ops.is_transient());
 }
 
 #[test]
 fn test_retry_ops_is_transient_ok() {
     let pipeline: ErrorPipeline<u32, RetryTestError> = ErrorPipeline::new(Ok(42));
-    assert!(!pipeline.is_transient());
+
+    // Test RetryOps API correctly
+    let retry_ops = pipeline.retry();
+    assert!(!retry_ops.is_transient());
 }
 
 #[test]
 fn test_retry_ops_max_retries_metadata() {
     let result = ErrorPipeline::<u32, RetryTestError>::new(Err(RetryTestError::new("error", true)))
-        .with_retry_context(1)
+        .retry()
+        .max_retries(5)
+        .to_error_pipeline()
         .finish();
 
     if let Err(err) = result {
         let chain = err.error_chain();
-        assert!(chain.contains("retry_attempt=1"));
+        assert!(chain.contains("max_retries_hint=5"));
     }
 }
 
 #[test]
 fn test_retry_ops_after_hint_metadata() {
-    let result =
-        ErrorPipeline::<u32, RetryTestError>::new(Err(RetryTestError::new("error", true))).finish();
+    let result = ErrorPipeline::<u32, RetryTestError>::new(Err(RetryTestError::new("error", true)))
+        .retry()
+        .after_hint(Duration::from_secs(30))
+        .to_error_pipeline()
+        .finish();
 
     if let Err(err) = result {
-        // Test that we can extract retry hints from the underlying error
         let chain = err.error_chain();
-        assert!(chain.contains("error"));
+        // Duration debug format is "30s"
+        assert!(chain.contains("retry_after_hint=30s"));
     }
 }
 

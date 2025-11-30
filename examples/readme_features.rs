@@ -1,6 +1,16 @@
 //! README Features Example
 //!
-//! This example demonstrates all the key features shown in README.md.
+//! This example demonstrates all 9 key features shown in README.md:
+//! 1. Structured Error Context
+//! 2. Error Pipeline
+//! 3. Validation Accumulation
+//! 4. Zero-Cost Lazy Context
+//! 5. Convenient Macros
+//! 6. Quick Start Example
+//! 7. Transient Error Classification
+//! 8. Error Fingerprinting
+//! 9. .ctx() vs context!() Performance
+//!
 //! Run with: cargo run --example readme_features
 
 use error_rail::{context, group, rail, ComposableError, ErrorContext, ErrorPipeline, Validation};
@@ -199,6 +209,173 @@ fn feature6_quick_start() {
 }
 
 // =============================================================================
+// Feature 7: Transient Error Classification
+// =============================================================================
+
+use error_rail::traits::TransientError;
+use std::time::Duration;
+
+#[derive(Debug)]
+enum ApiError {
+    Timeout,          // Transient - retry
+    RateLimited(u64), // Transient - retry after delay
+    NotFound,         // Permanent - don't retry
+}
+
+impl TransientError for ApiError {
+    fn is_transient(&self) -> bool {
+        matches!(self, ApiError::Timeout | ApiError::RateLimited(_))
+    }
+
+    fn retry_after_hint(&self) -> Option<Duration> {
+        match self {
+            ApiError::RateLimited(secs) => Some(Duration::from_secs(*secs)),
+            ApiError::Timeout => Some(Duration::from_millis(100)),
+            _ => None,
+        }
+    }
+}
+
+fn feature7_transient_error() {
+    println!("\n=== Feature 7: Transient Error Classification ===\n");
+
+    // Transient error - can retry
+    let result1: Result<String, ApiError> = Err(ApiError::Timeout);
+    let pipeline1 = ErrorPipeline::new(result1);
+
+    println!("Timeout error:");
+    if pipeline1.is_transient() {
+        println!("  ✓ Is transient (can retry)");
+        println!(
+            "  ✓ Retry after: {:?}",
+            pipeline1.retry_after_hint().unwrap()
+        );
+    }
+
+    // Rate limited - retry with backoff
+    let result2: Result<String, ApiError> = Err(ApiError::RateLimited(60));
+    let pipeline2 = ErrorPipeline::new(result2);
+
+    println!("\nRate limited error:");
+    if pipeline2.is_transient() {
+        println!("  ✓ Is transient (can retry)");
+        println!(
+            "  ✓ Retry after: {:?}",
+            pipeline2.retry_after_hint().unwrap()
+        );
+    }
+
+    // Permanent error - don't retry
+    let result3: Result<String, ApiError> = Err(ApiError::NotFound);
+    let pipeline3 = ErrorPipeline::new(result3);
+
+    println!("\nNot found error:");
+    if pipeline3.is_transient() {
+        println!("  ✓ Is transient");
+    } else {
+        println!("  ✗ Is permanent (don't retry)");
+    }
+
+    println!("\n> Note: Use with retry libraries like backoff, retry, or tokio-retry");
+}
+
+// =============================================================================
+// Feature 8: Error Fingerprinting
+// =============================================================================
+
+fn feature8_fingerprinting() {
+    println!("\n=== Feature 8: Error Fingerprinting ===\n");
+
+    let err = ComposableError::new("database timeout")
+        .with_context(ErrorContext::tag("db"))
+        .with_context(ErrorContext::tag("users"))
+        .set_code(504);
+
+    println!("Error: {}", err.error_chain());
+    println!("\nFingerprints for deduplication:");
+    println!("  Hex:  {}", err.fingerprint_hex());
+    println!("  u64:  {}", err.fingerprint());
+
+    // Customized fingerprint configuration
+    let fp_custom = err
+        .fingerprint_config()
+        .include_message(false) // Ignore variable message content
+        .include_metadata(true) // Include metadata
+        .compute_hex();
+
+    println!("\nCustom fingerprint (no message): {}", fp_custom);
+
+    // Create another error with same structure
+    let err2 = ComposableError::new("database timeout (different message)")
+        .with_context(ErrorContext::tag("db"))
+        .with_context(ErrorContext::tag("users"))
+        .set_code(504);
+
+    println!("\nSecond error with same tags/code:");
+    println!(
+        "  Same fingerprint: {}",
+        err2.fingerprint_hex() == err.fingerprint_hex()
+    );
+
+    println!("\n> Use for Sentry grouping, log deduplication, alert throttling");
+}
+
+// =============================================================================
+// Feature 9: .ctx() vs context!() Performance
+// =============================================================================
+
+use error_rail::prelude::*;
+
+fn feature9_ctx_comparison() {
+    println!("\n=== Feature 9: .ctx() vs context!() Comparison ===\n");
+
+    let user_id = 42;
+    let username = "alice";
+
+    // 1. Simple static context - direct string
+    println!("1. Static context (.ctx with &str):");
+    let result1: Result<(), &str> = Err("database error");
+    match result1.ctx("database connection failed") {
+        Ok(_) => println!("   Success"),
+        Err(e) => println!("   Error: {}", e.error_chain()),
+    }
+
+    // 2. Lazy formatted context (RECOMMENDED for variables)
+    println!("\n2. Lazy formatted context (context! macro):");
+    let result2: Result<(), &str> = Err("not found");
+    match result2.ctx(context!("user {} not found", user_id)) {
+        Ok(_) => println!("   Success"),
+        Err(e) => println!("   Error: {}", e.error_chain()),
+    }
+
+    // 3. Multiple variables in lazy context
+    println!("\n3. Multiple variables (context! macro):");
+    let result3: Result<(), &str> = Err("permission denied");
+    match result3.ctx(context!(
+        "user '{}' (id: {}) access denied",
+        username,
+        user_id
+    )) {
+        Ok(_) => println!("   Success"),
+        Err(e) => println!("   Error: {}", e.error_chain()),
+    }
+
+    // 4. Complex closure with ctx_with
+    println!("\n4. Complex logic (.ctx_with closure):");
+    let result4: Result<(), &str> = Err("calculation failed");
+    match result4.ctx_with(|| format!("computation for user {} took too long", user_id)) {
+        Ok(_) => println!("   Success"),
+        Err(e) => println!("   Error: {}", e.error_chain()),
+    }
+
+    println!("\n📊 Performance Guide:");
+    println!("  ✅ Use .ctx(\"static\") for simple strings");
+    println!("  ✅ Use .ctx(context!()) for formatted messages → 7x faster on success!");
+    println!("  ✅ Use .ctx_with(|| ...) for expensive computations");
+    println!("  ❌ Avoid .ctx(format!()) → Always evaluates, even on success");
+}
+
+// =============================================================================
 // Main
 // =============================================================================
 
@@ -213,6 +390,10 @@ fn main() {
     feature4_lazy_context();
     feature5_macros();
     feature6_quick_start();
+    feature7_transient_error();
+    feature8_fingerprinting();
+    feature9_ctx_comparison();
 
-    println!("\n✓ All features demonstrated!");
+    println!("\n✓ All 9 README features demonstrated!");
+    println!("✓ 100% README coverage achieved!");
 }

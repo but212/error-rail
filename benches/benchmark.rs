@@ -471,32 +471,6 @@ fn bench_validation_batch_scaling(c: &mut Criterion) {
     group.finish();
 }
 
-fn bench_pipeline_chain_scaling(c: &mut Criterion) {
-    let mut group = c.benchmark_group("scaling/pipeline_chain");
-
-    for chain_len in [2, 5, 10, 20] {
-        group.bench_with_input(
-            BenchmarkId::from_parameter(chain_len),
-            &chain_len,
-            |b, &chain_len| {
-                b.iter(|| {
-                    let mut pipeline = ErrorPipeline::new(Ok::<i32, &str>(0));
-
-                    for i in 0..chain_len {
-                        pipeline = pipeline
-                            .and_then(|x| Ok(x + 1))
-                            .with_context(context!("operation_{}", i));
-                    }
-
-                    let _ = black_box(pipeline.finish());
-                })
-            },
-        );
-    }
-
-    group.finish();
-}
-
 // ============================================================================
 // Group 6: Pipeline Operations
 // ============================================================================
@@ -877,7 +851,6 @@ criterion_group! {
     targets =
         bench_context_depth_scaling,
         bench_validation_batch_scaling,
-        bench_pipeline_chain_scaling,
 }
 
 criterion_group! {
