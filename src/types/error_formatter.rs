@@ -2,6 +2,7 @@
 
 use crate::types::alloc_type;
 use crate::types::ComposableError;
+use bitflags::bitflags;
 use core::fmt::Display;
 
 #[cfg(not(feature = "std"))]
@@ -32,6 +33,34 @@ pub trait ErrorFormatter {
     }
 }
 
+bitflags! {
+    /// Configuration flags for error formatting.
+    ///
+    /// This provides a memory-efficient way to configure error formatting
+    /// using bit flags instead of individual boolean fields.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    pub struct ErrorFormat: u8 {
+        /// Show error codes in output (default: enabled).
+        const SHOW_CODE = 0b0001;
+        /// Use multiline formatting with tree structure (default: disabled).
+        const MULTILINE = 0b0010;
+        /// Use compact separator style (default: disabled).
+        const COMPACT = 0b0100;
+        /// Use pretty formatting with tree characters (default: disabled).
+        const PRETTY = 0b1000;
+        /// Default format: show code, single line.
+        const DEFAULT = Self::SHOW_CODE.bits();
+        /// All formatting options enabled.
+        const ALL = Self::SHOW_CODE.bits() | Self::MULTILINE.bits() | Self::COMPACT.bits() | Self::PRETTY.bits();
+    }
+}
+
+impl Default for ErrorFormat {
+    fn default() -> Self {
+        Self::DEFAULT
+    }
+}
+
 /// Configuration-based error formatter.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ErrorFormatConfig {
@@ -40,9 +69,8 @@ pub struct ErrorFormatConfig {
     pub context_suffix: Option<alloc_type::String>,
     pub root_prefix: Option<alloc_type::String>,
     pub root_suffix: Option<alloc_type::String>,
-    pub multiline: bool,
     pub indent: alloc_type::String,
-    pub show_code: bool,
+    pub format: ErrorFormat,
 }
 
 impl Default for ErrorFormatConfig {
@@ -53,9 +81,8 @@ impl Default for ErrorFormatConfig {
             context_suffix: None,
             root_prefix: None,
             root_suffix: None,
-            multiline: false,
             indent: "  ".into(),
-            show_code: true,
+            format: ErrorFormat::default(),
         }
     }
 }
@@ -67,7 +94,7 @@ impl ErrorFormatConfig {
             separator: "\n".into(),
             context_prefix: Some("├─ ".into()),
             root_prefix: Some("└─ ".into()),
-            multiline: true,
+            format: ErrorFormat::PRETTY | ErrorFormat::MULTILINE,
             ..Default::default()
         }
     }
@@ -76,6 +103,7 @@ impl ErrorFormatConfig {
     pub fn compact() -> Self {
         Self {
             separator: " | ".into(),
+            format: ErrorFormat::COMPACT,
             ..Default::default()
         }
     }
@@ -83,9 +111,71 @@ impl ErrorFormatConfig {
     #[inline]
     pub fn no_code() -> Self {
         Self {
-            show_code: false,
+            format: ErrorFormat::default().difference(ErrorFormat::SHOW_CODE),
             ..Default::default()
         }
+    }
+
+    #[inline]
+    pub fn with_format(mut self, format: ErrorFormat) -> Self {
+        self.format = format;
+
+        // Automatically apply configuration changes based on bitflags
+        if self.format.contains(ErrorFormat::COMPACT) {
+            self.separator = " | ".into();
+        }
+        if self.format.contains(ErrorFormat::PRETTY) {
+            self.separator = "\n".into();
+            self.context_prefix = Some("├─ ".into());
+            self.root_prefix = Some("└─ ".into());
+        }
+
+        self
+    }
+
+    #[inline]
+    pub fn show_code(mut self, show: bool) -> Self {
+        self.format.set(ErrorFormat::SHOW_CODE, show);
+        self
+    }
+
+    #[inline]
+    pub fn multiline(mut self, multiline: bool) -> Self {
+        self.format.set(ErrorFormat::MULTILINE, multiline);
+        self
+    }
+
+    #[inline]
+    pub fn set_compact(mut self, compact: bool) -> Self {
+        self.format.set(ErrorFormat::COMPACT, compact);
+        self
+    }
+
+    #[inline]
+    pub fn set_pretty(mut self, pretty: bool) -> Self {
+        self.format.set(ErrorFormat::PRETTY, pretty);
+        if pretty {
+            self.format.insert(ErrorFormat::MULTILINE);
+        }
+        self
+    }
+
+    #[deprecated(
+        since = "0.8.0",
+        note = "Use with_format() or format-specific methods instead"
+    )]
+    #[inline]
+    pub fn is_show_code(&self) -> bool {
+        self.format.contains(ErrorFormat::SHOW_CODE)
+    }
+
+    #[deprecated(
+        since = "0.8.0",
+        note = "Use with_format() or format-specific methods instead"
+    )]
+    #[inline]
+    pub fn is_multiline(&self) -> bool {
+        self.format.contains(ErrorFormat::MULTILINE)
     }
 }
 
@@ -115,7 +205,7 @@ impl ErrorFormatter for ErrorFormatConfig {
         let mut result = String::new();
         let item_count = items.len();
 
-        if self.multiline && self.context_prefix.is_some() {
+        if self.format.contains(ErrorFormat::MULTILINE) && self.context_prefix.is_some() {
             if item_count > 0 {
                 result.push_str("┌ ");
                 result.push_str(&items[0].to_string());
@@ -193,17 +283,22 @@ impl<'a, E> ErrorFormatBuilder<'a, E> {
     }
 
     pub fn show_code(mut self, show: bool) -> Self {
-        self.config.show_code = show;
+        self.config.format.set(ErrorFormat::SHOW_CODE, show);
         self
     }
 
-    pub fn pretty(mut self) -> Self {
+    pub fn set_pretty(mut self) -> Self {
         self.config = ErrorFormatConfig::pretty();
         self
     }
 
-    pub fn compact(mut self) -> Self {
+    pub fn set_compact(mut self) -> Self {
         self.config = ErrorFormatConfig::compact();
+        self
+    }
+
+    pub fn with_format(mut self, format: ErrorFormat) -> Self {
+        self.config = self.config.with_format(format);
         self
     }
 }
@@ -232,7 +327,7 @@ where
         let s = self.config.format_chain(items.iter().copied());
         write!(f, "{}", s)?;
 
-        if self.config.show_code {
+        if self.config.format.contains(ErrorFormat::SHOW_CODE) {
             if let Some(code) = self.error.error_code() {
                 write!(f, " (code: {})", code)?;
             }

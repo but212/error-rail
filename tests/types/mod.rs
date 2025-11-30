@@ -72,6 +72,7 @@ fn composable_error_map_core_preserves_context() {
 }
 
 pub mod accumulator;
+pub mod bitflags_refactor;
 pub mod composable_error;
 pub mod error_context;
 pub mod error_context_builder;

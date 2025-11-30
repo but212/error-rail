@@ -1,5 +1,41 @@
 # CHANGELOG
 
+## [0.8.0]
+
+### Added - 0.8.0
+
+- **Bitflags Refactoring**: Major performance and API improvements using bitflags
+  - `ErrorFormat` bitflags for error formatting configuration (`SHOW_CODE`, `MULTILINE`, `COMPACT`, `PRETTY`)
+  - `ContextKind` bitflags for fast context type detection (`MESSAGE`, `TAGS`, `LOCATION`, `METADATA`)
+  - `ErrorFormat::with_format()` method for direct bitflag configuration
+  - `ErrorContext::context_kinds()` method for fast content checking without pattern matching
+  - Comprehensive test suite in `tests/types/bitflags_refactor.rs`
+
+- **Performance Improvements**:
+  - Faster fingerprinting using bitflag operations instead of pattern matching
+  - Memory-efficient configuration with bitflags instead of multiple boolean fields
+  - Optimized context filtering using `ContextKind::contains()` checks
+
+- **API Enhancements**:
+  - Bitwise operations for configuration (e.g., `ErrorFormat::COMPACT | ErrorFormat::SHOW_CODE`)
+  - Automatic configuration application when using `with_format()` with bitflags
+  - New public exports: `ErrorFormat` and `ContextKind` from `lib.rs`
+
+### Changed - 0.8.0
+
+- **ErrorFormatConfig**: Replaced individual boolean fields with `ErrorFormat` bitflags
+  - `show_code: bool` → `format: ErrorFormat` with `ErrorFormat::SHOW_CODE` flag
+  - `multiline: bool` → `ErrorFormat::MULTILINE` flag
+  - Added semantic flags: `COMPACT`, `PRETTY`, `DEFAULT`, `ALL`
+
+- **Method Renaming**: Updated ErrorFormatBuilder methods to avoid conflicts
+  - `pretty()` → `set_pretty()` (for instance methods, static `pretty()` remains)
+  - `compact()` → `set_compact()` (for instance methods, static `compact()` remains)
+
+- **Backward Compatibility**: Added deprecated wrapper methods for gradual migration
+  - `ErrorFormatConfig::is_show_code()` and `is_multiline()` marked deprecated
+  - Updated examples and tests to use new API
+
 ## [0.7.1]
 
 ### Changed - 0.7.1

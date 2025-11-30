@@ -82,8 +82,9 @@ pub use context::*;
 pub use convert::*;
 pub use traits::*;
 pub use types::{
-    error_formatter::ErrorFormatConfig, BoxedComposableResult, BoxedResult, ComposableError,
-    ComposableResult, ErrorContext, ErrorPipeline, ErrorVec, FingerprintOptions, GroupContext,
-    LazyContext, LazyGroupContext,
+    error_context::ContextKind,
+    error_formatter::{ErrorFormat, ErrorFormatConfig},
+    BoxedComposableResult, BoxedResult, ComposableError, ComposableResult, ErrorContext,
+    ErrorPipeline, ErrorVec, FingerprintOptions, GroupContext, LazyContext, LazyGroupContext,
 };
 pub use validation::*;

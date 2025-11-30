@@ -33,6 +33,7 @@
 use crate::types::alloc_type::String;
 use crate::types::alloc_type::{Cow, Vec};
 use crate::ErrorVec;
+use bitflags::bitflags;
 use core::fmt::Display;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -46,6 +47,26 @@ use alloc::string::ToString;
 use std::format;
 #[cfg(feature = "std")]
 use std::string::ToString;
+
+bitflags! {
+    /// Flags representing different kinds of context data available.
+    ///
+    /// This provides a fast way to check what types of information are present
+    /// in an ErrorContext without expensive pattern matching.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    pub struct ContextKind: u8 {
+        /// Context contains a message.
+        const MESSAGE = 0b0001;
+        /// Context contains tags.
+        const TAGS = 0b0010;
+        /// Context contains location information.
+        const LOCATION = 0b0100;
+        /// Context contains metadata key-value pairs.
+        const METADATA = 0b1000;
+        /// All possible context kinds.
+        const ALL = Self::MESSAGE.bits() | Self::TAGS.bits() | Self::LOCATION.bits() | Self::METADATA.bits();
+    }
+}
 
 /// Structured metadata attached to a [`ComposableError`](crate::types::ComposableError).
 ///
@@ -202,7 +223,46 @@ impl ErrorContext {
         })
     }
 
-    /// Renders the context as a human-friendly string.
+    /// Returns bitflags indicating what kinds of data this context contains.
+    ///
+    /// This provides a fast way to check context contents without pattern matching.
+    /// Useful for fingerprinting and filtering operations.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use error_rail::{ErrorContext, ContextKind};
+    ///
+    /// let msg = ErrorContext::new("test");
+    /// assert!(msg.context_kinds().contains(ContextKind::MESSAGE));
+    ///
+    /// let ctx = ErrorContext::tag("network");
+    /// assert!(ctx.context_kinds().contains(ContextKind::TAGS));
+    /// ```
+    #[inline]
+    pub fn context_kinds(&self) -> ContextKind {
+        match self {
+            Self::Simple(_) => ContextKind::MESSAGE,
+            Self::Group(g) => {
+                let mut kinds = ContextKind::empty();
+
+                if g.message.is_some() {
+                    kinds.insert(ContextKind::MESSAGE);
+                }
+                if !g.tags.is_empty() {
+                    kinds.insert(ContextKind::TAGS);
+                }
+                if g.location.is_some() {
+                    kinds.insert(ContextKind::LOCATION);
+                }
+                if !g.metadata.is_empty() {
+                    kinds.insert(ContextKind::METADATA);
+                }
+
+                kinds
+            }
+        }
+    }
     ///
     /// Each variant is formatted differently:
     /// - `Simple`: Returns the message as-is.

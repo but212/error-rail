@@ -370,7 +370,7 @@ impl<E> ComposableError<E> {
     /// use error_rail::ComposableError;
     ///
     /// let err = ComposableError::new("error");
-    /// let s = err.format_with(|fmt| fmt.pretty().show_code(false));
+    /// let s = err.format_with(|fmt| fmt.set_pretty().show_code(false));
     /// ```
     #[must_use]
     pub fn format_with<F>(&self, f: F) -> String

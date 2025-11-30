@@ -92,7 +92,7 @@ mod intermediate_example {
             .with_context(error_rail::context!("query failed"))
             .set_code(500);
 
-        let formatted = err.fmt().pretty().show_code(true).to_string();
+        let formatted = err.fmt().set_pretty().show_code(true).to_string();
         println!("\nFormatted error:\n{}\n", formatted);
     }
 }

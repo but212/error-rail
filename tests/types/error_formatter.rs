@@ -1,6 +1,7 @@
 use core::fmt::Display;
 use error_rail::types::alloc_type::Vec;
 
+use error_rail::types::error_formatter::ErrorFormat;
 use error_rail::types::error_formatter::ErrorFormatConfig;
 use error_rail::types::error_formatter::ErrorFormatter;
 
@@ -81,7 +82,7 @@ fn test_custom_prefix_suffix() {
 #[test]
 fn test_no_code_config() {
     let config = ErrorFormatConfig::no_code();
-    assert!(!config.show_code);
+    assert!(!config.format.contains(ErrorFormat::SHOW_CODE));
 }
 
 #[test]
