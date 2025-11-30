@@ -1,5 +1,83 @@
 # CHANGELOG
 
+## [0.7.0]
+
+### Added - 0.7.0
+
+- **API Layering**: Introduced 3-level API hierarchy for different user expertise levels
+  - **Beginner API** (`prelude`): Minimal exports for quick starts - `ComposableError`, `ErrorContext`, `ErrorPipeline`, `rail!`, `context!`, `group!` macros
+  - **Intermediate API** (`intermediate`): Advanced patterns - `TransientError`, `ErrorFormatter`, fingerprinting
+  - **Advanced API** (`advanced`): Low-level internals for library authors - `ErrorVec`, `ErrorContextBuilder`, `LazyContext`, internal types
+
+- **ErrorPipeline Enhancements**: New builder methods for improved ergonomics
+  - `.context()` - Alias for `with_context()` for more fluent API
+  - `.step()` - Generic chaining function for operations
+  - `.error_ops()` - Groups error handling strategies (recovery, retry, fingerprinting)
+  - `.retry()` - Integrates `RetryOps` for configuring retry policies
+  - **RetryOps Helper**: Added `to_error_pipeline()` method for converting RetryOps back to ErrorPipeline
+
+- **Validation Normalization**: Simplified validation workflow
+  - `validation::prelude` - Common validation exports in one place
+  - `validate!` macro - DSL for combining multiple validations, automatically accumulates errors
+
+- **RetryOps Integration**: Structured retry support
+  - `RetryOps` struct encapsulates retry-related operations
+  - Methods: `is_transient()`, `max_retries()`, `after_hint()`
+  - Integrated into `ErrorPipeline` via `.retry()` method
+
+- **ErrorFormatter Integration**: Unified formatting configuration
+  - `ErrorFormatBuilder` - Builder API for customizing error display
+  - Methods: `with_separator()`, `reverse_context()`, `show_code()`, `pretty()`, `compact()`
+  - Integrated into `ComposableError` via `.fmt()` and `.format_with()`
+  - Example: `err.fmt().pretty().show_code(false).to_string()`
+
+- **Internal Abstraction**: Common abstractions for consistency
+  - `Accumulator<T>` - Unified accumulation logic for errors and contexts
+  - Replaces direct `ErrorVec` usage in both `ErrorPipeline` and `Validation`
+  - Implements `PartialOrd`, `Ord`, `Hash`, `FromIterator` for full compatibility
+
+- **Benchmark Suite Enhancements**: Comprehensive performance testing improvements
+  - **Expanded Coverage**: 30+ benchmarks (67% increase from 18 benchmarks)
+  - **Optimized Configuration**: Custom Criterion settings (100 samples, 3s warm-up, 5s measurement, 5% noise threshold)
+  - **9 Organized Groups**: Core operations, retry operations, error conversions, context operations, scaling tests, pipeline operations, validation operations, real-world scenarios, memory & allocation
+  - **Parameterized Scaling Tests**: Context depth (1-50 layers), validation batch size (10-5000 items), pipeline chain length (2-20 operations)
+  - **Retry Operations Coverage**: Transient error handling, recovery patterns, classification benchmarks
+  - **Error Conversion Patterns**: Type transformations (map_core, std::io → domain, serde → domain, conversion chains)
+  - **Real-World Scenarios**: HTTP request simulation, database transaction rollback, microservice error propagation with mixed success/error ratios
+  - **Memory Analysis**: Large metadata contexts, String vs static str allocation patterns
+  - **Throughput Measurements**: Elements per second metrics for batch operations
+
+### Changed - 0.7.0
+
+- **Module Consolidation**: Simplified trait organization
+  - Consolidated 6 separate trait files into single `traits/mod.rs`
+  - Removed: `error_category.rs`, `error_ops.rs`, `into_error_context.rs`, `result_ext.rs`, `transient.rs`, `with_error.rs`
+  - Easier navigation and clearer import paths
+
+- **Internal Improvements**: Enhanced type safety and consistency
+  - `ErrorPipeline` now uses `Accumulator<ErrorContext>` for context storage
+  - `Validation` now uses `Accumulator<E>` for error storage
+  - All internal accumulation logic unified through common abstraction
+
+### Breaking Changes - 0.7.0
+
+- **Removed deprecated macros**: `location!`, `tag!`, `metadata!`
+  - **Migration**: Use the `group!` macro instead
+  - **Before**: `err.with_context(location!()).with_context(tag!("db"))`
+  - **After**: `err.with_context(group!(location(file!(), line!()), tag("db")))`
+  - These macros were deprecated in 0.5.0 and have now been removed
+
+- **Removed deprecated methods**:
+  - `WithError::to_result()` - Use `to_result_first()` or `to_result_all()` instead
+  - `Validation::to_result()` - Use the `Validation::to_result()` method which returns `Result<A, ErrorVec<E>>`
+  - `result::to_result()` - Use trait methods directly
+  - These methods were deprecated in 0.6.0 and have now been removed
+
+### Removed - 0.7.0
+
+- Deprecated macros: `location!`, `tag!`, `metadata!` (use `group!` macro)
+- Deprecated methods: `WithError::to_result()`, old `Validation::to_result()`, `result::to_result()`
+
 ## [0.6.0]
 
 ### Deprecated - 0.6.0

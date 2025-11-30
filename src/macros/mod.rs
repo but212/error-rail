@@ -9,9 +9,6 @@
 //!   unboxed [`ComposableResult`](crate::types::ComposableResult) via `ErrorPipeline::finish`.
 //! - [`macro@crate::context`] - Defers formatting until the context is consumed, avoiding
 //!   unnecessary allocations on the success path.
-//! - [`macro@crate::location`] - Automatically captures the current file path and line number
-//!   using `file!()` and `line!()`.
-//! - [`macro@crate::tag`] - Attaches a short categorical label for filtering and searching.
 //! - [`macro@crate::group`] - Creates a lazily-evaluated grouped context that combines
 //!   multiple fields (message, tags, location, metadata) into one cohesive unit while deferring
 //!   all formatting until the error occurs.
@@ -168,63 +165,6 @@ macro_rules! rail_unboxed {
 macro_rules! context {
     ($($arg:tt)*) => {
         $crate::types::LazyContext::new(move || format!($($arg)*))
-    };
-}
-
-/// Captures the current source file and line number as error context.
-///
-/// This macro creates an [`ErrorContext::location`](crate::types::ErrorContext::location)
-/// using the `file!()` and `line!()` built-in macros.
-///
-/// # Deprecated
-///
-/// Use [`group!`](crate::group) instead since version 0.5.0.
-#[macro_export]
-#[deprecated(since = "0.5.0", note = "Use `group!` instead")]
-macro_rules! location {
-    () => {
-        $crate::types::ErrorContext::location(file!(), line!())
-    };
-}
-
-/// Creates a categorical tag for error classification.
-///
-/// This macro creates an [`ErrorContext::tag`](crate::types::ErrorContext::tag) that can be
-/// used to categorize and filter errors.
-///
-/// # Deprecated
-///
-/// Use [`group!`](crate::group) instead since version 0.5.0.
-///
-/// # Arguments
-///
-/// * `$tag` - A string or expression that can be converted into a tag
-#[macro_export]
-#[deprecated(since = "0.5.0", note = "Use `group!` instead")]
-macro_rules! tag {
-    ($tag:expr) => {
-        $crate::types::ErrorContext::tag($tag)
-    };
-}
-
-/// Creates a key-value metadata pair for structured error context.
-///
-/// This macro creates an [`ErrorContext::metadata`](crate::types::ErrorContext::metadata)
-/// entry.
-///
-/// # Deprecated
-///
-/// Use [`group!`](crate::group) instead since version 0.5.0.
-///
-/// # Arguments
-///
-/// * `$key` - The metadata key
-/// * `$value` - The metadata value
-#[macro_export]
-#[deprecated(since = "0.5.0", note = "Use `group!` instead")]
-macro_rules! metadata {
-    ($key:expr, $value:expr) => {
-        $crate::types::ErrorContext::metadata($key, $value)
     };
 }
 
@@ -398,5 +338,72 @@ macro_rules! backtrace {
 macro_rules! backtrace_force {
     () => {{
         $crate::types::LazyContext::new(|| std::backtrace::Backtrace::force_capture().to_string())
+    }};
+}
+
+/// Combines multiple `Validation` results into a single one.
+///
+/// This macro allows you to validate multiple fields in parallel and accumulate
+/// all errors if any occur. If all validations succeed, it returns a tuple
+/// containing the successful values.
+///
+/// # Syntax
+///
+/// ```rust,ignore
+/// validate!(
+///     field1 = validation_expr1,
+///     field2 = validation_expr2,
+///     ...
+/// )
+/// ```
+///
+/// # Returns
+///
+/// `Validation<E, (T1, T2, ...)>` where `T1`, `T2` are the success types of the expressions.
+///
+/// # Examples
+///
+/// ```
+/// use error_rail::{validate, validation::Validation};
+///
+/// let v1 = Validation::<&str, i32>::valid(1);
+/// let v2 = Validation::<&str, i32>::valid(2);
+///
+/// let result = validate!(
+///     a = v1,
+///     b = v2
+/// );
+///
+/// assert!(result.is_valid());
+/// assert_eq!(result.into_value(), Some((1, 2)));
+///
+/// let e1 = Validation::<&str, i32>::invalid("error1");
+/// let e2 = Validation::<&str, i32>::invalid("error2");
+///
+/// let result = validate!(
+///     a = e1,
+///     b = e2
+/// );
+///
+/// assert!(result.is_invalid());
+/// assert_eq!(result.into_errors().unwrap().len(), 2);
+/// ```
+#[macro_export]
+macro_rules! validate {
+    ($($key:ident = $val:expr),+ $(,)?) => {{
+        match ($($val),+) {
+            ( $( $crate::validation::Validation::Valid($key) ),+ ) => {
+                $crate::validation::Validation::Valid( ($($key),+) )
+            }
+            ( $( ref $key ),+ ) => {
+                let mut errors = $crate::ErrorVec::new();
+                $(
+                    if let $crate::validation::Validation::Invalid(e) = $key {
+                        errors.extend(e.iter().cloned());
+                    }
+                )+
+                $crate::validation::Validation::Invalid(errors.into())
+            }
+        }
     }};
 }

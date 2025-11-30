@@ -57,22 +57,6 @@ fn with_error_to_result_first_invalid_returns_first_error() {
 }
 
 #[test]
-#[allow(deprecated)]
-fn test_validation_to_result() {
-    let valid: Validation<&str, i32> = Validation::valid(42);
-    assert_eq!(
-        <Validation<&str, i32> as WithError<&str>>::to_result(valid),
-        Ok(42)
-    );
-
-    let invalid: Validation<&str, i32> = Validation::invalid("error");
-    assert_eq!(
-        <Validation<&str, i32> as WithError<&str>>::to_result(invalid),
-        Err("error")
-    );
-}
-
-#[test]
 fn test_validation_to_result_all() {
     let valid: Validation<&str, i32> = Validation::valid(42);
     assert_eq!(

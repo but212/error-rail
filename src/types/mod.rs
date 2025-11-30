@@ -17,21 +17,17 @@
 //! ```
 use smallvec::SmallVec;
 
+pub mod accumulator;
 pub mod alloc_type;
-
 pub mod composable_error;
 pub mod error_context;
 pub mod error_formatter;
 pub mod error_pipeline;
 pub mod lazy_context;
+pub mod retry;
 
-// Re-export from error_formatter (trait and config)
-pub use error_formatter::{ErrorFormatConfig, ErrorFormatter};
-
-// Re-export from composable_error (excluding ErrorFormatter struct to avoid ambiguity)
+pub use alloc_type::*;
 pub use composable_error::{ComposableError, FingerprintConfig};
-
-// Re-export everything else
 pub use error_context::*;
 pub use error_pipeline::*;
 pub use lazy_context::*;

@@ -64,22 +64,10 @@ impl<T, E> WithError<E> for Validation<E, T> {
     {
         match self {
             Validation::Valid(t) => Validation::Valid(t),
-            Validation::Invalid(e) => Validation::Invalid(e.into_iter().map(f).collect()),
+            Validation::Invalid(e) => {
+                Validation::Invalid(e.into_inner().into_iter().map(f).collect())
+            }
         }
-    }
-
-    /// Converts the validation to a result, taking only the first error if invalid.
-    ///
-    /// **⚠️ DEPRECATED**: Use [`to_result_first()`](Self::to_result_first) or
-    /// [`to_result_all()`](Self::to_result_all) for explicit error handling.
-    /// This method loses additional errors in multi-error scenarios.
-    ///
-    /// # Returns
-    ///
-    /// * `Ok(value)` if validation is valid
-    /// * `Err(first_error)` if validation is invalid (only the first error)
-    fn to_result(self) -> Result<Self::Success, E> {
-        self.to_result_first()
     }
 
     /// Converts the validation to a result, taking only the first error if invalid.
@@ -136,7 +124,7 @@ impl<T, E> WithError<E> for Validation<E, T> {
     fn to_result_all(self) -> Result<Self::Success, ErrorVec<E>> {
         match self {
             Validation::Valid(t) => Ok(t),
-            Validation::Invalid(e) => Err(e),
+            Validation::Invalid(e) => Err(e.into_inner()),
         }
     }
 }

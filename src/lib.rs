@@ -71,8 +71,19 @@ pub mod types;
 /// Validation type and associated traits for error accumulation
 pub mod validation;
 
+/// Advanced API level for library authors
+pub mod advanced;
+/// Intermediate API level for service developers
+pub mod intermediate;
+
+// Re-export common types that might be needed at root,
+// but encourage using prelude/intermediate/advanced modules.
 pub use context::*;
 pub use convert::*;
 pub use traits::*;
-pub use types::*;
+pub use types::{
+    error_formatter::ErrorFormatConfig, BoxedComposableResult, BoxedResult, ComposableError,
+    ComposableResult, ErrorContext, ErrorPipeline, ErrorVec, GroupContext, LazyContext,
+    LazyGroupContext,
+};
 pub use validation::*;
