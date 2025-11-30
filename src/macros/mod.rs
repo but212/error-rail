@@ -171,63 +171,6 @@ macro_rules! context {
     };
 }
 
-/// Captures the current source file and line number as error context.
-///
-/// This macro creates an [`ErrorContext::location`](crate::types::ErrorContext::location)
-/// using the `file!()` and `line!()` built-in macros.
-///
-/// # Deprecated
-///
-/// Use [`group!`](crate::group) instead since version 0.5.0.
-#[macro_export]
-#[deprecated(since = "0.5.0", note = "Use `group!` instead")]
-macro_rules! location {
-    () => {
-        $crate::types::ErrorContext::location(file!(), line!())
-    };
-}
-
-/// Creates a categorical tag for error classification.
-///
-/// This macro creates an [`ErrorContext::tag`](crate::types::ErrorContext::tag) that can be
-/// used to categorize and filter errors.
-///
-/// # Deprecated
-///
-/// Use [`group!`](crate::group) instead since version 0.5.0.
-///
-/// # Arguments
-///
-/// * `$tag` - A string or expression that can be converted into a tag
-#[macro_export]
-#[deprecated(since = "0.5.0", note = "Use `group!` instead")]
-macro_rules! tag {
-    ($tag:expr) => {
-        $crate::types::ErrorContext::tag($tag)
-    };
-}
-
-/// Creates a key-value metadata pair for structured error context.
-///
-/// This macro creates an [`ErrorContext::metadata`](crate::types::ErrorContext::metadata)
-/// entry.
-///
-/// # Deprecated
-///
-/// Use [`group!`](crate::group) instead since version 0.5.0.
-///
-/// # Arguments
-///
-/// * `$key` - The metadata key
-/// * `$value` - The metadata value
-#[macro_export]
-#[deprecated(since = "0.5.0", note = "Use `group!` instead")]
-macro_rules! metadata {
-    ($key:expr, $value:expr) => {
-        $crate::types::ErrorContext::metadata($key, $value)
-    };
-}
-
 /// Implements `IntoErrorContext` for a custom type.
 ///
 /// This macro simplifies the implementation of the [`IntoErrorContext`](crate::traits::IntoErrorContext)

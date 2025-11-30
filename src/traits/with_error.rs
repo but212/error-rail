@@ -51,28 +51,6 @@ pub trait WithError<E> {
 
     /// Converts the container into a `Result`, taking only the first error if invalid.
     ///
-    /// **⚠️ DEPRECATED**: Use [`to_result_first()`](Self::to_result_first) or
-    /// [`to_result_all()`](Self::to_result_all) for explicit error handling.
-    ///
-    /// For types that are already `Result`, this is a no-op.
-    /// For other types, this extracts the success/error into standard Result form.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use error_rail::traits::WithError;
-    ///
-    /// let result: Result<i32, &str> = Ok(42);
-    /// assert_eq!(result.to_result(), Ok(42));
-    /// ```
-    #[deprecated(
-        since = "0.6.0",
-        note = "Use to_result_first() or to_result_all() for explicit error handling"
-    )]
-    fn to_result(self) -> Result<Self::Success, E>;
-
-    /// Converts the container into a `Result`, taking only the first error if invalid.
-    ///
     /// This method explicitly indicates that only the first error will be returned,
     /// potentially losing additional errors in multi-error scenarios.
     ///
@@ -114,10 +92,6 @@ impl<T, E> WithError<E> for Result<T, E> {
             Ok(t) => Ok(t),
             Err(e) => Err(f(e)),
         }
-    }
-
-    fn to_result(self) -> Result<Self::Success, E> {
-        self.to_result_first()
     }
 
     fn to_result_first(self) -> Result<Self::Success, E> {

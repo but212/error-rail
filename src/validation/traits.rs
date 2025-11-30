@@ -70,20 +70,6 @@ impl<T, E> WithError<E> for Validation<E, T> {
 
     /// Converts the validation to a result, taking only the first error if invalid.
     ///
-    /// **⚠️ DEPRECATED**: Use [`to_result_first()`](Self::to_result_first) or
-    /// [`to_result_all()`](Self::to_result_all) for explicit error handling.
-    /// This method loses additional errors in multi-error scenarios.
-    ///
-    /// # Returns
-    ///
-    /// * `Ok(value)` if validation is valid
-    /// * `Err(first_error)` if validation is invalid (only the first error)
-    fn to_result(self) -> Result<Self::Success, E> {
-        self.to_result_first()
-    }
-
-    /// Converts the validation to a result, taking only the first error if invalid.
-    ///
     /// This method explicitly indicates that only the first error will be returned,
     /// potentially losing additional errors in multi-error scenarios.
     ///
