@@ -9,9 +9,6 @@
 //!   unboxed [`ComposableResult`](crate::types::ComposableResult) via `ErrorPipeline::finish`.
 //! - [`macro@crate::context`] - Defers formatting until the context is consumed, avoiding
 //!   unnecessary allocations on the success path.
-//! - [`macro@crate::location`] - Automatically captures the current file path and line number
-//!   using `file!()` and `line!()`.
-//! - [`macro@crate::tag`] - Attaches a short categorical label for filtering and searching.
 //! - [`macro@crate::group`] - Creates a lazily-evaluated grouped context that combines
 //!   multiple fields (message, tags, location, metadata) into one cohesive unit while deferring
 //!   all formatting until the error occurs.
