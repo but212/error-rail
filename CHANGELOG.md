@@ -49,10 +49,24 @@
 
 ### Deprecated - 0.7.0
 
-### Removed - 0.7.0
+### Breaking Changes - 0.7.0
 
 - **Removed deprecated macros**: `location!`, `tag!`, `metadata!`
-- **Removed deprecated methods**: `WithError::to_result()`, `Validation::to_result()`, `result::to_result()`
+  - **Migration**: Use the `group!` macro instead
+  - **Before**: `err.with_context(location!()).with_context(tag!("db"))`
+  - **After**: `err.with_context(group!(location(file!(), line!()), tag("db")))`
+  - These macros were deprecated in 0.5.0 and have now been removed
+
+- **Removed deprecated methods**:
+  - `WithError::to_result()` - Use `to_result_first()` or `to_result_all()` instead
+  - `Validation::to_result()` - Use the `Validation::to_result()` method which returns `Result<A, ErrorVec<E>>`
+  - `result::to_result()` - Use trait methods directly
+  - These methods were deprecated in 0.6.0 and have now been removed
+
+### Removed - 0.7.0
+
+- Deprecated macros: `location!`, `tag!`, `metadata!` (use `group!` macro)
+- Deprecated methods: `WithError::to_result()`, old `Validation::to_result()`, `result::to_result()`
 
 ### Fixed - 0.7.0
 

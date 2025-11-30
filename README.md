@@ -51,7 +51,7 @@ Or add to `Cargo.toml`:
 
 ```toml
 [dependencies]
-error-rail = "0.5"
+error-rail = "0.7"
 ```
 
 ## 30-Second Quick Start
@@ -80,6 +80,57 @@ fn main() {
 ```
 
 > **New to error-rail?** See the [Quick Start Guide](docs/QUICK_START.md) for step-by-step examples.
+
+## API Levels (New in 0.7.0)
+
+error-rail provides a 3-level API hierarchy to match your expertise level:
+
+### Beginner API (`prelude`)
+
+Start here! Everything you need for common error handling:
+
+```rust
+use error_rail::prelude::*;
+
+fn load_config() -> BoxedResult<String, std::io::Error> {
+    std::fs::read_to_string("config.toml")
+        .ctx("loading configuration")
+}
+```
+
+**Exports**: `ComposableError`, `ErrorContext`, `ErrorPipeline`, `rail!`, `context!`, `group!`, `ResultExt`, `BoxedResultExt`
+
+### Intermediate API (`intermediate`)
+
+Advanced patterns for service developers:
+
+```rust
+use error_rail::intermediate::*;
+
+// Classify errors as transient/permanent
+impl TransientError for MyError {
+    fn is_transient(&self) -> bool { /* ... */ }
+}
+
+// Custom error formatting
+let formatted = err.fmt().pretty().show_code(false).to_string();
+```
+
+**Exports**: `TransientError`, `ErrorFormatter`, `FingerprintConfig`
+
+### Advanced API (`advanced`)
+
+Low-level internals for library authors:
+
+```rust
+use error_rail::advanced::*;
+
+// Direct access to internal types
+let vec: ErrorVec<_> = /* ... */;
+let builder = ErrorContextBuilder::new();
+```
+
+**Exports**: `ErrorVec`, `ErrorContextBuilder`, `LazyContext`, `LazyGroupContext`, `GroupContext`
 
 ## Key Features
 
@@ -168,6 +219,18 @@ match results {
 // Output:
 // Error: age must be between 0 and 150
 // Error: name cannot be empty
+
+// New in 0.7.0: validate! macro for cleaner syntax
+use error_rail::validate;
+
+let age_result = validate_age(-5);
+let name_result = validate_name("");
+
+let combined = validate!(
+    age = age_result,
+    name = name_result
+);
+// Returns Validation<E, (i32, &str)> with all errors accumulated
 ```
 
 ### 4. Zero-Cost Lazy Context
@@ -392,7 +455,7 @@ ErrorPipeline::new(result)
 ```toml
 # Default (no_std compatible, requires alloc)
 [dependencies]
-error-rail = "0.5"
+error-rail = "0.7"
 
 # With std library support (e.g., for backtraces)
 [dependencies]
