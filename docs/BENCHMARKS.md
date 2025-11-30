@@ -47,8 +47,8 @@ start target/criterion/report/index.html
 core/error_creation     → 295.92 ns/iter  (Create basic error with context)
 core/error_clone        → 149.89 ns/iter  (Clone error for async/ownership transfer)
 core/error_arc_wrap     → 208.26 ns/iter  (Wrap error in Arc for sharing)
-core/ops_recover        → 1.28 ns/iter   (Recover from error with fallback)
-core/ops_bimap          → 1.54 ns/iter   (Transform error types)
+core/ops_recover        → 1.28 ns/iter    (Recover from error with fallback)
+core/ops_bimap          → 1.54 ns/iter    (Transform error types)
 ```
 
 ### Deep Cloning Scaling
@@ -66,9 +66,9 @@ depth=50  → 16.7 µs/iter  (1.6x from depth=20)
 
 ```text
 retry/transient_success  → 400.29 ns/iter  (Retry succeeds after transient error)
-retry/permanent_skip     → 57.99 ns/iter  (Skip retry for permanent errors - 7x faster)
+retry/permanent_skip     → 57.99 ns/iter   (Skip retry for permanent errors - 7x faster)
 retry/recover_transient  → 778.69 ns/iter  (Recover from transient error with retry)
-retry/retry_check        → 126.61 ns/iter  (Check if error should be retried)
+retry/should_retry_check → 126.61 ns/iter  (Check if error should be retried)
 ```
 
 ## 3. Error Conversions
@@ -84,21 +84,21 @@ conversions/conversion_chain → 452.73 ns/iter  (Chain multiple error conversio
 
 ## 4. Context Evaluation: Lazy vs Eager
 
-**Important**: The "baseline" tests use simple Result types without any ErrorRail functionality.
+**Important**: The "baseline" tests now use plain Result types without any ErrorRail functionality for accurate comparison.
 
 ```text
 Success Path:
-  context_lazy_success    → 612.98 ns/iter  (ErrorRail lazy evaluation)
-  context_eager_success   → 4,277.2 ns/iter  (ErrorRail eager evaluation)
-  context_baseline_success → 4,457.7 ns/iter  (Plain Result, no context)
+  context_lazy_success    → 605 ns/iter     (ErrorRail lazy evaluation)
+  context_eager_success   → 1,291 ns/iter   (ErrorRail eager evaluation)
+  context_baseline_success → 572 ns/iter    (Plain Result, no ErrorRail)
 
 Error Path:
-  context_lazy_error      → 914.37 ns/iter  (ErrorRail lazy evaluation)
-  context_eager_error     → 801.70 ns/iter  (ErrorRail eager evaluation)
-  context_baseline_error  → 84.18 ns/iter   (Plain Result, no context)
+  context_lazy_error      → 894 ns/iter     (ErrorRail lazy evaluation)
+  context_eager_error     → 796 ns/iter     (ErrorRail eager evaluation)
+  context_baseline_error  → 65 ns/iter      (Plain Result, no ErrorRail)
 ```
 
-**Key Insight**: ErrorRail's lazy evaluation is 7x faster than eager on success paths. The baseline error path is faster because it performs minimal error handling without context creation.
+**Key Insight**: ErrorRail's lazy evaluation adds only 6% overhead vs plain Result on success paths (605ns vs 572ns). The baseline error path is faster because it performs minimal error handling without context creation.
 
 ## 5. Scaling Tests
 

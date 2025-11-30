@@ -369,9 +369,10 @@ fn bench_context_lazy_vs_eager_success(c: &mut Criterion) {
     });
 
     group.bench_function("baseline_success", |b| {
+        let user = UserData::new(1); // Pre-allocate to match other benchmarks
         b.iter(|| {
-            let result: Result<UserData, &str> = Ok(UserData::new(1));
-            let _ = ErrorPipeline::new(result).finish();
+            let result: Result<UserData, &str> = Ok(user.clone());
+            let _ = black_box(result);
         })
     });
 
@@ -404,10 +405,10 @@ fn bench_context_lazy_vs_eager_error(c: &mut Criterion) {
     });
 
     group.bench_function("baseline_error", |b| {
+        let error = DomainError::Validation("Email format invalid".to_string()); // Pre-allocate
         b.iter(|| {
-            let result: Result<UserData, DomainError> =
-                Err(DomainError::Validation("Email format invalid".to_string()));
-            let _ = ErrorPipeline::new(result).finish();
+            let result: Result<UserData, DomainError> = Err(error.clone());
+            let _ = black_box(result);
         })
     });
 
