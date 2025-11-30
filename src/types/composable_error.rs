@@ -383,12 +383,12 @@ impl<E> ComposableError<E> {
     /// Formats the error chain using a custom formatter.
     ///
     /// This method allows you to customize how the error chain is formatted
-    /// by providing a custom [`crate::ErrorFormatter`] implementation or using
+    /// by providing a custom formatter implementation or using
     /// one of the built-in configurations.
     ///
     /// # Arguments
     ///
-    /// * `formatter` - Any type implementing [`crate::ErrorFormatter`]
+    /// * `formatter` - A closure that configures the error formatter
     ///
     /// # Examples
     ///
