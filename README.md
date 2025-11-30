@@ -30,13 +30,13 @@ Most error handling libraries format context eagerly—even on success paths whe
 | Validation overhead        | ~5% vs manual collection         |
 | Validation throughput      | 5.37 M elements/sec (5000 items) |
 
-### **Critical Performance Advantages**
+### **Performance Advantages**
 
-| Feature                      | Performance Gain               | Real-world Impact                          |
-|------------------------------|--------------------------------|--------------------------------------------|
-| **Lazy vs eager evaluation** | **7x faster** on success paths | Dominant benefit - most operations succeed |
-| **Static str vs String**     | **13x faster** allocation      | Use `&'static str` when possible           |
-| **Permanent error retry**    | **7x faster** than transient   | Smart error classification matters         |
+| Feature                                | Performance Gain                              | Real-world Impact                          |
+|----------------------------------------|-----------------------------------------------|--------------------------------------------|
+| **Lazy context!() vs eager format!()** | **7x faster** on success paths (within error-rail) | Primary benefit - most operations succeed |
+| **Static str vs String**               | **13x faster** allocation                     | Use `&'static str` when possible           |
+| **Permanent error retry**              | **7x faster** than transient                  | Smart error classification matters         |
 
 ### **Key Performance Insights**
 
@@ -46,7 +46,7 @@ Most error handling libraries format context eagerly—even on success paths whe
 - **Scaling**: Context depth scales linearly (50 layers = 12µs)
 - **Throughput**: Validation maintains 5.37 M elements/sec at 5000 items
 
-> **Why lazy evaluation matters**: Since most operations succeed (95%+ in production), the 7x speedup on success paths provides significant real-world performance gains, making error handling virtually free on the happy path.
+> **Why lazy evaluation matters**: Since most operations succeed (95%+ in production), the 7x speedup of `context!()` vs `format!()` within error-rail provides meaningful real-world performance gains, keeping error handling efficient on the happy path.
 
 ## Requirements
 
@@ -245,7 +245,7 @@ let combined = validate!(
 // Returns Validation<E, (i32, &str)> with all errors accumulated
 ```
 
-### 4. Zero-Cost Lazy Context
+### 4. Efficient Lazy Context
 
 The `context!` macro defers string formatting until an error actually occurs.
 
@@ -261,13 +261,13 @@ fn process(data: &LargePayload) -> Result<(), &'static str> {
 
 let payload = LargePayload { /* ... */ };
 
-// format!() is NEVER called on success path
+// format!() is not called on success path
 let result = ErrorPipeline::new(process(&payload))
     .with_context(context!("processing payload: {:?}", payload))
     .finish_boxed();
 ```
 
-> **Performance**: In benchmarks, lazy context adds near-zero overhead on success. Eager formatting can be orders of magnitude slower.
+> **Performance**: In benchmarks, lazy context adds minimal overhead on success. Eager formatting can be significantly slower.
 
 ### When to Use `.ctx()` vs `context!()`
 
