@@ -459,15 +459,15 @@ error-rail = "0.7"
 
 # With std library support (e.g., for backtraces)
 [dependencies]
-error-rail = { version = "0.5", features = ["std"] }
+error-rail = { version = "0.7", features = ["std"] }
 
 # With serialization support
 [dependencies]
-error-rail = { version = "0.5", features = ["serde"] }
+error-rail = { version = "0.7", features = ["serde"] }
 
 # All features enabled
 [dependencies]
-error-rail = { version = "0.5", features = ["full"] }
+error-rail = { version = "0.7", features = ["full"] }
 ```
 
 ### `no_std` Support
@@ -477,7 +477,7 @@ error-rail = { version = "0.5", features = ["full"] }
 ```toml
 # Minimal no_std usage
 [dependencies]
-error-rail = { version = "0.5", default-features = false }
+error-rail = { version = "0.7", default-features = false }
 ```
 
 > **Note**: Some features like `backtrace!` require the `std` feature.
