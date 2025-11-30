@@ -1,7 +1,7 @@
+use crate::types::accumulator::Accumulator;
 use crate::types::ErrorVec;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
-use smallvec::smallvec;
 
 /// Applicative-style validation that accumulates many errors instead of failing fast.
 ///
@@ -23,7 +23,7 @@ use smallvec::smallvec;
 /// # Variants
 ///
 /// * `Valid(A)` - Contains a successful value
-/// * `Invalid(ErrorVec<E>)` - Contains one or more errors
+/// * `Invalid(Accumulator<E>)` - Contains one or more accumulated errors
 ///
 /// # Examples
 ///
@@ -41,7 +41,7 @@ use smallvec::smallvec;
 #[derive(Clone, PartialEq, PartialOrd, Eq, Ord, Debug, Hash)]
 pub enum Validation<E, A> {
     Valid(A),
-    Invalid(ErrorVec<E>),
+    Invalid(Accumulator<E>),
 }
 
 impl<E, A> Validation<E, A> {
@@ -80,7 +80,9 @@ impl<E, A> Validation<E, A> {
     /// ```
     #[inline]
     pub fn invalid(error: E) -> Self {
-        Self::Invalid(smallvec![error])
+        let mut acc = Accumulator::new();
+        acc.push(error);
+        Self::Invalid(acc)
     }
 
     /// Creates an invalid value from an iterator of errors.
@@ -103,7 +105,9 @@ impl<E, A> Validation<E, A> {
     where
         I: IntoIterator<Item = E>,
     {
-        Self::Invalid(errors.into_iter().collect())
+        let mut acc = Accumulator::new();
+        acc.extend(errors);
+        Self::Invalid(acc)
     }
 
     /// Returns `true` if the validation contains a value.
@@ -229,7 +233,7 @@ impl<E, A> Validation<E, A> {
     {
         match self {
             Self::Valid(value) => Validation::Valid(value),
-            Self::Invalid(errors) => op(errors),
+            Self::Invalid(errors) => op(errors.into_inner()),
         }
     }
 
@@ -264,7 +268,7 @@ impl<E, A> Validation<E, A> {
             (Validation::Invalid(e), Validation::Valid(_)) => Validation::Invalid(e),
             (Validation::Valid(_), Validation::Invalid(e)) => Validation::Invalid(e),
             (Validation::Invalid(mut e1), Validation::Invalid(e2)) => {
-                e1.extend(e2);
+                e1.extend(e2.into_inner());
                 Validation::Invalid(e1)
             }
         }
@@ -295,7 +299,11 @@ impl<E, A> Validation<E, A> {
     {
         match self {
             Self::Valid(value) => Validation::Valid(value),
-            Self::Invalid(errors) => Validation::Invalid(errors.into_iter().map(f).collect()),
+            Self::Invalid(errors) => {
+                let mut acc = Accumulator::new();
+                acc.extend(errors.into_inner().into_iter().map(f));
+                Validation::Invalid(acc)
+            }
         }
     }
 
@@ -318,7 +326,7 @@ impl<E, A> Validation<E, A> {
     pub fn to_result(self) -> Result<A, ErrorVec<E>> {
         match self {
             Self::Valid(value) => Ok(value),
-            Self::Invalid(errors) => Err(errors),
+            Self::Invalid(errors) => Err(errors.into_inner()),
         }
     }
 
@@ -362,7 +370,7 @@ impl<E, A> Validation<E, A> {
     pub fn into_errors(self) -> Option<ErrorVec<E>> {
         match self {
             Self::Valid(_) => None,
-            Self::Invalid(errors) => Some(errors),
+            Self::Invalid(errors) => Some(errors.into_inner()),
         }
     }
 

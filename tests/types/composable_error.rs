@@ -211,7 +211,7 @@ fn test_fingerprint_tag_order_independence() {
 
 #[test]
 fn test_error_chain_with_custom_formatter() {
-    use error_rail::ErrorFormatter;
+    use error_rail::types::error_formatter::ErrorFormatter;
 
     struct CustomFormatter;
     impl ErrorFormatter for CustomFormatter {

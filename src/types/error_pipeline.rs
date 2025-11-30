@@ -1,7 +1,8 @@
 use crate::traits::TransientError;
+use crate::types::accumulator::Accumulator;
 use crate::types::alloc_type::Box;
 use crate::types::composable_error::ComposableError;
-use crate::{ComposableResult, ErrorContext, ErrorVec, IntoErrorContext};
+use crate::{ComposableResult, ErrorContext, IntoErrorContext};
 
 #[cfg(not(feature = "std"))]
 use alloc::format;
@@ -37,7 +38,7 @@ use std::format;
 #[must_use]
 pub struct ErrorPipeline<T, E> {
     result: Result<T, E>,
-    pending_contexts: ErrorVec<ErrorContext>,
+    pending_contexts: Accumulator<ErrorContext>,
 }
 
 impl<T, E> ErrorPipeline<T, E> {
@@ -67,7 +68,7 @@ impl<T, E> ErrorPipeline<T, E> {
     pub fn new(result: Result<T, E>) -> Self {
         Self {
             result,
-            pending_contexts: ErrorVec::new(),
+            pending_contexts: Accumulator::new(),
         }
     }
 
@@ -102,11 +103,29 @@ impl<T, E> ErrorPipeline<T, E> {
         self
     }
 
-    /// Transforms the error type using a mapping function.
+    /// Alias for `with_context`.
     ///
-    /// Preserves all pending contexts while converting the error to a new type.
+    /// Adds a context entry to the pending context stack.
+    #[inline]
+    pub fn context<C>(self, context: C) -> Self
+    where
+        C: IntoErrorContext,
+    {
+        self.with_context(context)
+    }
+
+    /// Transforms the pipeline using a function.
     ///
-    /// # Arguments
+    /// This is a generic step function that can be used for chaining operations.
+    /// Currently behaves like `and_then`.
+    #[inline]
+    pub fn step<U, F>(self, f: F) -> ErrorPipeline<U, E>
+    where
+        F: FnOnce(T) -> Result<U, E>,
+    {
+        self.and_then(f)
+    }
+
     ///
     /// * `f` - Function to transform the error
     ///
@@ -163,7 +182,7 @@ impl<T, E> ErrorPipeline<T, E> {
             Err(e) => match recovery(e) {
                 Ok(v) => ErrorPipeline {
                     result: Ok(v),
-                    pending_contexts: ErrorVec::new(),
+                    pending_contexts: Accumulator::new(),
                 },
                 Err(e) => ErrorPipeline {
                     result: Err(e),
@@ -202,7 +221,7 @@ impl<T, E> ErrorPipeline<T, E> {
             },
             Err(_) => ErrorPipeline {
                 result: Ok(value),
-                pending_contexts: ErrorVec::new(),
+                pending_contexts: Accumulator::new(),
             },
         }
     }
@@ -236,7 +255,7 @@ impl<T, E> ErrorPipeline<T, E> {
             },
             Err(e) => ErrorPipeline {
                 result: Ok(f(e)),
-                pending_contexts: ErrorVec::new(),
+                pending_contexts: Accumulator::new(),
             },
         }
     }
@@ -446,7 +465,7 @@ impl<T, E> ErrorPipeline<T, E> {
             Err(e) if e.is_transient() => match recovery(e) {
                 Ok(v) => ErrorPipeline {
                     result: Ok(v),
-                    pending_contexts: ErrorVec::new(),
+                    pending_contexts: Accumulator::new(),
                 },
                 Err(e) => ErrorPipeline {
                     result: Err(e),

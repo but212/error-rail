@@ -4,7 +4,48 @@
 
 ### Added - 0.7.0
 
+- **API Layering**: Introduced 3-level API hierarchy for different user expertise levels
+  - **Beginner API** (`prelude`): Minimal exports for quick starts - `ComposableError`, `ErrorContext`, `ErrorPipeline`, `rail!`, `context!`, `group!` macros
+  - **Intermediate API** (`intermediate`): Advanced patterns - `TransientError`, `ErrorFormatter`, fingerprinting
+  - **Advanced API** (`advanced`): Low-level internals for library authors - `ErrorVec`, `ErrorContextBuilder`, `LazyContext`, internal types
+
+- **ErrorPipeline Enhancements**: New builder methods for improved ergonomics
+  - `.context()` - Alias for `with_context()` for more fluent API
+  - `.step()` - Generic chaining function for operations
+  - `.error_ops()` - Groups error handling strategies (recovery, retry, fingerprinting)
+  - `.retry()` - Integrates `RetryOps` for configuring retry policies
+
+- **Validation Normalization**: Simplified validation workflow
+  - `validation::prelude` - Common validation exports in one place
+  - `validate!` macro - DSL for combining multiple validations, automatically accumulates errors
+
+- **RetryOps Integration**: Structured retry support
+  - `RetryOps` struct encapsulates retry-related operations
+  - Methods: `is_transient()`, `max_retries()`, `after_hint()`
+  - Integrated into `ErrorPipeline` via `.retry()` method
+
+- **ErrorFormatter Integration**: Unified formatting configuration
+  - `ErrorFormatBuilder` - Builder API for customizing error display
+  - Methods: `with_separator()`, `reverse_context()`, `show_code()`, `pretty()`, `compact()`
+  - Integrated into `ComposableError` via `.fmt()` and `.format_with()`
+  - Example: `err.fmt().pretty().show_code(false).to_string()`
+
+- **Internal Abstraction**: Common abstractions for consistency
+  - `Accumulator<T>` - Unified accumulation logic for errors and contexts
+  - Replaces direct `ErrorVec` usage in both `ErrorPipeline` and `Validation`
+  - Implements `PartialOrd`, `Ord`, `Hash`, `FromIterator` for full compatibility
+
 ### Changed - 0.7.0
+
+- **Module Consolidation**: Simplified trait organization
+  - Consolidated 6 separate trait files into single `traits/mod.rs`
+  - Removed: `error_category.rs`, `error_ops.rs`, `into_error_context.rs`, `result_ext.rs`, `transient.rs`, `with_error.rs`
+  - Easier navigation and clearer import paths
+
+- **Internal Improvements**: Enhanced type safety and consistency
+  - `ErrorPipeline` now uses `Accumulator<ErrorContext>` for context storage
+  - `Validation` now uses `Accumulator<E>` for error storage
+  - All internal accumulation logic unified through common abstraction
 
 ### Deprecated - 0.7.0
 

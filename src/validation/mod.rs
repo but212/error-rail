@@ -24,6 +24,7 @@
 //! ```
 pub mod core;
 pub mod iter;
+pub mod prelude;
 pub mod traits;
 
 pub use self::core::*;

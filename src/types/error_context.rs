@@ -30,7 +30,7 @@
 //! assert_eq!(msg.message(), "database connection failed");
 //! assert!(ctx.message().contains("[db]"));
 //! ```
-use crate::alloc_type::String;
+use crate::types::alloc_type::String;
 use crate::types::alloc_type::{Cow, Vec};
 use crate::ErrorVec;
 use core::fmt::Display;

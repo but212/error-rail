@@ -354,13 +354,30 @@ impl<E> ComposableError<E> {
     /// ```
     #[must_use]
     #[inline]
-    pub fn fmt(&self) -> ErrorFormatter<'_, E> {
-        ErrorFormatter {
-            error: self,
-            separator: " -> ",
-            reverse_context: false,
-            show_code: true,
-        }
+    pub fn fmt(&self) -> crate::types::error_formatter::ErrorFormatBuilder<'_, E> {
+        crate::types::error_formatter::ErrorFormatBuilder::new(self)
+    }
+
+    /// Formats the error using a closure to configure the builder.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use error_rail::ComposableError;
+    ///
+    /// let err = ComposableError::new("error");
+    /// let s = err.format_with(|fmt| fmt.pretty().show_code(false));
+    /// ```
+    #[must_use]
+    pub fn format_with<F>(&self, f: F) -> String
+    where
+        E: Display,
+        F: FnOnce(
+            crate::types::error_formatter::ErrorFormatBuilder<'_, E>,
+        ) -> crate::types::error_formatter::ErrorFormatBuilder<'_, E>,
+    {
+        let builder = self.fmt();
+        f(builder).to_string()
     }
 
     /// Formats the error chain using a custom formatter.

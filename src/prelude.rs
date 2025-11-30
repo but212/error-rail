@@ -65,11 +65,10 @@
 // Macros
 pub use crate::{context, group, rail, rail_unboxed};
 
-// Core types
-pub use crate::types::lazy_context::LazyGroupContext;
+// Core types (Beginner friendly)
 pub use crate::types::{ComposableError, ErrorContext, ErrorPipeline};
 
-// Traits
+// Traits (Essential for method syntax)
 pub use crate::traits::{BoxedResultExt, IntoErrorContext, ResultExt};
 
 // Convenient type alias

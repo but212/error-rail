@@ -340,3 +340,70 @@ macro_rules! backtrace_force {
         $crate::types::LazyContext::new(|| std::backtrace::Backtrace::force_capture().to_string())
     }};
 }
+
+/// Combines multiple `Validation` results into a single one.
+///
+/// This macro allows you to validate multiple fields in parallel and accumulate
+/// all errors if any occur. If all validations succeed, it returns a tuple
+/// containing the successful values.
+///
+/// # Syntax
+///
+/// ```rust,ignore
+/// validate!(
+///     field1 = validation_expr1,
+///     field2 = validation_expr2,
+///     ...
+/// )
+/// ```
+///
+/// # Returns
+///
+/// `Validation<E, (T1, T2, ...)>` where `T1`, `T2` are the success types of the expressions.
+///
+/// # Examples
+///
+/// ```
+/// use error_rail::{validate, validation::Validation};
+///
+/// let v1 = Validation::<&str, i32>::valid(1);
+/// let v2 = Validation::<&str, i32>::valid(2);
+///
+/// let result = validate!(
+///     a = v1,
+///     b = v2
+/// );
+///
+/// assert!(result.is_valid());
+/// assert_eq!(result.into_value(), Some((1, 2)));
+///
+/// let e1 = Validation::<&str, i32>::invalid("error1");
+/// let e2 = Validation::<&str, i32>::invalid("error2");
+///
+/// let result = validate!(
+///     a = e1,
+///     b = e2
+/// );
+///
+/// assert!(result.is_invalid());
+/// assert_eq!(result.into_errors().unwrap().len(), 2);
+/// ```
+#[macro_export]
+macro_rules! validate {
+    ($($key:ident = $val:expr),+ $(,)?) => {{
+        match ($($val),+) {
+            ( $( $crate::validation::Validation::Valid($key) ),+ ) => {
+                $crate::validation::Validation::Valid( ($($key),+) )
+            }
+            ( $( ref $key ),+ ) => {
+                let mut errors = $crate::ErrorVec::new();
+                $(
+                    if let $crate::validation::Validation::Invalid(e) = $key {
+                        errors.extend(e.clone().into_inner());
+                    }
+                )+
+                $crate::validation::Validation::Invalid(errors.into())
+            }
+        }
+    }};
+}

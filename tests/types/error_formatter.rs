@@ -1,7 +1,8 @@
 use core::fmt::Display;
 use error_rail::types::alloc_type::Vec;
 
-use error_rail::{error_formatter::ErrorFormatter, ErrorFormatConfig};
+use error_rail::types::error_formatter::ErrorFormatConfig;
+use error_rail::types::error_formatter::ErrorFormatter;
 
 struct TestDisplay(String);
 

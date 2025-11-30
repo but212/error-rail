@@ -64,7 +64,9 @@ impl<T, E> WithError<E> for Validation<E, T> {
     {
         match self {
             Validation::Valid(t) => Validation::Valid(t),
-            Validation::Invalid(e) => Validation::Invalid(e.into_iter().map(f).collect()),
+            Validation::Invalid(e) => {
+                Validation::Invalid(e.into_inner().into_iter().map(f).collect())
+            }
         }
     }
 
@@ -122,7 +124,7 @@ impl<T, E> WithError<E> for Validation<E, T> {
     fn to_result_all(self) -> Result<Self::Success, ErrorVec<E>> {
         match self {
             Validation::Valid(t) => Ok(t),
-            Validation::Invalid(e) => Err(e),
+            Validation::Invalid(e) => Err(e.into_inner()),
         }
     }
 }
