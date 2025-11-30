@@ -114,6 +114,34 @@ impl<T, E> ErrorPipeline<T, E> {
         self.with_context(context)
     }
 
+    /// Creates a retry operations builder for this pipeline.
+    ///
+    /// Returns a `RetryOps` wrapper that provides fluent methods for configuring
+    /// retry behavior and checking transient error states.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use error_rail::{ErrorPipeline, traits::TransientError};
+    /// use core::time::Duration;
+    ///
+    /// #[derive(Debug)]
+    /// struct NetworkError;
+    ///
+    /// impl TransientError for NetworkError {
+    ///     fn is_transient(&self) -> bool { true }
+    /// }
+    ///
+    /// let pipeline: ErrorPipeline<(), NetworkError> = ErrorPipeline::new(Err(NetworkError));
+    /// let retry_ops = pipeline.retry()
+    ///     .max_retries(3)
+    ///     .after_hint(Duration::from_secs(1));
+    /// ```
+    #[inline]
+    pub fn retry(self) -> crate::types::retry::RetryOps<T, E> {
+        crate::types::retry::RetryOps { pipeline: self }
+    }
+
     /// Transforms the pipeline using a function.
     ///
     /// This is a generic step function that can be used for chaining operations.
