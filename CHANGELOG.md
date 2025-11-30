@@ -14,6 +14,7 @@
   - `.step()` - Generic chaining function for operations
   - `.error_ops()` - Groups error handling strategies (recovery, retry, fingerprinting)
   - `.retry()` - Integrates `RetryOps` for configuring retry policies
+  - **RetryOps Helper**: Added `to_error_pipeline()` method for converting RetryOps back to ErrorPipeline
 
 - **Validation Normalization**: Simplified validation workflow
   - `validation::prelude` - Common validation exports in one place
@@ -34,6 +35,17 @@
   - `Accumulator<T>` - Unified accumulation logic for errors and contexts
   - Replaces direct `ErrorVec` usage in both `ErrorPipeline` and `Validation`
   - Implements `PartialOrd`, `Ord`, `Hash`, `FromIterator` for full compatibility
+
+- **Benchmark Suite Enhancements**: Comprehensive performance testing improvements
+  - **Expanded Coverage**: 30+ benchmarks (67% increase from 18 benchmarks)
+  - **Optimized Configuration**: Custom Criterion settings (100 samples, 3s warm-up, 5s measurement, 5% noise threshold)
+  - **9 Organized Groups**: Core operations, retry operations, error conversions, context operations, scaling tests, pipeline operations, validation operations, real-world scenarios, memory & allocation
+  - **Parameterized Scaling Tests**: Context depth (1-50 layers), validation batch size (10-5000 items), pipeline chain length (2-20 operations)
+  - **Retry Operations Coverage**: Transient error handling, recovery patterns, classification benchmarks
+  - **Error Conversion Patterns**: Type transformations (map_core, std::io → domain, serde → domain, conversion chains)
+  - **Real-World Scenarios**: HTTP request simulation, database transaction rollback, microservice error propagation with mixed success/error ratios
+  - **Memory Analysis**: Large metadata contexts, String vs static str allocation patterns
+  - **Throughput Measurements**: Elements per second metrics for batch operations
 
 ### Changed - 0.7.0
 
