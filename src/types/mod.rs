@@ -27,7 +27,7 @@ pub mod lazy_context;
 pub mod retry;
 
 pub use alloc_type::*;
-pub use composable_error::{ComposableError, FingerprintConfig};
+pub use composable_error::{ComposableError, FingerprintConfig, FingerprintOptions};
 pub use error_context::*;
 pub use error_pipeline::*;
 pub use lazy_context::*;

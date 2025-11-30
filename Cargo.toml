@@ -15,6 +15,7 @@ rust-version = "1.81.0"
 msrv = "1.81.0"
 
 [dependencies]
+bitflags = "2.10.0"
 serde = { version = "1.0", default-features = false, features = [
     "derive",
     "alloc",

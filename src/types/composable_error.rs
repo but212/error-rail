@@ -22,6 +22,7 @@ use core::fmt::{Debug, Display};
 use crate::traits::IntoErrorContext;
 use crate::types::alloc_type::String;
 use crate::types::{ErrorContext, ErrorVec};
+use bitflags::bitflags;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -568,13 +569,7 @@ impl<E> ComposableError<E> {
     /// ```
     #[must_use]
     pub fn fingerprint_config(&self) -> FingerprintConfig<'_, E> {
-        FingerprintConfig {
-            error: self,
-            include_tags: true,
-            include_code: true,
-            include_message: true,
-            include_metadata: false,
-        }
+        FingerprintConfig::new(self)
     }
 }
 
@@ -729,49 +724,86 @@ impl<E> From<E> for ComposableError<E> {
     }
 }
 
-/// Configuration builder for customizing fingerprint generation.
-///
-/// This struct allows fine-grained control over which error components
-/// are included when computing the fingerprint.
-///
-/// # Examples
-///
-/// ```
-/// use error_rail::{ComposableError, ErrorContext};
-///
-/// let err = ComposableError::new("database timeout")
-///     .with_context(ErrorContext::tag("db"))
-///     .with_context(ErrorContext::metadata("table", "users"))
-///     .set_code(504);
-///
-/// // Include only tags and code, ignore message for broader grouping
-/// let fp1 = err.fingerprint_config()
-///     .include_message(false)
-///     .compute();
-///
-/// // Include everything for precise matching
-/// let fp2 = err.fingerprint_config()
-///     .include_metadata(true)
-///     .compute();
-///
-/// // Different configurations produce different fingerprints
-/// assert_ne!(fp1, fp2);
-/// ```
+bitflags! {
+    /// Configuration builder for customizing fingerprint generation.
+    ///
+    /// This struct allows fine-grained control over which error components
+    /// are included when computing the fingerprint.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use error_rail::{ComposableError, ErrorContext};
+    ///
+    /// let err = ComposableError::new("database timeout")
+    ///     .with_context(ErrorContext::tag("db"))
+    ///     .with_context(ErrorContext::metadata("table", "users"))
+    ///     .set_code(504);
+    ///
+    /// // Include only tags and code, ignore message for broader grouping
+    /// let fp1 = err.fingerprint_config()
+    ///     .include_message(false)
+    ///     .compute();
+    ///
+    /// // Include everything for precise matching
+    /// let fp2 = err.fingerprint_config()
+    ///     .include_metadata(true)
+    ///     .compute();
+    ///
+    /// // Different configurations produce different fingerprints
+    /// assert_ne!(fp1, fp2);
+    /// ```
+    ///
+    /// Options for fingerprint generation, specifying which components to include.
+    ///
+    /// This provides a memory-efficient way to configure fingerprint generation
+    /// using bit flags instead of individual boolean fields.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    pub struct FingerprintOptions: u8 {
+        /// Include error tags in fingerprint (default: enabled).
+        const TAGS = 0b0001;
+        /// Include error code in fingerprint (default: enabled).
+        const CODE = 0b0010;
+        /// Include core error message in fingerprint (default: enabled).
+        const MESSAGE = 0b0100;
+        /// Include metadata in fingerprint (default: disabled).
+        const METADATA = 0b1000;
+        /// All standard options (tags, code, message) - excludes metadata.
+        const DEFAULT = Self::TAGS.bits() | Self::CODE.bits() | Self::MESSAGE.bits();
+        /// All possible options including metadata.
+        const ALL = Self::DEFAULT.bits() | Self::METADATA.bits();
+    }
+}
+
+impl Default for FingerprintOptions {
+    fn default() -> Self {
+        Self::DEFAULT
+    }
+}
+
 pub struct FingerprintConfig<'a, E> {
     error: &'a ComposableError<E>,
-    include_tags: bool,
-    include_code: bool,
-    include_message: bool,
-    include_metadata: bool,
+    options: FingerprintOptions,
 }
 
 impl<'a, E> FingerprintConfig<'a, E> {
+    /// Creates a new fingerprint configuration with default options.
+    ///
+    /// Default includes tags, code, and message, but excludes metadata.
+    #[inline]
+    pub fn new(error: &'a ComposableError<E>) -> Self {
+        Self {
+            error,
+            options: FingerprintOptions::default(),
+        }
+    }
+
     /// Whether to include tags in the fingerprint (default: true).
     ///
     /// Tags are useful for categorizing errors by subsystem (e.g., "db", "network").
     #[must_use]
     pub fn include_tags(mut self, include: bool) -> Self {
-        self.include_tags = include;
+        self.options.set(FingerprintOptions::TAGS, include);
         self
     }
 
@@ -780,7 +812,7 @@ impl<'a, E> FingerprintConfig<'a, E> {
     /// Error codes provide semantic meaning (e.g., HTTP status codes).
     #[must_use]
     pub fn include_code(mut self, include: bool) -> Self {
-        self.include_code = include;
+        self.options.set(FingerprintOptions::CODE, include);
         self
     }
 
@@ -790,7 +822,7 @@ impl<'a, E> FingerprintConfig<'a, E> {
     /// messages contain variable data (e.g., timestamps, IDs).
     #[must_use]
     pub fn include_message(mut self, include: bool) -> Self {
-        self.include_message = include;
+        self.options.set(FingerprintOptions::MESSAGE, include);
         self
     }
 
@@ -799,8 +831,34 @@ impl<'a, E> FingerprintConfig<'a, E> {
     /// Metadata often contains variable data, so it's excluded by default.
     #[must_use]
     pub fn include_metadata(mut self, include: bool) -> Self {
-        self.include_metadata = include;
+        self.options.set(FingerprintOptions::METADATA, include);
         self
+    }
+
+    /// Sets fingerprint options directly using bitflags.
+    ///
+    /// This provides direct access to all bitflag combinations for advanced usage.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use error_rail::{ComposableError, FingerprintOptions};
+    ///
+    /// let err = ComposableError::new("error").set_code(500);
+    /// let fp = err.fingerprint_config()
+    ///     .with_options(FingerprintOptions::TAGS | FingerprintOptions::CODE)
+    ///     .compute();
+    /// ```
+    #[must_use]
+    pub fn with_options(mut self, options: FingerprintOptions) -> Self {
+        self.options = options;
+        self
+    }
+
+    /// Returns the current fingerprint options.
+    #[must_use]
+    pub fn options(&self) -> FingerprintOptions {
+        self.options
     }
 
     /// Computes the fingerprint using the configured options.
@@ -824,7 +882,7 @@ impl<'a, E> FingerprintConfig<'a, E> {
         };
 
         // Include tags in sorted order
-        if self.include_tags {
+        if self.options.contains(FingerprintOptions::TAGS) {
             let mut tags: crate::types::alloc_type::Vec<_> = self
                 .error
                 .context
@@ -852,7 +910,7 @@ impl<'a, E> FingerprintConfig<'a, E> {
         }
 
         // Include error code
-        if self.include_code {
+        if self.options.contains(FingerprintOptions::CODE) {
             if let Some(code) = self.error.error_code {
                 hash_bytes(b"code:");
                 hash_bytes(&code.to_le_bytes());
@@ -860,13 +918,13 @@ impl<'a, E> FingerprintConfig<'a, E> {
         }
 
         // Include core error message
-        if self.include_message {
+        if self.options.contains(FingerprintOptions::MESSAGE) {
             hash_bytes(b"msg:");
             hash_bytes(self.error.core_error.to_string().as_bytes());
         }
 
         // Include metadata
-        if self.include_metadata {
+        if self.options.contains(FingerprintOptions::METADATA) {
             let mut metadata: crate::types::alloc_type::Vec<_> = self
                 .error
                 .context
