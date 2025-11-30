@@ -129,6 +129,28 @@ impl<T, E> RetryOps<T, E> {
         self
     }
 
+    /// Converts the retry operations back to an error pipeline.
+    ///
+    /// This consumes the `RetryOps` and returns the underlying [`ErrorPipeline`],
+    /// preserving any retry hints that were added to the error context.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use error_rail::{ErrorPipeline, traits::TransientError};
+    /// use core::time::Duration;
+    ///
+    /// #[derive(Debug)]
+    /// struct NetworkError;
+    ///
+    /// impl TransientError for NetworkError {
+    ///     fn is_transient(&self) -> bool { true }
+    /// }
+    ///
+    /// let pipeline: ErrorPipeline<(), NetworkError> = ErrorPipeline::new(Err(NetworkError));
+    /// let retry_ops = pipeline.retry().max_retries(3);
+    /// let pipeline_again = retry_ops.to_error_pipeline();
+    /// ```
     pub fn to_error_pipeline(self) -> ErrorPipeline<T, E> {
         self.pipeline
     }
