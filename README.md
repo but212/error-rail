@@ -34,7 +34,7 @@ Most error handling libraries format context eagerly—even on success paths whe
 
 | Feature                                | Performance Gain                              | Real-world Impact                          |
 |----------------------------------------|-----------------------------------------------|--------------------------------------------|
-| **Lazy context!() vs eager format!()** | **7x faster** (ErrorRail lazy: 613ns vs eager: 4,277ns) | Primary benefit - most operations succeed |
+| **Lazy context!() vs eager format!()** | **7x faster** (613ns vs 4,277ns; same library, same API) | Primary benefit - most operations succeed |
 | **Static str vs String allocation** | **13x faster** (static: 4.66ns vs String: 63ns) | Use `&'static str` when possible |
 
 ### **Key Performance Insights**
