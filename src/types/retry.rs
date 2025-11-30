@@ -128,4 +128,8 @@ impl<T, E> RetryOps<T, E> {
         ));
         self
     }
+
+    pub fn to_error_pipeline(self) -> ErrorPipeline<T, E> {
+        self.pipeline
+    }
 }

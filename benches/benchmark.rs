@@ -1,12 +1,16 @@
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 #[cfg(feature = "std")]
 use error_rail::backtrace;
-use error_rail::traits::ErrorOps;
+use error_rail::traits::{ErrorOps, TransientError};
 use error_rail::validation::Validation;
 use error_rail::{context, ComposableError, ErrorContext, ErrorPipeline};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
-use std::{hint::black_box, sync::OnceLock};
+use std::{hint::black_box, sync::OnceLock, time::Duration};
+
+// ============================================================================
+// Test Data & Domain Types
+// ============================================================================
 
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
@@ -58,7 +62,32 @@ impl std::fmt::Display for DomainError {
     }
 }
 
-// Simulate realistic error propagation through multiple layers
+impl TransientError for DomainError {
+    fn is_transient(&self) -> bool {
+        matches!(self, DomainError::Network(_) | DomainError::Database(_))
+    }
+
+    fn retry_after_hint(&self) -> Option<Duration> {
+        match self {
+            DomainError::Network(_) => Some(Duration::from_secs(1)),
+            DomainError::Database(_) => Some(Duration::from_millis(100)),
+            _ => None,
+        }
+    }
+
+    fn max_retries_hint(&self) -> Option<u32> {
+        match self {
+            DomainError::Network(_) => Some(3),
+            DomainError::Database(_) => Some(5),
+            _ => None,
+        }
+    }
+}
+
+// ============================================================================
+// Simulation Functions
+// ============================================================================
+
 fn simulate_db_query(user_id: u64) -> Result<UserData, DomainError> {
     if user_id % 100 == 0 {
         Err(DomainError::Database("Connection timeout".to_string()))
@@ -83,259 +112,6 @@ fn simulate_auth_check(user: UserData) -> Result<UserData, DomainError> {
     }
 }
 
-// 1. Construction benchmark - realistic error with domain context
-fn bench_composable_error_creation(c: &mut Criterion) {
-    c.bench_function("composable_error_creation", |b| {
-        b.iter(|| {
-            black_box(
-                ComposableError::new(DomainError::Database(
-                    "Connection pool exhausted".to_string(),
-                ))
-                .with_context(ErrorContext::tag("database"))
-                .with_context(ErrorContext::metadata("query", "SELECT * FROM users"))
-                .with_context(ErrorContext::metadata(
-                    "host",
-                    "db-primary-01.company.local",
-                ))
-                .with_context(ErrorContext::metadata("retry_count", "3"))
-                .set_code(503),
-            )
-        })
-    });
-}
-
-#[cfg(feature = "serde")]
-// 2. Serialization benchmark - realistic complex error
-fn bench_composable_error_serialization(c: &mut Criterion) {
-    let err = ComposableError::new(DomainError::Network("API rate limit exceeded".to_string()))
-        .with_context(ErrorContext::tag("external_api"))
-        .with_context(ErrorContext::metadata("endpoint", "/api/v2/users"))
-        .with_context(ErrorContext::metadata("retry_after", "60"))
-        .with_context(ErrorContext::metadata("quota_limit", "1000"))
-        .set_code(429);
-    c.bench_function("composable_error_serialization", |b| {
-        b.iter(|| black_box(serde_json::to_string(&err).unwrap()))
-    });
-}
-
-// 3. ErrorOps benchmark (recover & bimap)
-fn bench_error_ops_recover(c: &mut Criterion) {
-    c.bench_function("error_ops_recover", |b| {
-        b.iter(|| black_box(Err::<i32, &str>("missing").recover(|_| Ok(42))))
-    });
-}
-
-fn bench_error_ops_bimap(c: &mut Criterion) {
-    c.bench_function("error_ops_bimap", |b| {
-        b.iter(|| black_box(Ok::<i32, &str>(21).bimap_result(|x| x * 2, |e| e.to_uppercase())))
-    });
-}
-
-fn bench_context_lazy_vs_eager_success(c: &mut Criterion) {
-    let users = realistic_user_data();
-
-    c.bench_function("context_lazy_success", |b| {
-        b.iter(|| {
-            let user = black_box(&users[0]);
-            let result: Result<UserData, &str> = Ok(user.clone());
-            let _ = ErrorPipeline::new(result)
-                .with_context(context!("user_data: {:?}", user))
-                .finish_boxed();
-        })
-    });
-
-    c.bench_function("context_eager_success", |b| {
-        b.iter(|| {
-            let user = black_box(&users[0]);
-            let result: Result<UserData, &str> = Ok(user.clone());
-            let message = format!("user_data: {:?}", user);
-            let _ = ErrorPipeline::new(result).with_context(message).finish();
-        })
-    });
-
-    c.bench_function("context_baseline_success", |b| {
-        b.iter(|| {
-            let result: Result<UserData, &str> = Ok(UserData::new(1));
-            let _ = ErrorPipeline::new(result).finish();
-        })
-    });
-}
-
-fn bench_context_lazy_vs_eager_error(c: &mut Criterion) {
-    let users = realistic_user_data();
-
-    c.bench_function("context_lazy_error", |b| {
-        b.iter(|| {
-            let user = black_box(&users[0]);
-            let result: Result<UserData, DomainError> =
-                Err(DomainError::Validation("Email format invalid".to_string()));
-            let _ = ErrorPipeline::new(result)
-                .with_context(context!("failed_user: {:?}", user))
-                .finish_boxed();
-        })
-    });
-
-    c.bench_function("context_eager_error", |b| {
-        b.iter(|| {
-            let user = black_box(&users[0]);
-            let result: Result<UserData, DomainError> =
-                Err(DomainError::Validation("Email format invalid".to_string()));
-            let message = format!("failed_user: {:?}", user);
-            let _ = ErrorPipeline::new(result).with_context(message).finish();
-        })
-    });
-
-    c.bench_function("context_baseline_error", |b| {
-        b.iter(|| {
-            let result: Result<UserData, DomainError> =
-                Err(DomainError::Validation("Email format invalid".to_string()));
-            let _ = ErrorPipeline::new(result).finish();
-        })
-    });
-}
-
-#[cfg(feature = "std")]
-fn bench_backtrace_lazy_success(c: &mut Criterion) {
-    c.bench_function("backtrace_lazy_success", |b| {
-        b.iter(|| {
-            let result: Result<UserData, DomainError> = Ok(UserData::new(42));
-            let _ = ErrorPipeline::new(result)
-                .with_context(backtrace!())
-                .finish();
-        })
-    });
-}
-
-#[cfg(feature = "std")]
-fn bench_backtrace_lazy_error(c: &mut Criterion) {
-    c.bench_function("backtrace_lazy_error", |b| {
-        b.iter(|| {
-            let result: Result<UserData, DomainError> =
-                Err(DomainError::Network("Connection refused".to_string()));
-            let _ = ErrorPipeline::new(result)
-                .with_context(backtrace!())
-                .finish();
-        })
-    });
-}
-
-fn build_realistic_error_with_depth(depth: usize) -> ComposableError<DomainError> {
-    let mut err = ComposableError::new(DomainError::Database("Query failed".to_string()))
-        .with_context(ErrorContext::tag("database"))
-        .with_context(ErrorContext::metadata("query_id", "12345"));
-
-    for i in 0..depth {
-        err = err
-            .with_context(ErrorContext::new(format!("layer_{}", i)))
-            .with_context(ErrorContext::metadata("depth", i.to_string()));
-    }
-    err
-}
-
-fn bench_context_depth(c: &mut Criterion) {
-    c.bench_function("context_depth_1", |b| {
-        b.iter(|| {
-            let err = build_realistic_error_with_depth(1);
-            let _ = black_box(err);
-        })
-    });
-
-    c.bench_function("context_depth_3", |b| {
-        b.iter(|| {
-            let err = build_realistic_error_with_depth(3);
-            let _ = black_box(err);
-        })
-    });
-
-    c.bench_function("context_depth_10", |b| {
-        b.iter(|| {
-            let err = build_realistic_error_with_depth(10);
-            let _ = black_box(err);
-        })
-    });
-
-    c.bench_function("context_depth_30", |b| {
-        b.iter(|| {
-            let err = build_realistic_error_with_depth(30);
-            let _ = black_box(err);
-        })
-    });
-}
-
-// Realistic service layer simulation with mixed success/error ratios
-fn realistic_user_service(user_id: u64) -> Result<UserData, ComposableError<DomainError>> {
-    ErrorPipeline::new(simulate_db_query(user_id))
-        .with_context(context!("Fetching user {} from database", user_id))
-        .and_then(|user| simulate_validation(user))
-        .with_context(context!("Validating user data for user {}", user_id))
-        .and_then(|user| simulate_auth_check(user))
-        .with_context(context!("Authentication check for user {}", user_id))
-        .finish()
-}
-
-fn bench_pipeline_vs_result_success(c: &mut Criterion) {
-    c.bench_function("pipeline_success", |b| {
-        b.iter(|| {
-            let result = realistic_user_service(42);
-            let _ = black_box(result).is_ok();
-        })
-    });
-
-    c.bench_function("result_with_context_success", |b| {
-        b.iter(|| {
-            let result = simulate_db_query(42)
-                .and_then(|user| simulate_validation(user))
-                .and_then(|user| simulate_auth_check(user));
-            let result = result.map_err(|e| {
-                ComposableError::<DomainError>::new(e)
-                    .with_context(ErrorContext::new("User service operation failed"))
-            });
-            let _ = black_box(result).is_ok();
-        })
-    });
-
-    c.bench_function("result_baseline_success", |b| {
-        b.iter(|| {
-            let result = simulate_db_query(42)
-                .and_then(|user| simulate_validation(user))
-                .and_then(|user| simulate_auth_check(user));
-            let _ = black_box(result).is_ok();
-        })
-    });
-}
-
-fn bench_pipeline_vs_result_error(c: &mut Criterion) {
-    c.bench_function("pipeline_error", |b| {
-        b.iter(|| {
-            let result = realistic_user_service(100); // Will fail at DB layer
-            let _ = black_box(result).is_ok();
-        })
-    });
-
-    c.bench_function("result_with_context_error", |b| {
-        b.iter(|| {
-            let result = simulate_db_query(100)
-                .and_then(|user| simulate_validation(user))
-                .and_then(|user| simulate_auth_check(user));
-            let result = result.map_err(|e| {
-                ComposableError::<DomainError>::new(e)
-                    .with_context(ErrorContext::new("User service operation failed"))
-            });
-            let _ = black_box(result).is_ok();
-        })
-    });
-
-    c.bench_function("result_baseline_error", |b| {
-        b.iter(|| {
-            let result = simulate_db_query(100)
-                .and_then(|user| simulate_validation(user))
-                .and_then(|user| simulate_auth_check(user));
-            let _ = black_box(result).is_ok();
-        })
-    });
-}
-
-// Realistic validation with heterogeneous error types
 fn validate_user_email(email: &str) -> Result<String, DomainError> {
     if email.contains('@') {
         Ok(email.to_string())
@@ -362,6 +138,443 @@ fn validate_user_name(name: &str) -> Result<String, DomainError> {
     }
 }
 
+fn realistic_user_service(user_id: u64) -> Result<UserData, ComposableError<DomainError>> {
+    ErrorPipeline::new(simulate_db_query(user_id))
+        .with_context(context!("Fetching user {} from database", user_id))
+        .and_then(|user| simulate_validation(user))
+        .with_context(context!("Validating user data for user {}", user_id))
+        .and_then(|user| simulate_auth_check(user))
+        .with_context(context!("Authentication check for user {}", user_id))
+        .finish()
+}
+
+// ============================================================================
+// Group 1: Core Error Operations
+// ============================================================================
+
+fn bench_composable_error_creation(c: &mut Criterion) {
+    c.bench_function("core/error_creation", |b| {
+        b.iter(|| {
+            black_box(
+                ComposableError::new(DomainError::Database(
+                    "Connection pool exhausted".to_string(),
+                ))
+                .with_context(ErrorContext::tag("database"))
+                .with_context(ErrorContext::metadata("query", "SELECT * FROM users"))
+                .with_context(ErrorContext::metadata(
+                    "host",
+                    "db-primary-01.company.local",
+                ))
+                .with_context(ErrorContext::metadata("retry_count", "3"))
+                .set_code(503),
+            )
+        })
+    });
+}
+
+fn bench_error_cloning_and_arc(c: &mut Criterion) {
+    let err = ComposableError::new(DomainError::Network("Service unavailable".to_string()))
+        .with_context(ErrorContext::tag("external_service"))
+        .set_code(503);
+
+    c.bench_function("core/error_clone", |b| {
+        b.iter(|| {
+            let cloned = black_box(err.clone());
+            let _ = black_box(cloned);
+        })
+    });
+
+    c.bench_function("core/error_arc_wrap", |b| {
+        b.iter(|| {
+            let arc_err = black_box(std::sync::Arc::new(err.clone()));
+            black_box(arc_err);
+        })
+    });
+}
+
+fn bench_error_cloning_deep(c: &mut Criterion) {
+    let mut group = c.benchmark_group("core/error_clone_deep");
+
+    for depth in [5, 10, 20, 50] {
+        let mut err = ComposableError::new(DomainError::Database("Query failed".to_string()));
+        for i in 0..depth {
+            err = err
+                .with_context(ErrorContext::new(format!("layer_{}", i)))
+                .with_context(ErrorContext::metadata("depth", i.to_string()));
+        }
+
+        group.bench_with_input(BenchmarkId::from_parameter(depth), &err, |b, err| {
+            b.iter(|| black_box(err.clone()))
+        });
+    }
+    group.finish();
+}
+
+fn bench_error_ops_recover(c: &mut Criterion) {
+    c.bench_function("core/ops_recover", |b| {
+        b.iter(|| black_box(Err::<i32, &str>("missing").recover(|_| Ok(42))))
+    });
+}
+
+fn bench_error_ops_bimap(c: &mut Criterion) {
+    c.bench_function("core/ops_bimap", |b| {
+        b.iter(|| black_box(Ok::<i32, &str>(21).bimap_result(|x| x * 2, |e| e.to_uppercase())))
+    });
+}
+
+// ============================================================================
+// Group 2: Retry Operations (NEW)
+// ============================================================================
+
+fn bench_retry_operations(c: &mut Criterion) {
+    let mut group = c.benchmark_group("retry");
+
+    // Transient error with successful retry
+    group.bench_function("transient_success", |b| {
+        b.iter(|| {
+            let result: Result<UserData, DomainError> =
+                Err(DomainError::Network("Timeout".to_string()));
+            let pipeline = ErrorPipeline::new(result)
+                .retry()
+                .max_retries(3)
+                .after_hint(Duration::from_secs(1));
+            black_box(pipeline.is_transient());
+        })
+    });
+
+    // Permanent error should not retry
+    group.bench_function("permanent_skip", |b| {
+        b.iter(|| {
+            let result: Result<UserData, DomainError> =
+                Err(DomainError::Validation("Invalid input".to_string()));
+            let pipeline = ErrorPipeline::new(result);
+            black_box(pipeline.should_retry());
+        })
+    });
+
+    // Recover transient errors
+    group.bench_function("recover_transient", |b| {
+        b.iter(|| {
+            let result: Result<UserData, DomainError> =
+                Err(DomainError::Network("Connection refused".to_string()));
+            let recovered = ErrorPipeline::new(result)
+                .recover_transient(|_| Ok(UserData::new(1)))
+                .finish();
+            let _ = black_box(recovered);
+        })
+    });
+
+    // Should retry check
+    group.bench_function("should_retry_check", |b| {
+        b.iter(|| {
+            let transient: Result<(), DomainError> =
+                Err(DomainError::Database("Deadlock".to_string()));
+            let permanent: Result<(), DomainError> =
+                Err(DomainError::Validation("Bad input".to_string()));
+
+            let t_pipeline = ErrorPipeline::new(transient);
+            let p_pipeline = ErrorPipeline::new(permanent);
+
+            black_box((t_pipeline.should_retry(), p_pipeline.should_retry()));
+        })
+    });
+
+    group.finish();
+}
+
+// ============================================================================
+// Group 3: Error Conversion Patterns (NEW)
+// ============================================================================
+
+fn bench_error_conversions(c: &mut Criterion) {
+    let mut group = c.benchmark_group("conversions");
+
+    // Map core error type
+    group.bench_function("map_core", |b| {
+        b.iter(|| {
+            let err = ComposableError::new("io error")
+                .with_context(ErrorContext::tag("fs"))
+                .set_code(500);
+            let mapped = err.map_core(|e| format!("wrapped: {}", e));
+            let _ = black_box(mapped);
+        })
+    });
+
+    // std::io::Error conversion
+    group.bench_function("std_io_to_domain", |b| {
+        b.iter(|| {
+            let io_err = std::io::Error::new(std::io::ErrorKind::NotFound, "config file not found");
+            let converted = ComposableError::new(DomainError::Database(io_err.to_string()))
+                .with_context(ErrorContext::tag("file_system"))
+                .with_context(ErrorContext::metadata("path", "/etc/app/config.toml"));
+            let _ = black_box(converted);
+        })
+    });
+
+    // Serde error conversion
+    group.bench_function("serde_to_domain", |b| {
+        b.iter(|| {
+            let json_str = "{invalid json}";
+            let serde_result: Result<serde_json::Value, serde_json::Error> =
+                serde_json::from_str(json_str);
+            let converted = match serde_result {
+                Ok(_) => unreachable!(),
+                Err(e) => ComposableError::new(DomainError::Validation(e.to_string()))
+                    .with_context(ErrorContext::tag("json_parsing"))
+                    .with_context(ErrorContext::metadata("input", json_str)),
+            };
+            let _ = black_box(converted);
+        })
+    });
+
+    // Error type conversion chain
+    group.bench_function("conversion_chain", |b| {
+        b.iter(|| {
+            let err = ComposableError::new("initial")
+                .map_core(|e| format!("step1: {}", e))
+                .map_core(|e| format!("step2: {}", e))
+                .map_core(|e| format!("step3: {}", e));
+            let _ = black_box(err);
+        })
+    });
+
+    group.finish();
+}
+
+// ============================================================================
+// Group 4: Context Operations
+// ============================================================================
+
+fn bench_context_lazy_vs_eager_success(c: &mut Criterion) {
+    let users = realistic_user_data();
+    let mut group = c.benchmark_group("context/lazy_vs_eager");
+
+    group.bench_function("lazy_success", |b| {
+        b.iter(|| {
+            let user = black_box(&users[0]);
+            let result: Result<UserData, &str> = Ok(user.clone());
+            let _ = ErrorPipeline::new(result)
+                .with_context(context!("user_data: {:?}", user))
+                .finish_boxed();
+        })
+    });
+
+    group.bench_function("eager_success", |b| {
+        b.iter(|| {
+            let user = black_box(&users[0]);
+            let result: Result<UserData, &str> = Ok(user.clone());
+            let message = format!("user_data: {:?}", user);
+            let _ = ErrorPipeline::new(result).with_context(message).finish();
+        })
+    });
+
+    group.bench_function("baseline_success", |b| {
+        b.iter(|| {
+            let result: Result<UserData, &str> = Ok(UserData::new(1));
+            let _ = ErrorPipeline::new(result).finish();
+        })
+    });
+
+    group.finish();
+}
+
+fn bench_context_lazy_vs_eager_error(c: &mut Criterion) {
+    let users = realistic_user_data();
+    let mut group = c.benchmark_group("context/lazy_vs_eager");
+
+    group.bench_function("lazy_error", |b| {
+        b.iter(|| {
+            let user = black_box(&users[0]);
+            let result: Result<UserData, DomainError> =
+                Err(DomainError::Validation("Email format invalid".to_string()));
+            let _ = ErrorPipeline::new(result)
+                .with_context(context!("failed_user: {:?}", user))
+                .finish_boxed();
+        })
+    });
+
+    group.bench_function("eager_error", |b| {
+        b.iter(|| {
+            let user = black_box(&users[0]);
+            let result: Result<UserData, DomainError> =
+                Err(DomainError::Validation("Email format invalid".to_string()));
+            let message = format!("failed_user: {:?}", user);
+            let _ = ErrorPipeline::new(result).with_context(message).finish();
+        })
+    });
+
+    group.bench_function("baseline_error", |b| {
+        b.iter(|| {
+            let result: Result<UserData, DomainError> =
+                Err(DomainError::Validation("Email format invalid".to_string()));
+            let _ = ErrorPipeline::new(result).finish();
+        })
+    });
+
+    group.finish();
+}
+
+// ============================================================================
+// Group 5: Scaling Tests (Parameterized)
+// ============================================================================
+
+fn bench_context_depth_scaling(c: &mut Criterion) {
+    let mut group = c.benchmark_group("scaling/context_depth");
+
+    for depth in [1, 5, 10, 20, 50] {
+        group.bench_with_input(BenchmarkId::from_parameter(depth), &depth, |b, &depth| {
+            b.iter(|| {
+                let mut err =
+                    ComposableError::new(DomainError::Database("Query failed".to_string()))
+                        .with_context(ErrorContext::tag("database"))
+                        .with_context(ErrorContext::metadata("query_id", "12345"));
+
+                for i in 0..depth {
+                    err = err
+                        .with_context(ErrorContext::new(format!("layer_{}", i)))
+                        .with_context(ErrorContext::metadata("depth", i.to_string()));
+                }
+                let _ = black_box(err);
+            })
+        });
+    }
+
+    group.finish();
+}
+
+fn bench_validation_batch_scaling(c: &mut Criterion) {
+    let mut group = c.benchmark_group("scaling/validation_batch");
+
+    for size in [10, 100, 1000, 5000] {
+        group.throughput(Throughput::Elements(size as u64));
+        group.bench_with_input(BenchmarkId::from_parameter(size), &size, |b, &size| {
+            b.iter(|| {
+                let emails: Vec<String> = (0..size)
+                    .map(|i| {
+                        if i % 5 == 0 {
+                            format!("invalid{}", i)
+                        } else {
+                            format!("user{}@test.com", i)
+                        }
+                    })
+                    .collect();
+
+                let result: Validation<DomainError, Vec<String>> = emails
+                    .iter()
+                    .map(|email| validate_user_email(email))
+                    .collect();
+                let _ = black_box(result);
+            })
+        });
+    }
+
+    group.finish();
+}
+
+fn bench_pipeline_chain_scaling(c: &mut Criterion) {
+    let mut group = c.benchmark_group("scaling/pipeline_chain");
+
+    for chain_len in [2, 5, 10, 20] {
+        group.bench_with_input(
+            BenchmarkId::from_parameter(chain_len),
+            &chain_len,
+            |b, &chain_len| {
+                b.iter(|| {
+                    let mut pipeline = ErrorPipeline::new(Ok::<i32, &str>(0));
+
+                    for i in 0..chain_len {
+                        pipeline = pipeline
+                            .and_then(|x| Ok(x + 1))
+                            .with_context(context!("operation_{}", i));
+                    }
+
+                    let _ = black_box(pipeline.finish());
+                })
+            },
+        );
+    }
+
+    group.finish();
+}
+
+// ============================================================================
+// Group 6: Pipeline Operations
+// ============================================================================
+
+fn bench_pipeline_vs_result_success(c: &mut Criterion) {
+    let mut group = c.benchmark_group("pipeline/vs_result");
+
+    group.bench_function("pipeline_success", |b| {
+        b.iter(|| {
+            let result = realistic_user_service(42);
+            let _ = black_box(result).is_ok();
+        })
+    });
+
+    group.bench_function("result_with_context_success", |b| {
+        b.iter(|| {
+            let result = simulate_db_query(42)
+                .and_then(|user| simulate_validation(user))
+                .and_then(|user| simulate_auth_check(user));
+            let result = result.map_err(|e| {
+                ComposableError::<DomainError>::new(e)
+                    .with_context(ErrorContext::new("User service operation failed"))
+            });
+            let _ = black_box(result).is_ok();
+        })
+    });
+
+    group.bench_function("result_baseline_success", |b| {
+        b.iter(|| {
+            let result = simulate_db_query(42)
+                .and_then(|user| simulate_validation(user))
+                .and_then(|user| simulate_auth_check(user));
+            let _ = black_box(result).is_ok();
+        })
+    });
+
+    group.finish();
+}
+
+fn bench_pipeline_vs_result_error(c: &mut Criterion) {
+    let mut group = c.benchmark_group("pipeline/vs_result");
+
+    group.bench_function("pipeline_error", |b| {
+        b.iter(|| {
+            let result = realistic_user_service(100); // Will fail at DB layer
+            let _ = black_box(result).is_ok();
+        })
+    });
+
+    group.bench_function("result_with_context_error", |b| {
+        b.iter(|| {
+            let result = simulate_db_query(100)
+                .and_then(|user| simulate_validation(user))
+                .and_then(|user| simulate_auth_check(user));
+            let result = result.map_err(|e| {
+                ComposableError::<DomainError>::new(e)
+                    .with_context(ErrorContext::new("User service operation failed"))
+            });
+            let _ = black_box(result).is_ok();
+        })
+    });
+
+    group.bench_function("result_baseline_error", |b| {
+        b.iter(|| {
+            let result = simulate_db_query(100)
+                .and_then(|user| simulate_validation(user))
+                .and_then(|user| simulate_auth_check(user));
+            let _ = black_box(result).is_ok();
+        })
+    });
+
+    group.finish();
+}
+
+// ============================================================================
+// Group 7: Validation Operations
+// ============================================================================
+
 fn bench_validation_collect_realistic(c: &mut Criterion) {
     let test_emails = vec![
         "user1@company.com",
@@ -376,7 +589,9 @@ fn bench_validation_collect_realistic(c: &mut Criterion) {
         "user10@company.com",
     ];
 
-    c.bench_function("validation_collect_realistic_mixed", |b| {
+    let mut group = c.benchmark_group("validation");
+
+    group.bench_function("collect_realistic_mixed", |b| {
         b.iter(|| {
             let result: Validation<DomainError, Vec<String>> = test_emails
                 .iter()
@@ -386,7 +601,7 @@ fn bench_validation_collect_realistic(c: &mut Criterion) {
         })
     });
 
-    c.bench_function("manual_collect_realistic_mixed", |b| {
+    group.bench_function("manual_collect_realistic_mixed", |b| {
         b.iter(|| {
             let mut values = Vec::new();
             let mut errors = Vec::new();
@@ -400,8 +615,7 @@ fn bench_validation_collect_realistic(c: &mut Criterion) {
         })
     });
 
-    // Test with different validation types
-    c.bench_function("validation_collect_heterogeneous", |b| {
+    group.bench_function("collect_heterogeneous", |b| {
         b.iter(|| {
             let email_result: Validation<DomainError, Vec<String>> = test_emails
                 .iter()
@@ -418,34 +632,87 @@ fn bench_validation_collect_realistic(c: &mut Criterion) {
             black_box((&email_result, &age_result, &name_result));
         })
     });
+
+    group.finish();
 }
 
-// Additional realistic benchmarks for production scenarios
+// ============================================================================
+// Group 8: Real-World Scenarios (NEW)
+// ============================================================================
 
-// Benchmark error cloning and Arc wrapping (common in async/concurrent contexts)
-fn bench_error_cloning_and_arc(c: &mut Criterion) {
-    let err = ComposableError::new(DomainError::Network("Service unavailable".to_string()))
-        .with_context(ErrorContext::tag("external_service"))
-        .set_code(503);
+fn bench_real_world_scenarios(c: &mut Criterion) {
+    let mut group = c.benchmark_group("real_world");
 
-    c.bench_function("error_clone", |b| {
+    // Simulated HTTP request with error handling
+    group.bench_function("http_request_simulation", |b| {
         b.iter(|| {
-            let cloned = black_box(err.clone());
-            let _ = black_box(cloned);
+            let result: Result<String, DomainError> =
+                Err(DomainError::Network("503 Service Unavailable".to_string()));
+
+            let response = ErrorPipeline::new(result)
+                .with_context(ErrorContext::tag("http"))
+                .with_context(ErrorContext::metadata("method", "GET"))
+                .with_context(ErrorContext::metadata("url", "/api/v1/users"))
+                .with_context(ErrorContext::metadata("status", "503"))
+                .retry()
+                .max_retries(3)
+                .after_hint(Duration::from_secs(1))
+                .to_error_pipeline()
+                .finish();
+
+            let _ = black_box(response);
         })
     });
 
-    c.bench_function("error_arc_wrap", |b| {
+    // Database transaction error
+    group.bench_function("database_transaction_rollback", |b| {
         b.iter(|| {
-            let arc_err = black_box(std::sync::Arc::new(err.clone()));
-            black_box(arc_err);
+            let tx_result: Result<(), DomainError> =
+                Err(DomainError::Database("Deadlock detected".to_string()));
+
+            let result = ErrorPipeline::new(tx_result)
+                .with_context(ErrorContext::tag("transaction"))
+                .with_context(ErrorContext::metadata("isolation", "serializable"))
+                .with_context(ErrorContext::metadata("table", "users"))
+                .retry()
+                .max_retries(5)
+                .after_hint(Duration::from_millis(100))
+                .to_error_pipeline()
+                .finish();
+
+            let _ = black_box(result);
         })
     });
+
+    // Microservice error propagation
+    group.bench_function("microservice_error_propagation", |b| {
+        b.iter(|| {
+            let auth_result: Result<(), DomainError> =
+                Err(DomainError::Authentication("Invalid token".to_string()));
+
+            let result = ErrorPipeline::new(auth_result)
+                .with_context(ErrorContext::tag("auth-service"))
+                .with_context(ErrorContext::metadata("service", "auth-ms-01"))
+                .and_then(|_| Err(DomainError::Network("Connection timeout".to_string())))
+                .with_context(ErrorContext::tag("user-service"))
+                .with_context(ErrorContext::metadata("service", "user-ms-02"))
+                .and_then(|_: ()| Ok::<(), DomainError>(()))
+                .with_context(ErrorContext::tag("api-gateway"))
+                .finish()
+                .map_err(|e| e.set_code(500));
+
+            let _ = black_box(result);
+        })
+    });
+
+    group.finish();
 }
 
-// Benchmark mixed success/error ratios (95% success, 5% error - typical production)
 fn bench_mixed_success_error_ratios(c: &mut Criterion) {
-    c.bench_function("mixed_95percent_success", |b| {
+    let mut group = c.benchmark_group("real_world/mixed_ratios");
+    group.throughput(Throughput::Elements(100));
+
+    group.bench_function("95percent_success", |b| {
         b.iter(|| {
             let results: Vec<Result<UserData, ComposableError<DomainError>>> =
                 (0..100).map(|i| realistic_user_service(i)).collect();
@@ -454,7 +721,7 @@ fn bench_mixed_success_error_ratios(c: &mut Criterion) {
         })
     });
 
-    c.bench_function("mixed_50percent_success", |b| {
+    group.bench_function("50percent_success", |b| {
         b.iter(|| {
             let results: Vec<Result<UserData, ComposableError<DomainError>>> = (0..100)
                 .map(|i| realistic_user_service(i * 2)) // Higher failure rate
@@ -463,74 +730,255 @@ fn bench_mixed_success_error_ratios(c: &mut Criterion) {
             black_box(success_count);
         })
     });
+
+    group.finish();
 }
 
-// Benchmark error type conversion scenarios
-fn bench_error_type_conversions(c: &mut Criterion) {
-    c.bench_function("std_io_error_conversion", |b| {
+// ============================================================================
+// Group 9: Memory & Allocation (NEW)
+// ============================================================================
+
+fn bench_memory_allocation(c: &mut Criterion) {
+    let mut group = c.benchmark_group("memory");
+
+    // Large metadata contexts
+    group.bench_function("large_metadata_contexts", |b| {
         b.iter(|| {
-            let io_err = std::io::Error::new(std::io::ErrorKind::NotFound, "config file not found");
-            let converted = ComposableError::new(DomainError::Database(io_err.to_string()))
-                .with_context(ErrorContext::tag("file_system"))
-                .with_context(ErrorContext::metadata("path", "/etc/app/config.toml"));
-            let _ = black_box(converted);
+            let large_json = serde_json::json!({
+                "user_id": 12345,
+                "request_id": "abc-def-ghi-jkl-mno",
+                "timestamp": "2024-01-01T00:00:00Z",
+                "metadata": {
+                    "ip": "192.168.1.1",
+                    "user_agent": "Mozilla/5.0...",
+                    "session": "session-token-here"
+                }
+            })
+            .to_string();
+
+            let err = ComposableError::new(DomainError::Network("Timeout".to_string()))
+                .with_context(ErrorContext::metadata("request", large_json))
+                .with_context(ErrorContext::tag("api"))
+                .set_code(408);
+
+            let _ = black_box(err);
         })
     });
 
-    c.bench_function("serde_error_conversion", |b| {
+    // String vs static str contexts
+    group.bench_function("string_allocation", |b| {
         b.iter(|| {
-            let json_str = "{invalid json}";
-            let serde_result: Result<serde_json::Value, serde_json::Error> =
-                serde_json::from_str(json_str);
-            let converted = match serde_result {
-                Ok(_) => unreachable!(),
-                Err(e) => ComposableError::new(DomainError::Validation(e.to_string()))
-                    .with_context(ErrorContext::tag("json_parsing"))
-                    .with_context(ErrorContext::metadata("input", json_str)),
-            };
-            let _ = black_box(converted);
+            let dynamic = format!("Error at timestamp: {}", 1234567890);
+            let err = ComposableError::new("error").with_context(dynamic);
+            let _ = black_box(err);
         })
     });
+
+    group.bench_function("static_str_no_allocation", |b| {
+        b.iter(|| {
+            let err = ComposableError::new("error").with_context("Static error context");
+            let _ = black_box(err);
+        })
+    });
+
+    group.finish();
+}
+
+// ============================================================================
+// Feature-Gated Benchmarks
+// ============================================================================
+
+#[cfg(feature = "std")]
+fn bench_backtrace_lazy_success(c: &mut Criterion) {
+    c.bench_function("std/backtrace_lazy_success", |b| {
+        b.iter(|| {
+            let result: Result<UserData, DomainError> = Ok(UserData::new(42));
+            let _ = ErrorPipeline::new(result)
+                .with_context(backtrace!())
+                .finish();
+        })
+    });
+}
+
+#[cfg(feature = "std")]
+fn bench_backtrace_lazy_error(c: &mut Criterion) {
+    c.bench_function("std/backtrace_lazy_error", |b| {
+        b.iter(|| {
+            let result: Result<UserData, DomainError> =
+                Err(DomainError::Network("Connection refused".to_string()));
+            let _ = ErrorPipeline::new(result)
+                .with_context(backtrace!())
+                .finish();
+        })
+    });
+}
+
+#[cfg(feature = "serde")]
+fn bench_composable_error_serialization(c: &mut Criterion) {
+    let err = ComposableError::new(DomainError::Network("API rate limit exceeded".to_string()))
+        .with_context(ErrorContext::tag("external_api"))
+        .with_context(ErrorContext::metadata("endpoint", "/api/v2/users"))
+        .with_context(ErrorContext::metadata("retry_after", "60"))
+        .with_context(ErrorContext::metadata("quota_limit", "1000"))
+        .set_code(429);
+
+    c.bench_function("serde/error_serialization", |b| {
+        b.iter(|| black_box(serde_json::to_string(&err).unwrap()))
+    });
+}
+
+// ============================================================================
+// Benchmark Group Configuration
+// ============================================================================
+
+fn configure_criterion() -> Criterion {
+    Criterion::default()
+        .sample_size(100)
+        .warm_up_time(Duration::from_secs(3))
+        .measurement_time(Duration::from_secs(5))
+        .noise_threshold(0.05)
 }
 
 // Base benchmarks (no_std compatible)
-criterion_group!(
-    base_benches,
-    bench_composable_error_creation,
-    bench_error_ops_recover,
-    bench_error_ops_bimap,
-    bench_context_lazy_vs_eager_success,
-    bench_context_lazy_vs_eager_error,
-    bench_context_depth,
-    bench_pipeline_vs_result_success,
-    bench_pipeline_vs_result_error,
-    bench_validation_collect_realistic,
-    bench_error_cloning_and_arc,
-    bench_mixed_success_error_ratios,
-    bench_error_type_conversions
-);
+criterion_group! {
+    name = core_benches;
+    config = configure_criterion();
+    targets =
+        bench_composable_error_creation,
+        bench_error_cloning_and_arc,
+        bench_error_cloning_deep,
+        bench_error_ops_recover,
+        bench_error_ops_bimap,
+}
+
+criterion_group! {
+    name = retry_benches;
+    config = configure_criterion();
+    targets = bench_retry_operations,
+}
+
+criterion_group! {
+    name = conversion_benches;
+    config = configure_criterion();
+    targets = bench_error_conversions,
+}
+
+criterion_group! {
+    name = context_benches;
+    config = configure_criterion();
+    targets =
+        bench_context_lazy_vs_eager_success,
+        bench_context_lazy_vs_eager_error,
+}
+
+criterion_group! {
+    name = scaling_benches;
+    config = configure_criterion();
+    targets =
+        bench_context_depth_scaling,
+        bench_validation_batch_scaling,
+        bench_pipeline_chain_scaling,
+}
+
+criterion_group! {
+    name = pipeline_benches;
+    config = configure_criterion();
+    targets =
+        bench_pipeline_vs_result_success,
+        bench_pipeline_vs_result_error,
+}
+
+criterion_group! {
+    name = validation_benches;
+    config = configure_criterion();
+    targets = bench_validation_collect_realistic,
+}
+
+criterion_group! {
+    name = real_world_benches;
+    config = configure_criterion();
+    targets =
+        bench_real_world_scenarios,
+        bench_mixed_success_error_ratios,
+}
+
+criterion_group! {
+    name = memory_benches;
+    config = configure_criterion();
+    targets = bench_memory_allocation,
+}
 
 // std-specific benchmarks
 #[cfg(feature = "std")]
-criterion_group!(
-    std_benches,
-    bench_backtrace_lazy_success,
-    bench_backtrace_lazy_error,
-);
+criterion_group! {
+    name = std_benches;
+    config = configure_criterion();
+    targets =
+        bench_backtrace_lazy_success,
+        bench_backtrace_lazy_error,
+}
 
 // serde-specific benchmarks
 #[cfg(feature = "serde")]
-criterion_group!(serde_benches, bench_composable_error_serialization,);
+criterion_group! {
+    name = serde_benches;
+    config = configure_criterion();
+    targets = bench_composable_error_serialization,
+}
 
 // Main benchmark groups based on available features
 #[cfg(all(feature = "std", feature = "serde"))]
-criterion_main!(base_benches, std_benches, serde_benches);
+criterion_main!(
+    core_benches,
+    retry_benches,
+    conversion_benches,
+    context_benches,
+    scaling_benches,
+    pipeline_benches,
+    validation_benches,
+    real_world_benches,
+    memory_benches,
+    std_benches,
+    serde_benches
+);
 
 #[cfg(all(feature = "std", not(feature = "serde")))]
-criterion_main!(base_benches, std_benches);
+criterion_main!(
+    core_benches,
+    retry_benches,
+    conversion_benches,
+    context_benches,
+    scaling_benches,
+    pipeline_benches,
+    validation_benches,
+    real_world_benches,
+    memory_benches,
+    std_benches
+);
 
 #[cfg(all(feature = "serde", not(feature = "std")))]
-criterion_main!(base_benches, serde_benches);
+criterion_main!(
+    core_benches,
+    retry_benches,
+    conversion_benches,
+    context_benches,
+    scaling_benches,
+    pipeline_benches,
+    validation_benches,
+    real_world_benches,
+    memory_benches,
+    serde_benches
+);
 
 #[cfg(not(any(feature = "std", feature = "serde")))]
-criterion_main!(base_benches);
+criterion_main!(
+    core_benches,
+    retry_benches,
+    conversion_benches,
+    context_benches,
+    scaling_benches,
+    pipeline_benches,
+    validation_benches,
+    real_world_benches,
+    memory_benches
+);
