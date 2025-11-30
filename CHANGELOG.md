@@ -59,8 +59,6 @@
   - `Validation` now uses `Accumulator<E>` for error storage
   - All internal accumulation logic unified through common abstraction
 
-### Deprecated - 0.7.0
-
 ### Breaking Changes - 0.7.0
 
 - **Removed deprecated macros**: `location!`, `tag!`, `metadata!`
@@ -79,8 +77,6 @@
 
 - Deprecated macros: `location!`, `tag!`, `metadata!` (use `group!` macro)
 - Deprecated methods: `WithError::to_result()`, old `Validation::to_result()`, `result::to_result()`
-
-### Fixed - 0.7.0
 
 ## [0.6.0]
 
