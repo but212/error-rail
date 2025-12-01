@@ -110,17 +110,17 @@ async fn fetch_orders_for_user(user_id: u64) -> Result<Vec<Order>, ApiError> {
     }
 }
 
-static mut CALL_COUNT: u32 = 0;
+use std::sync::atomic::{AtomicU32, Ordering};
+
+static CALL_COUNT: AtomicU32 = AtomicU32::new(0);
 
 async fn flaky_external_service() -> Result<String, ApiError> {
     // Simulates a flaky service that fails first 2 times
-    unsafe {
-        CALL_COUNT += 1;
-        if CALL_COUNT <= 2 {
-            Err(ApiError::ServiceUnavailable)
-        } else {
-            Ok("external data".to_string())
-        }
+    let count = CALL_COUNT.fetch_add(1, Ordering::SeqCst);
+    if count < 2 {
+        Err(ApiError::ServiceUnavailable)
+    } else {
+        Ok("external data".to_string())
     }
 }
 
@@ -176,12 +176,11 @@ async fn get_user_with_orders(
 // =============================================================================
 
 async fn api_handler_pattern(user_id: u64) -> Result<User, error_rail::ComposableError<ApiError>> {
-    // For multiple context layers, use chained .ctx() on the future
-    // Each .ctx() adds context to the same ComposableError
+    // Context can be added at different stages. Here, we add specific context
+    // before awaiting, and more general context after the operation fails.
     fetch_user_from_db(user_id)
         .ctx("database query") // Most specific
         .await
-        .map(|user| user)
         .map_err(|e| {
             e.with_context("user service")
                 .with_context("GET /users/:id")
@@ -194,9 +193,7 @@ async fn api_handler_pattern(user_id: u64) -> Result<User, error_rail::Composabl
 
 async fn call_with_retry() -> Result<String, error_rail::ComposableError<ApiError>> {
     // Reset call counter
-    unsafe {
-        CALL_COUNT = 0;
-    }
+    CALL_COUNT.store(0, Ordering::SeqCst);
 
     // Use retry_transient with automatic backoff
     retry_transient(
