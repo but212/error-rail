@@ -1,5 +1,26 @@
 # CHANGELOG
 
+## [0.8.0]
+
+### Added - 0.8.0
+
+- **Async Support**
+  - Added `async` feature flag with runtime-agnostic async support (`futures-core`, `pin-project-lite` only)
+  - Introduced `async_ext` module with core async types:
+    - `FutureResultExt` trait for `Future<Output = Result<T, E>>` providing `.ctx()` / `.with_ctx()` on futures
+    - `ContextFuture` wrapper that evaluates error context lazily only on failure
+    - `AsyncErrorPipeline` as async counterpart to `ErrorPipeline` for chainable async error handling
+  - Added async prelude module:
+    - `prelude_async` re-exports everything from `prelude` plus async items (`FutureResultExt`, `AsyncErrorPipeline`, `ContextFuture`, `rail_async!`, `ctx_async!`)
+  - New async macros:
+    - `rail_async!` for wrapping async operations into `AsyncErrorPipeline`
+    - `ctx_async!` for attaching formatted context to futures in a lazy, ergonomic way
+  - Added async integration tests under `tests/async_ext` covering:
+    - Lazy evaluation on success vs error paths
+    - Context chaining behavior for futures and pipelines
+    - Async macro behavior (`rail_async!`, `ctx_async!`)
+  - Added `docs/QUICK_START_ASYNC.md` documenting async usage patterns and best practices
+
 ## [0.7.1]
 
 ### Changed - 0.7.1

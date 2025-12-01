@@ -20,16 +20,27 @@ serde = { version = "1.0", default-features = false, features = [
     "alloc",
 ], optional = true }
 smallvec = "1.15.1"
+pin-project-lite = { version = "0.2", optional = true }
+futures-core = { version = "0.3", optional = true, default-features = false }
 
 [dev-dependencies]
 serde_json = "1.0.145"
 criterion = "0.7.0"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time"] }
 
 [features]
 default = []
 std = []
 serde = ["dep:serde", "smallvec/serde"]
 full = ["serde", "std"]
+
+# Async features (Phase 1)
+async = ["std", "dep:pin-project-lite", "dep:futures-core"]
+async-retry = ["async"]
+async-validation = ["async"]
+async-full = ["async", "async-retry", "async-validation"]
+
+everything = ["full", "async-full"]
 
 [package.metadata.docs.rs]
 all-features = true

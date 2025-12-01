@@ -76,6 +76,14 @@ pub mod advanced;
 /// Intermediate API level for service developers
 pub mod intermediate;
 
+/// Async extensions for error handling (requires `async` feature)
+#[cfg(feature = "async")]
+pub mod async_ext;
+
+/// Async prelude - all async utilities in one import (requires `async` feature)
+#[cfg(feature = "async")]
+pub mod prelude_async;
+
 // Re-export common types that might be needed at root,
 // but encourage using prelude/intermediate/advanced modules.
 pub use context::*;
