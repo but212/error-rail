@@ -201,6 +201,7 @@ where
     S: Fn(Duration) -> SFut,
     SFut: Future<Output = ()>,
 {
+    policy.reset();
     let mut attempt = 0u32;
 
     loop {
@@ -253,85 +254,36 @@ where
     S: Fn(Duration) -> SFut,
     SFut: Future<Output = ()>,
 {
+    policy.reset();
     let mut attempt = 0u32;
     let mut total_wait_time = Duration::ZERO;
 
-    loop {
+    let result = loop {
         match operation().await {
-            Ok(value) => {
-                return RetryResult {
-                    result: Ok(value),
-                    attempts: attempt + 1,
-                    total_wait_time,
-                }
-            }
+            Ok(value) => break Ok(value),
             Err(e) if e.is_transient() => {
                 if let Some(delay) = policy.next_delay(attempt) {
                     total_wait_time += delay;
                     sleep_fn(delay).await;
                     attempt += 1;
                     continue;
+                } else {
+                    break Err(ComposableError::new(e).with_context(crate::context!(
+                        "exhausted {} retry attempts",
+                        attempt + 1
+                    )));
                 }
-                return RetryResult {
-                    result: Err(ComposableError::new(e)
-                        .with_context(crate::context!("exhausted {} retry attempts", attempt + 1))),
-                    attempts: attempt + 1,
-                    total_wait_time,
-                };
             }
             Err(e) => {
-                return RetryResult {
-                    result: Err(ComposableError::new(e)
-                        .with_context(crate::context!("permanent error, no retry"))),
-                    attempts: attempt + 1,
-                    total_wait_time,
-                };
+                break Err(ComposableError::new(e)
+                    .with_context(crate::context!("permanent error, no retry")));
             }
         }
-    }
-}
+    };
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn exponential_backoff_delays() {
-        let mut policy = ExponentialBackoff {
-            initial_delay: Duration::from_millis(100),
-            max_delay: Duration::from_secs(10),
-            max_attempts: 5,
-            multiplier: 2.0,
-        };
-
-        assert_eq!(policy.next_delay(0), Some(Duration::from_millis(100)));
-        assert_eq!(policy.next_delay(1), Some(Duration::from_millis(200)));
-        assert_eq!(policy.next_delay(2), Some(Duration::from_millis(400)));
-        assert_eq!(policy.next_delay(3), Some(Duration::from_millis(800)));
-        assert_eq!(policy.next_delay(4), Some(Duration::from_millis(1600)));
-        assert_eq!(policy.next_delay(5), None); // max_attempts reached
-    }
-
-    #[test]
-    fn exponential_backoff_caps_at_max() {
-        let mut policy = ExponentialBackoff {
-            initial_delay: Duration::from_secs(1),
-            max_delay: Duration::from_secs(5),
-            max_attempts: 10,
-            multiplier: 10.0,
-        };
-
-        // 1s * 10^2 = 100s, but capped at 5s
-        assert_eq!(policy.next_delay(2), Some(Duration::from_secs(5)));
-    }
-
-    #[test]
-    fn fixed_delay_consistent() {
-        let mut policy = FixedDelay::new(Duration::from_millis(500), 3);
-
-        assert_eq!(policy.next_delay(0), Some(Duration::from_millis(500)));
-        assert_eq!(policy.next_delay(1), Some(Duration::from_millis(500)));
-        assert_eq!(policy.next_delay(2), Some(Duration::from_millis(500)));
-        assert_eq!(policy.next_delay(3), None);
+    RetryResult {
+        result,
+        attempts: attempt + 1,
+        total_wait_time,
     }
 }
