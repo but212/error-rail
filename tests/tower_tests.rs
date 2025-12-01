@@ -1,4 +1,5 @@
 //! Tests for Tower integration.
+#![cfg(feature = "tower")]
 
 use std::future::Future;
 use std::pin::Pin;
