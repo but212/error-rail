@@ -30,6 +30,16 @@
 //! - **Traits**: [`FutureResultExt`](crate::async_ext::FutureResultExt) - `.ctx()` and `.with_ctx()` for futures
 //! - **Types**: [`AsyncErrorPipeline`](crate::async_ext::AsyncErrorPipeline), [`ContextFuture`](crate::async_ext::ContextFuture)
 //! - **Macros**: [`rail_async!`], [`ctx_async!`]
+//!
+//! ## Async Retry (requires `async-retry` feature)
+//!
+//! - **Traits**: [`RetryPolicy`](crate::async_ext::RetryPolicy)
+//! - **Types**: [`ExponentialBackoff`](crate::async_ext::ExponentialBackoff), [`FixedDelay`](crate::async_ext::FixedDelay)
+//! - **Functions**: [`retry_with_policy`](crate::async_ext::retry_with_policy)
+//!
+//! ## Async Validation (requires `async-validation` feature)
+//!
+//! - **Functions**: [`validate_all_async`](crate::async_ext::validate_all_async), [`validate_seq_async`](crate::async_ext::validate_seq_async)
 
 // Re-export everything from sync prelude
 pub use crate::prelude::*;
@@ -40,3 +50,14 @@ pub use crate::async_ext::{AsyncErrorPipeline, ContextFuture, FutureResultExt};
 
 #[cfg(feature = "async")]
 pub use crate::{ctx_async, rail_async};
+
+// Async retry exports
+#[cfg(feature = "async-retry")]
+pub use crate::async_ext::{
+    retry_with_metadata, retry_with_policy, ExponentialBackoff, FixedDelay, RetryPolicy,
+    RetryResult,
+};
+
+// Async validation exports
+#[cfg(feature = "async-validation")]
+pub use crate::async_ext::{validate_all_async, validate_seq_async};

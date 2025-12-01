@@ -8,3 +8,9 @@ mod macro_tests;
 
 #[cfg(feature = "async")]
 mod pipeline_tests;
+
+#[cfg(feature = "async-retry")]
+mod retry_tests;
+
+#[cfg(feature = "async-validation")]
+mod validation_tests;
