@@ -135,7 +135,7 @@ fn timeout_result_variants() {
     assert!(ok.is_ok());
 
     let err: TimeoutResult<i32, &str> =
-        TimeoutResult::Err(error_rail::ComposableError::new("error"));
+        TimeoutResult::Err(Box::new(error_rail::ComposableError::new("error")));
     assert!(err.is_err());
 
     let timeout: TimeoutResult<i32, &str> = TimeoutResult::Timeout(Duration::from_secs(1));

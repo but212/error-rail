@@ -191,7 +191,7 @@ async fn api_handler_pattern(user_id: u64) -> Result<User, error_rail::Composabl
 // Pattern 5: Retry with TransientError
 // =============================================================================
 
-async fn call_with_retry() -> Result<String, error_rail::ComposableError<ApiError>> {
+async fn call_with_retry() -> BoxedResult<String, ApiError> {
     // Reset call counter
     CALL_COUNT.store(0, Ordering::SeqCst);
 

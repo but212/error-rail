@@ -16,7 +16,7 @@ use core::future::Future;
 use core::time::Duration;
 
 use crate::traits::TransientError;
-use crate::types::ComposableError;
+use crate::types::{BoxedComposableError, BoxedComposableResult, ComposableError};
 
 use super::retry::{retry_with_policy, RetryPolicy};
 
@@ -46,14 +46,16 @@ use super::retry::{retry_with_policy, RetryPolicy};
 pub async fn retry_transient<F, Fut, T, E, P>(
     operation: F,
     policy: P,
-) -> Result<T, ComposableError<E>>
+) -> BoxedComposableResult<T, E>
 where
     F: FnMut() -> Fut,
     Fut: Future<Output = Result<T, E>>,
     E: TransientError,
     P: RetryPolicy,
 {
-    retry_with_policy(operation, policy, tokio::time::sleep).await
+    retry_with_policy(operation, policy, tokio::time::sleep)
+        .await
+        .map_err(Box::new)
 }
 
 /// Retries an async operation with a simple count limit using Tokio's sleep.
@@ -75,7 +77,7 @@ where
 pub async fn retry_transient_n<F, Fut, T, E>(
     operation: F,
     max_attempts: u32,
-) -> Result<T, ComposableError<E>>
+) -> BoxedComposableResult<T, E>
 where
     F: FnMut() -> Fut,
     Fut: Future<Output = Result<T, E>>,
@@ -94,7 +96,7 @@ pub enum TimeoutResult<T, E> {
     /// Operation completed successfully.
     Ok(T),
     /// Operation failed with an error.
-    Err(ComposableError<E>),
+    Err(BoxedComposableError<E>),
     /// Operation timed out.
     Timeout(Duration),
 }
@@ -116,14 +118,14 @@ impl<T, E> TimeoutResult<T, E> {
     }
 
     /// Converts to a standard `Result`, treating timeout as an error message.
-    pub fn into_result(self) -> Result<T, ComposableError<E>>
+    pub fn into_result(self) -> BoxedComposableResult<T, E>
     where
         E: From<TimeoutError>,
     {
         match self {
             Self::Ok(v) => Ok(v),
             Self::Err(e) => Err(e),
-            Self::Timeout(d) => Err(ComposableError::new(E::from(TimeoutError(d)))),
+            Self::Timeout(d) => Err(Box::new(ComposableError::new(E::from(TimeoutError(d))))),
         }
     }
 }
@@ -164,7 +166,7 @@ where
 {
     match tokio::time::timeout(duration, future).await {
         Ok(Ok(value)) => TimeoutResult::Ok(value),
-        Ok(Err(e)) => TimeoutResult::Err(ComposableError::new(e)),
+        Ok(Err(e)) => TimeoutResult::Err(Box::new(ComposableError::new(e))),
         Err(_elapsed) => TimeoutResult::Timeout(duration),
     }
 }

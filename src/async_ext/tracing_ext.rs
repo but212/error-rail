@@ -20,7 +20,7 @@ use core::task::{Context, Poll};
 use pin_project_lite::pin_project;
 use tracing::Span;
 
-use crate::types::ComposableError;
+use crate::types::{BoxedComposableResult, ComposableError};
 use crate::ErrorContext;
 
 /// Extension trait for futures that adds tracing span context to errors.
@@ -84,7 +84,7 @@ impl<F, T, E> Future for SpanContextFuture<F>
 where
     F: Future<Output = Result<T, E>>,
 {
-    type Output = Result<T, ComposableError<E>>;
+    type Output = BoxedComposableResult<T, E>;
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = self.project();
@@ -94,7 +94,7 @@ where
             Poll::Ready(Err(error)) => {
                 let context = span_to_context(this.span);
                 let composable = ComposableError::new(error).with_context(context);
-                Poll::Ready(Err(composable))
+                Poll::Ready(Err(Box::new(composable)))
             }
             Poll::Pending => Poll::Pending,
         }
@@ -119,27 +119,27 @@ pub trait ResultSpanExt<T, E> {
     /// ```rust,ignore
     /// use error_rail::async_ext::ResultSpanExt;
     ///
-    /// fn process() -> Result<Data, ProcessError> {
+    /// fn process() -> BoxedComposableResult<Data, ProcessError> {
     ///     do_work().with_current_span()
     /// }
     /// ```
-    fn with_current_span(self) -> Result<T, ComposableError<E>>;
+    fn with_current_span(self) -> BoxedComposableResult<T, E>;
 
     /// Adds a specific span's context to an error.
-    fn with_span(self, span: &Span) -> Result<T, ComposableError<E>>;
+    fn with_span(self, span: &Span) -> BoxedComposableResult<T, E>;
 }
 
 impl<T, E> ResultSpanExt<T, E> for Result<T, E> {
-    fn with_current_span(self) -> Result<T, ComposableError<E>> {
+    fn with_current_span(self) -> BoxedComposableResult<T, E> {
         self.with_span(&Span::current())
     }
 
-    fn with_span(self, span: &Span) -> Result<T, ComposableError<E>> {
+    fn with_span(self, span: &Span) -> BoxedComposableResult<T, E> {
         match self {
             Ok(v) => Ok(v),
             Err(e) => {
                 let context = span_to_context(span);
-                Err(ComposableError::new(e).with_context(context))
+                Err(Box::new(ComposableError::new(e).with_context(context)))
             }
         }
     }

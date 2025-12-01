@@ -131,9 +131,7 @@ where
 
     #[inline]
     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        self.inner
-            .poll_ready(cx)
-            .map_err(|e| ComposableError::new(e))
+        self.inner.poll_ready(cx).map_err(ComposableError::new)
     }
 
     #[inline]
