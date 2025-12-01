@@ -7,6 +7,8 @@
 //!
 //! Run with: `cargo run --example async_tower_integration --features tower`
 
+#![cfg(feature = "tower")]
+
 use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll};

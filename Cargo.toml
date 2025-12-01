@@ -55,6 +55,16 @@ ecosystem = ["async-full", "async-tokio", "tower", "tracing"]
 
 everything = ["full", "ecosystem"]
 
+[[example]]
+name = "async_api_patterns"
+path = "examples/async_api_patterns.rs"
+required-features = ["async-tokio"]
+
+[[example]]
+name = "async_tower_integration"
+path = "examples/async_tower_integration.rs"
+required-features = ["tower"]
+
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs", "--generate-link-to-definition"]

@@ -7,6 +7,8 @@
 //!
 //! Run with: `cargo run --example async_api_patterns --features async-full,async-tokio`
 
+#![cfg(feature = "async-tokio")]
+
 use error_rail::context;
 use error_rail::prelude_async::*;
 use std::time::Duration;
