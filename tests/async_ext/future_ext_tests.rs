@@ -3,6 +3,25 @@
 use error_rail::prelude_async::*;
 use std::sync::atomic::{AtomicU32, Ordering};
 
+#[test]
+fn context_future_is_send_sync() {
+    fn assert_send<T: Send>() {}
+    fn assert_sync<T: Sync>() {}
+
+    assert_send::<
+        error_rail::async_ext::ContextFuture<
+            std::future::Ready<Result<(), ()>>,
+            fn() -> &'static str,
+        >,
+    >();
+    assert_sync::<
+        error_rail::async_ext::ContextFuture<
+            std::future::Ready<Result<(), ()>>,
+            fn() -> &'static str,
+        >,
+    >();
+}
+
 #[tokio::test]
 async fn ctx_does_not_evaluate_on_success() {
     let call_count = AtomicU32::new(0);

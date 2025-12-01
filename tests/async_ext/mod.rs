@@ -8,9 +8,3 @@ mod macro_tests;
 
 #[cfg(feature = "async")]
 mod pipeline_tests;
-
-#[cfg(feature = "async")]
-mod context_future;
-
-#[cfg(feature = "async")]
-mod pipeline;

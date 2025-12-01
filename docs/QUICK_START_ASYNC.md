@@ -44,9 +44,9 @@ Just like sync code, context is only evaluated when an error occurs:
 
 ```rust
 async fn process_order(order_id: u64) -> BoxedResult<Order, OrderError> {
-    // The format! is only called if the future returns Err
+    // The context! is only called if the future returns Err
     load_order(order_id)
-        .with_ctx(|| format!("processing order {}", order_id))
+        .with_ctx(|| context!("processing order {}", order_id))
         .await
         .map_err(Box::new)
 }
@@ -58,11 +58,12 @@ For more complex scenarios, use `AsyncErrorPipeline`:
 
 ```rust
 use error_rail::prelude_async::*;
+use error_rail::context;
 
 async fn create_user(req: CreateUserRequest) -> BoxedResult<User, ApiError> {
     AsyncErrorPipeline::new(database.insert_user(&req))
         .with_context("inserting user")
-        .with_context(format!("email: {}", req.email))
+        .with_context(context!("email: {}", req.email))
         .finish_boxed()
         .await
 }
@@ -74,7 +75,7 @@ Or use the `rail_async!` macro:
 async fn create_user(req: CreateUserRequest) -> BoxedResult<User, ApiError> {
     rail_async!(database.insert_user(&req))
         .with_context("inserting user")
-        .with_context(format!("email: {}", req.email))
+        .with_context(context!("email: {}", req.email))
         .finish_boxed()
         .await
 }
@@ -139,11 +140,11 @@ at application layer -> in complex operation -> fetching data -> [original error
 1. **Use lazy context for expensive formatting**
 
    ```rust
-   // Good: format! only called on error
-   .with_ctx(|| format!("data: {:?}", large_data))
+   // Good: context! only called on error
+   .with_ctx(|| context!("data: {:?}", large_data))
    
-   // Avoid: format! always called
-   .ctx(format!("data: {:?}", large_data))
+   // Avoid: context! always called
+   .ctx(context!("data: {:?}", large_data))
    ```
 
 2. **Prefer `finish_boxed()` for public APIs**
@@ -184,7 +185,7 @@ async fn get_user_by_id(id: u64) -> Result<User, DbError> {
 
 async fn fetch_user_profile(user_id: u64) -> BoxedResult<User, DbError> {
     get_user_by_id(user_id)
-        .with_ctx(|| format!("fetching profile for user {}", user_id))
+        .with_ctx(|| context!("fetching profile for user {}", user_id))
         .await
         .map_err(Box::new)
 }

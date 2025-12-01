@@ -1,6 +1,14 @@
 //! Tests for AsyncErrorPipeline.
 
 use error_rail::prelude_async::*;
+#[test]
+fn pipeline_is_send_sync() {
+    fn assert_send<T: Send>() {}
+    fn assert_sync<T: Sync>() {}
+
+    assert_send::<AsyncErrorPipeline<std::future::Ready<Result<(), ()>>>>();
+    assert_sync::<AsyncErrorPipeline<std::future::Ready<Result<(), ()>>>>();
+}
 
 #[tokio::test]
 async fn pipeline_basic_success() {

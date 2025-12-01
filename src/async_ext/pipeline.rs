@@ -65,6 +65,27 @@ impl<Fut> AsyncErrorPipeline<Fut> {
     pub fn new(future: Fut) -> Self {
         Self { future }
     }
+
+    /// Completes the pipeline and returns the inner future.
+    ///
+    /// This method consumes the pipeline and returns a future that
+    /// produces the original `Result<T, E>`.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use error_rail::async_ext::AsyncErrorPipeline;
+    ///
+    /// async fn example() -> Result<i32, &'static str> {
+    ///     AsyncErrorPipeline::new(async { Ok(42) })
+    ///         .finish()
+    ///         .await
+    /// }
+    /// ```
+    #[inline]
+    pub fn finish(self) -> Fut {
+        self.future
+    }
 }
 
 impl<Fut, T, E> AsyncErrorPipeline<Fut>
@@ -130,27 +151,6 @@ where
         AsyncErrorPipeline {
             future: self.future.with_ctx(f),
         }
-    }
-
-    /// Completes the pipeline and returns the inner future.
-    ///
-    /// This method consumes the pipeline and returns a future that
-    /// produces the original `Result<T, E>`.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use error_rail::async_ext::AsyncErrorPipeline;
-    ///
-    /// async fn example() -> Result<i32, &'static str> {
-    ///     AsyncErrorPipeline::new(async { Ok(42) })
-    ///         .finish()
-    ///         .await
-    /// }
-    /// ```
-    #[inline]
-    pub fn finish(self) -> Fut {
-        self.future
     }
 }
 
