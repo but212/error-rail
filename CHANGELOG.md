@@ -4,8 +4,8 @@
 
 ### Added - 0.8.0
 
-- **Async Support**
-  - Added `async` feature flag with runtime-agnostic async support (`futures-core`, `pin-project-lite` only)
+- **Async Support** (`async` feature)
+  - Added runtime-agnostic async support using only `futures-core` and `pin-project-lite`
   - Introduced `async_ext` module with core async types:
     - `FutureResultExt` trait for `Future<Output = Result<T, E>>` providing `.ctx()` / `.with_ctx()` on futures
     - `ContextFuture` wrapper that evaluates error context lazily only on failure
@@ -15,11 +15,33 @@
   - New async macros:
     - `rail_async!` for wrapping async operations into `AsyncErrorPipeline`
     - `ctx_async!` for attaching formatted context to futures in a lazy, ergonomic way
-  - Added async integration tests under `tests/async_ext` covering:
-    - Lazy evaluation on success vs error paths
-    - Context chaining behavior for futures and pipelines
-    - Async macro behavior (`rail_async!`, `ctx_async!`)
   - Added `docs/QUICK_START_ASYNC.md` documenting async usage patterns and best practices
+
+- **Async Validation** (`async-validation` feature)
+  - Added `src/async_ext/validation.rs` with async helpers for the existing `Validation` type:
+    - `validate_all_async<I>`: runs multiple async validations sequentially and accumulates all errors into a single `Validation<E, Vec<T>>`
+    - `validate_seq_async`: runs validators in sequence where each step depends on the previous result
+  - Design is **runtime-neutral** and mirrors sync `Validation` semantics (no parallel runtime primitives)
+  - `prelude_async` re-exports `validate_all_async` and `validate_seq_async` when `async-validation` feature is enabled
+
+- **Async Retry** (`async-retry` feature)
+  - Added `src/async_ext/retry.rs`:
+    - `RetryPolicy` trait for pluggable retry strategies (`next_delay(attempt) -> Option<Duration>`, `reset()`)
+    - `ExponentialBackoff` policy with configurable `initial_delay`, `max_delay`, `max_attempts`, `multiplier`
+    - `FixedDelay` policy for constant-delay retries
+    - `retry_with_policy` function:
+      - Runtime-agnostic retry loop over operations returning `Result<T, E>` where `E: TransientError`
+      - Accepts a `sleep_fn(Duration) -> Future` so it works with any async runtime (Tokio, async-std, etc.)
+      - Attaches structured context on failure (e.g. `"exhausted N retry attempts"`, `"permanent error, no retry"`)
+    - `retry_with_metadata` returning `RetryResult<T, E>` with `result`, `attempts`, and `total_wait_time`
+  - `RetryPolicy::reset()` is called at the start of each retry operation to ensure predictable behavior even for stateful policies reused across calls
+  - `prelude_async` re-exports `RetryPolicy`, `ExponentialBackoff`, `FixedDelay`, `retry_with_policy`, `retry_with_metadata`, and `RetryResult` when `async-retry` feature is enabled
+
+- **Tests**
+  - Added async integration tests under `tests/async_ext` covering:
+    - Core async functionality: lazy evaluation on success vs error paths, context chaining for futures and pipelines, async macro behavior (`rail_async!`, `ctx_async!`)
+    - Async validation: all-valid, some-invalid, and empty collections; sequential validation short-circuiting on first invalid result
+    - Async retry: immediate success, success after transient failures, permanent error (no retry), exhausted retry attempts, and builder configuration for `ExponentialBackoff` / `FixedDelay`
 
 ## [0.7.1]
 

@@ -28,6 +28,21 @@ mod context_future;
 mod future_ext;
 mod pipeline;
 
+#[cfg(feature = "async-retry")]
+mod retry;
+
+#[cfg(feature = "async-validation")]
+mod validation;
+
 pub use context_future::ContextFuture;
 pub use future_ext::FutureResultExt;
 pub use pipeline::AsyncErrorPipeline;
+
+#[cfg(feature = "async-retry")]
+pub use retry::{
+    retry_with_metadata, retry_with_policy, ExponentialBackoff, FixedDelay, RetryPolicy,
+    RetryResult,
+};
+
+#[cfg(feature = "async-validation")]
+pub use validation::{validate_all_async, validate_seq_async};
