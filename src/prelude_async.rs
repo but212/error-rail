@@ -27,8 +27,8 @@
 //!
 //! ## Async-Specific
 //!
-//! - **Traits**: [`FutureResultExt`] - `.ctx()` and `.with_ctx()` for futures
-//! - **Types**: [`AsyncErrorPipeline`], [`ContextFuture`]
+//! - **Traits**: [`FutureResultExt`](crate::async_ext::FutureResultExt) - `.ctx()` and `.with_ctx()` for futures
+//! - **Types**: [`AsyncErrorPipeline`](crate::async_ext::AsyncErrorPipeline), [`ContextFuture`](crate::async_ext::ContextFuture)
 //! - **Macros**: [`rail_async!`], [`ctx_async!`]
 
 // Re-export everything from sync prelude
