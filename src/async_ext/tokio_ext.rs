@@ -145,7 +145,7 @@ impl std::error::Error for TimeoutError {}
 
 /// Executes an async operation with a timeout, returning a `TimeoutResult`.
 ///
-/// Unlike [`with_timeout`], this function doesn't panic on timeout but
+/// Unlike panic-on-timeout helpers, this function doesn't panic on timeout but
 /// returns a structured result that the caller can handle.
 ///
 /// # Example

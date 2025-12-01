@@ -1,6 +1,6 @@
 //! Tower integration for error-rail.
 //!
-//! This module provides Tower [`Layer`] and [`Service`] implementations
+//! This module provides Tower `Layer` and `Service` implementations
 //! that automatically attach error context to service errors.
 //!
 //! # Feature Flag
