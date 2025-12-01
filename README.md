@@ -387,6 +387,47 @@ fn internal_op() -> ComposableResult<i32, &'static str> {
 }
 ```
 
+### 9. Async Support (New in 0.8.0)
+
+Full async support with the same lazy evaluation philosophy:
+
+```rust
+use error_rail::prelude_async::*;
+
+// .ctx() works on futures too
+async fn fetch_user(id: u64) -> BoxedResult<User, DbError> {
+    database.get_user(id)
+        .ctx("fetching user")
+        .await
+        .map_err(Box::new)
+}
+
+// AsyncErrorPipeline for complex flows
+async fn create_order(req: OrderRequest) -> BoxedResult<Order, ApiError> {
+    rail_async!(validate_order(&req))
+        .with_context("validating order")
+        .finish_boxed()
+        .await
+}
+
+// Retry with exponential backoff (requires async-tokio)
+async fn call_external_api() -> Result<Data, ComposableError<ApiError>> {
+    retry_transient(
+        || external_service.call(),
+        ExponentialBackoff::new().with_max_attempts(3),
+    ).await
+}
+```
+
+**Async Features:**
+
+- **`FutureResultExt`**: `.ctx()` / `.with_ctx()` for `Future<Output = Result<T, E>>`
+- **`AsyncErrorPipeline`**: Chainable async error handling
+- **`validate_all_async`**: Accumulate errors from multiple async validations
+- **`retry_transient`**: Automatic retry for transient errors (Tokio)
+- **Tower integration**: `ErrorRailLayer` for service-level error context
+- **Tracing integration**: Automatic span context attachment
+
 #### Type Aliases Comparison
 
 | Type Alias                    | Definition                           | Stack Size | Use When                        |
@@ -469,23 +510,29 @@ ErrorPipeline::new(result)
 | `prelude` / `prelude_async` | **Start here!** Common imports: sync + async utilities (`ResultExt`, `FutureResultExt`, `BoxedResult`, macros) |
 | `context`    | Context attachment: `with_context`, `accumulate_context`, `format_error_chain`               |
 | `convert`    | Conversions between `Result`, `Validation`, and `ComposableError`                            |
-| `macros`     | `context!`, `group!`, `rail!`, `impl_error_context!`                                         |
+| `macros`     | `context!`, `group!`, `rail!`, `rail_async!`, `ctx_async!`, `impl_error_context!`            |
 | `traits`     | `ResultExt`, `BoxedResultExt`, `IntoErrorContext`, `ErrorOps`, `WithError`, `TransientError` |
 | `types`      | `ComposableError`, `ErrorContext`, `ErrorPipeline`, `LazyContext`, `FingerprintConfig`       |
 | `validation` | `Validation<E, A>` type with collectors and iterators                                        |
+| `async_ext`  | Async types: `FutureResultExt`, `AsyncErrorPipeline`, `RetryPolicy`, `ExponentialBackoff`   |
+| `tower`      | Tower integration: `ErrorRailLayer`, `ErrorRailService`, `ServiceErrorExt`                  |
 
 ## Feature Flags
 
-| Feature       | Description                                                        | Default |
-|---------------|--------------------------------------------------------------------|---------|
-| `std`         | Standard library support (enables `backtrace!` macro)             | ❌ No    |
-| `serde`       | Serialization/deserialization support                             | ❌ No    |
-| `full`        | Enable all features (`std` + `serde`)                             | ❌ No    |
-| `async`       | Core async support (runtime-agnostic; enables `prelude_async`)    | ❌ No    |
-| `async-retry` | Async retry helpers (planned; builds on `async`)                  | ❌ No    |
-| `async-validation` | Async validation helpers (planned; builds on `async`)        | ❌ No    |
-| `async-full`  | Convenience bundle for all async features (Phase 1+2, when ready) | ❌ No    |
-| `everything`  | Convenience bundle for all features (when ready)                  | ❌ No    |
+| Feature            | Description                                                        | Default |
+|--------------------|--------------------------------------------------------------------|---------|
+| `std`              | Standard library support (enables `backtrace!` macro)             | ❌ No    |
+| `serde`            | Serialization/deserialization support                             | ❌ No    |
+| `full`             | Enable `std` + `serde`                                            | ❌ No    |
+| `async`            | Core async support (runtime-agnostic; enables `prelude_async`)    | ❌ No    |
+| `async-retry`      | Async retry with `RetryPolicy`, `ExponentialBackoff`, `FixedDelay`| ❌ No    |
+| `async-validation` | Async validation with `validate_all_async`, `validate_seq_async`  | ❌ No    |
+| `async-full`       | All async features (`async` + `async-retry` + `async-validation`) | ❌ No    |
+| `async-tokio`      | Tokio integration (`retry_transient`, `try_with_timeout`)         | ❌ No    |
+| `tower`            | Tower integration (`ErrorRailLayer`, `ErrorRailService`)          | ❌ No    |
+| `tracing`          | Tracing integration (`FutureSpanExt`, `instrument_error`)         | ❌ No    |
+| `ecosystem`        | All ecosystem integrations (`async-full` + `async-tokio` + `tower` + `tracing`) | ❌ No    |
+| `everything`       | All features (`full` + `ecosystem`)                               | ❌ No    |
 
 ### Usage Examples
 
@@ -502,9 +549,21 @@ error-rail = { version = "0.8", features = ["std"] }
 [dependencies]
 error-rail = { version = "0.8", features = ["serde"] }
 
+# Async support (runtime-agnostic)
+[dependencies]
+error-rail = { version = "0.8", features = ["async"] }
+
+# Async with Tokio integration
+[dependencies]
+error-rail = { version = "0.8", features = ["async-tokio"] }
+
+# Full async ecosystem (Tokio + Tower + Tracing)
+[dependencies]
+error-rail = { version = "0.8", features = ["ecosystem"] }
+
 # All features enabled
 [dependencies]
-error-rail = { version = "0.8", features = ["full"] }
+error-rail = { version = "0.8", features = ["everything"] }
 ```
 
 ### `no_std` Support
@@ -522,16 +581,22 @@ error-rail = { version = "0.8", default-features = false }
 ## Examples
 
 ```sh
+# Sync examples
 cargo run --example quick_start         # Basic usage patterns
 cargo run --example readme_features     # All features from this README
 cargo run --example pipeline            # Error pipeline chaining
 cargo run --example validation_collect  # Validation accumulation
 cargo run --example retry_integration   # Retry patterns & fingerprinting
+
+# Async examples (requires async features)
+cargo run --example async_api_patterns --features async-full,async-tokio
+cargo run --example async_tower_integration --features tower
 ```
 
 ## Integration Guides
 
-- **[Quick Start Guide](docs/QUICK_START.md)** - Step-by-step tutorial
+- **[Quick Start Guide](docs/QUICK_START.md)** - Step-by-step tutorial for sync code
+- **[Async Quick Start](docs/QUICK_START_ASYNC.md)** - Async error handling patterns
 - **[Error Handling Patterns](docs/PATTERNS.md)** - Real-world usage patterns and best practices
 
 ## Glossary
