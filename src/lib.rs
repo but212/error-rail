@@ -84,6 +84,10 @@ pub mod async_ext;
 #[cfg(feature = "async")]
 pub mod prelude_async;
 
+/// Tower integration - Layer and Service implementations (requires `tower` feature)
+#[cfg(feature = "tower")]
+pub mod tower;
+
 // Re-export common types that might be needed at root,
 // but encourage using prelude/intermediate/advanced modules.
 pub use context::*;

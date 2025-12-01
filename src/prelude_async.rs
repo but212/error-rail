@@ -40,6 +40,16 @@
 //! ## Async Validation (requires `async-validation` feature)
 //!
 //! - **Functions**: [`validate_all_async`](crate::async_ext::validate_all_async), [`validate_seq_async`](crate::async_ext::validate_seq_async)
+//!
+//! ## Tokio Integration (requires `async-tokio` feature)
+//!
+//! - **Functions**: [`retry_transient`](crate::async_ext::retry_transient), [`retry_transient_n`](crate::async_ext::retry_transient_n), [`try_with_timeout`](crate::async_ext::try_with_timeout)
+//! - **Types**: [`TimeoutResult`](crate::async_ext::TimeoutResult), [`TimeoutError`](crate::async_ext::TimeoutError)
+//!
+//! ## Tracing Integration (requires `tracing` feature)
+//!
+//! - **Traits**: [`FutureSpanExt`](crate::async_ext::FutureSpanExt), [`ResultSpanExt`](crate::async_ext::ResultSpanExt)
+//! - **Functions**: [`instrument_error`](crate::async_ext::instrument_error)
 
 // Re-export everything from sync prelude
 pub use crate::prelude::*;
@@ -61,3 +71,13 @@ pub use crate::async_ext::{
 // Async validation exports
 #[cfg(feature = "async-validation")]
 pub use crate::async_ext::{validate_all_async, validate_seq_async};
+
+// Tokio integration exports
+#[cfg(feature = "async-tokio")]
+pub use crate::async_ext::{
+    retry_transient, retry_transient_n, try_with_timeout, TimeoutError, TimeoutResult,
+};
+
+// Tracing integration exports
+#[cfg(feature = "tracing")]
+pub use crate::async_ext::{instrument_error, FutureSpanExt, ResultSpanExt, SpanContextFuture};

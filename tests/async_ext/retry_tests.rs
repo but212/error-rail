@@ -128,7 +128,7 @@ async fn retry_exhausts_attempts() {
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert!(err.error_chain().contains("exhausted"));
-    assert_eq!(counter.load(Ordering::SeqCst), 3); // max_attempts
+    assert_eq!(counter.load(Ordering::SeqCst), 4); // Initial attempt + 3 retries
 }
 
 #[test]

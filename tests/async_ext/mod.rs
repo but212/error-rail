@@ -17,3 +17,9 @@ mod validation_tests;
 
 #[cfg(feature = "async-retry")]
 mod retry;
+
+#[cfg(feature = "async-tokio")]
+mod tokio_tests;
+
+#[cfg(feature = "tracing")]
+mod tracing_tests;

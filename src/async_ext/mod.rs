@@ -34,6 +34,12 @@ mod retry;
 #[cfg(feature = "async-validation")]
 mod validation;
 
+#[cfg(feature = "async-tokio")]
+mod tokio_ext;
+
+#[cfg(feature = "tracing")]
+mod tracing_ext;
+
 pub use context_future::ContextFuture;
 pub use future_ext::FutureResultExt;
 pub use pipeline::AsyncErrorPipeline;
@@ -46,3 +52,11 @@ pub use retry::{
 
 #[cfg(feature = "async-validation")]
 pub use validation::{validate_all_async, validate_seq_async};
+
+#[cfg(feature = "async-tokio")]
+pub use tokio_ext::{
+    retry_transient, retry_transient_n, try_with_timeout, TimeoutError, TimeoutResult,
+};
+
+#[cfg(feature = "tracing")]
+pub use tracing_ext::{instrument_error, FutureSpanExt, ResultSpanExt, SpanContextFuture};
