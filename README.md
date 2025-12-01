@@ -45,7 +45,7 @@ Or add to `Cargo.toml`:
 
 ```toml
 [dependencies]
-error-rail = "0.7"
+error-rail = "0.8"
 ```
 
 ## 30-Second Quick Start
@@ -79,7 +79,7 @@ fn main() {
 
 error-rail provides a 3-level API hierarchy to match your expertise level:
 
-### Beginner API (`prelude`)
+### Beginner API (`prelude`, `prelude_async`)
 
 Start here! Everything you need for common error handling:
 
@@ -92,7 +92,20 @@ fn load_config() -> BoxedResult<String, std::io::Error> {
 }
 ```
 
-**Exports**: `ComposableError`, `ErrorContext`, `ErrorPipeline`, `rail!`, `context!`, `group!`, `ResultExt`, `BoxedResultExt`
+For async code, use `prelude_async`:
+
+```rust
+use error_rail::prelude_async::*;
+
+async fn load_config_async() -> BoxedResult<String, std::io::Error> {
+    tokio::fs::read_to_string("config.toml")
+        .ctx("loading configuration (async)")
+        .await
+        .map_err(Box::new)
+}
+```
+
+**Exports**: `ComposableError`, `ErrorContext`, `ErrorPipeline`, `rail!`, `context!`, `group!`, `ResultExt`, `BoxedResultExt`, and (with `async` feature) `FutureResultExt`, `AsyncErrorPipeline`, `rail_async!`, `ctx_async!`
 
 ### Intermediate API (`intermediate`)
 
@@ -453,7 +466,7 @@ ErrorPipeline::new(result)
 
 | Module       | Description                                                                                  |
 |--------------|----------------------------------------------------------------------------------------------|
-| `prelude`    | **Start here!** Common imports: `ResultExt`, `BoxedResult`, macros                           |
+| `prelude` / `prelude_async` | **Start here!** Common imports: sync + async utilities (`ResultExt`, `FutureResultExt`, `BoxedResult`, macros) |
 | `context`    | Context attachment: `with_context`, `accumulate_context`, `format_error_chain`               |
 | `convert`    | Conversions between `Result`, `Validation`, and `ComposableError`                            |
 | `macros`     | `context!`, `group!`, `rail!`, `impl_error_context!`                                         |
@@ -463,30 +476,35 @@ ErrorPipeline::new(result)
 
 ## Feature Flags
 
-| Feature | Description                                           | Default |
-|---------|-------------------------------------------------------|---------|
-| `std`   | Standard library support (enables `backtrace!` macro) | ❌ No    |
-| `serde` | Serialization/deserialization support                 | ❌ No    |
-| `full`  | Enable all features (`std` + `serde`)                 | ❌ No    |
+| Feature       | Description                                                        | Default |
+|---------------|--------------------------------------------------------------------|---------|
+| `std`         | Standard library support (enables `backtrace!` macro)             | ❌ No    |
+| `serde`       | Serialization/deserialization support                             | ❌ No    |
+| `full`        | Enable all features (`std` + `serde`)                             | ❌ No    |
+| `async`       | Core async support (runtime-agnostic; enables `prelude_async`)    | ❌ No    |
+| `async-retry` | Async retry helpers (planned; builds on `async`)                  | ❌ No    |
+| `async-validation` | Async validation helpers (planned; builds on `async`)        | ❌ No    |
+| `async-full`  | Convenience bundle for all async features (Phase 1+2, when ready) | ❌ No    |
+| `everything`  | Convenience bundle for all features (when ready)                  | ❌ No    |
 
 ### Usage Examples
 
 ```toml
 # Default (no_std compatible, requires alloc)
 [dependencies]
-error-rail = "0.7"
+error-rail = "0.8"
 
 # With std library support (e.g., for backtraces)
 [dependencies]
-error-rail = { version = "0.7", features = ["std"] }
+error-rail = { version = "0.8", features = ["std"] }
 
 # With serialization support
 [dependencies]
-error-rail = { version = "0.7", features = ["serde"] }
+error-rail = { version = "0.8", features = ["serde"] }
 
 # All features enabled
 [dependencies]
-error-rail = { version = "0.7", features = ["full"] }
+error-rail = { version = "0.8", features = ["full"] }
 ```
 
 ### `no_std` Support
@@ -496,7 +514,7 @@ error-rail = { version = "0.7", features = ["full"] }
 ```toml
 # Minimal no_std usage
 [dependencies]
-error-rail = { version = "0.7", default-features = false }
+error-rail = { version = "0.8", default-features = false }
 ```
 
 > **Note**: Some features like `backtrace!` require the `std` feature.
