@@ -14,12 +14,12 @@
   - `ctx_async!` macro for attaching formatted context to futures ergonomically
   - Added `docs/QUICK_START_ASYNC.md` with async usage patterns and best practices
 
-- **Async validation support** (`async-validation` feature)
+- **Async validation support** (`async` feature)
   - `validate_all_async<I>` function for running multiple async validations sequentially and accumulating all errors
   - `validate_seq_async` function for sequential validation where each step depends on previous result
   - Runtime-neutral design mirroring synchronous `Validation` semantics
 
-- **Async retry support** (`async-retry` feature)
+- **Async retry support** (`async` feature)
   - `RetryPolicy` trait for pluggable retry strategies
   - `ExponentialBackoff` policy with builder pattern (`with_initial_delay`, `with_max_delay`, `with_max_attempts`, `with_multiplier`)
   - `FixedDelay` policy for constant-delay retries
@@ -27,7 +27,7 @@
   - `retry_with_metadata` function returning `RetryResult<T, E>` with `result`, `attempts`, and `total_wait_time`
   - Structured context on failure (e.g., "exhausted N retry attempts", "permanent error, no retry")
 
-- **Tokio integration** (`async-tokio` feature)
+- **Tokio integration** (`ecosystem` feature)
   - `retry_transient` convenience function using `tokio::time::sleep`
   - `retry_transient_n` for simple retry with attempt count
   - `try_with_timeout` wrapper returning `TimeoutResult<T, E>`

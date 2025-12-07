@@ -410,7 +410,7 @@ async fn create_order(req: OrderRequest) -> BoxedResult<Order, ApiError> {
         .await
 }
 
-// Retry with exponential backoff (requires async-tokio)
+// Retry with exponential backoff (requires ecosystem feature)
 async fn call_external_api() -> Result<Data, ComposableError<ApiError>> {
     retry_transient(
         || external_service.call(),
@@ -523,16 +523,11 @@ ErrorPipeline::new(result)
 |--------------------|--------------------------------------------------------------------|---------|
 | `std`              | Standard library support (enables `backtrace!` macro)             | ❌ No    |
 | `serde`            | Serialization/deserialization support                             | ❌ No    |
-| `full`             | Enable `std` + `serde`                                            | ❌ No    |
 | `async`            | Core async support (runtime-agnostic; enables `prelude_async`)    | ❌ No    |
-| `async-retry`      | Async retry with `RetryPolicy`, `ExponentialBackoff`, `FixedDelay`| ❌ No    |
-| `async-validation` | Async validation with `validate_all_async`, `validate_seq_async`  | ❌ No    |
-| `async-full`       | All async features (`async` + `async-retry` + `async-validation`) | ❌ No    |
-| `async-tokio`      | Tokio integration (`retry_transient`, `try_with_timeout`)         | ❌ No    |
 | `tower`            | Tower integration (`ErrorRailLayer`, `ErrorRailService`)          | ❌ No    |
 | `tracing`          | Tracing integration (`FutureSpanExt`, `instrument_error`)         | ❌ No    |
-| `ecosystem`        | All ecosystem integrations (`async-full` + `async-tokio` + `tower` + `tracing`) | ❌ No    |
-| `everything`       | All features (`full` + `ecosystem`)                               | ❌ No    |
+| `ecosystem`        | Async ecosystem (`async` + `tokio` + `tower` + `tracing`)         | ❌ No    |
+| `full`             | Serde + async ecosystem (`serde` + `ecosystem`)                   | ❌ No    |
 
 ### Usage Examples
 
@@ -555,7 +550,7 @@ error-rail = { version = "0.8", features = ["async"] }
 
 # Async with Tokio integration
 [dependencies]
-error-rail = { version = "0.8", features = ["async-tokio"] }
+error-rail = { version = "0.8", features = ["ecosystem"] }
 
 # Full async ecosystem (Tokio + Tower + Tracing)
 [dependencies]
@@ -563,7 +558,7 @@ error-rail = { version = "0.8", features = ["ecosystem"] }
 
 # All features enabled
 [dependencies]
-error-rail = { version = "0.8", features = ["everything"] }
+error-rail = { version = "0.8", features = ["full"] }
 ```
 
 ### `no_std` Support
@@ -589,7 +584,7 @@ cargo run --example validation_collect  # Validation accumulation
 cargo run --example retry_integration   # Retry patterns & fingerprinting
 
 # Async examples (requires async features)
-cargo run --example async_api_patterns --features async-full,async-tokio
+cargo run --example async_api_patterns --features ecosystem
 cargo run --example async_tower_integration --features tower
 ```
 

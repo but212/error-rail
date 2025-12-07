@@ -31,17 +31,17 @@
 //! - **Types**: [`AsyncErrorPipeline`](crate::async_ext::AsyncErrorPipeline), [`ContextFuture`](crate::async_ext::ContextFuture)
 //! - **Macros**: [`rail_async!`], [`ctx_async!`]
 //!
-//! ## Async Retry (requires `async-retry` feature)
+//! ## Async Retry (requires `async` feature)
 //!
 //! - **Traits**: [`RetryPolicy`](crate::async_ext::RetryPolicy)
 //! - **Types**: [`ExponentialBackoff`](crate::async_ext::ExponentialBackoff), [`FixedDelay`](crate::async_ext::FixedDelay)
 //! - **Functions**: [`retry_with_policy`](crate::async_ext::retry_with_policy)
 //!
-//! ## Async Validation (requires `async-validation` feature)
+//! ## Async Validation (requires `async` feature)
 //!
 //! - **Functions**: [`validate_all_async`](crate::async_ext::validate_all_async), [`validate_seq_async`](crate::async_ext::validate_seq_async)
 //!
-//! ## Tokio Integration (requires `async-tokio` feature)
+//! ## Tokio Integration (requires `ecosystem` feature)
 //!
 //! - **Functions**: [`retry_transient`](crate::async_ext::retry_transient), [`retry_transient_n`](crate::async_ext::retry_transient_n), [`try_with_timeout`](crate::async_ext::try_with_timeout)
 //! - **Types**: [`TimeoutResult`](crate::async_ext::TimeoutResult), [`TimeoutError`](crate::async_ext::TimeoutError)
@@ -62,18 +62,18 @@ pub use crate::async_ext::{AsyncErrorPipeline, ContextFuture, FutureResultExt};
 pub use crate::{ctx_async, rail_async};
 
 // Async retry exports
-#[cfg(feature = "async-retry")]
+#[cfg(feature = "async")]
 pub use crate::async_ext::{
     retry_with_metadata, retry_with_policy, ExponentialBackoff, FixedDelay, RetryPolicy,
     RetryResult,
 };
 
 // Async validation exports
-#[cfg(feature = "async-validation")]
+#[cfg(feature = "async")]
 pub use crate::async_ext::{validate_all_async, validate_seq_async};
 
 // Tokio integration exports
-#[cfg(feature = "async-tokio")]
+#[cfg(feature = "ecosystem")]
 pub use crate::async_ext::{
     retry_transient, retry_transient_n, try_with_timeout, TimeoutError, TimeoutResult,
 };
