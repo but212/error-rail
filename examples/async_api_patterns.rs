@@ -5,9 +5,9 @@
 //!
 //! # Requirements
 //!
-//! Run with: `cargo run --example async_api_patterns --features async-full,async-tokio`
+//! Run with: `cargo run --example async_api_patterns --features async-full,ecosystem`
 
-#![cfg(feature = "async-tokio")]
+#![cfg(feature = "ecosystem")]
 
 use error_rail::context;
 use error_rail::prelude_async::*;

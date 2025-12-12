@@ -41,24 +41,14 @@ tower = { version = "0.5", default-features = false, features = ["util"] }
 default = []
 std = []
 serde = ["dep:serde", "smallvec/serde"]
-full = ["serde", "std"]
-
-async = ["std", "dep:pin-project-lite", "dep:futures-core"]
-async-retry = ["async"]
-async-validation = ["async"]
-async-full = ["async", "async-retry", "async-validation"]
-
-async-tokio = ["async", "async-retry", "dep:tokio"]
-tower = ["async", "dep:tower"]
-tracing = ["std", "dep:tracing"]
-ecosystem = ["async-full", "async-tokio", "tower", "tracing"]
-
-everything = ["full", "ecosystem"]
+async = ["std"]
+ecosystem = ["async", "tokio", "tower", "tracing"]
+full = ["serde", "ecosystem"]
 
 [[example]]
 name = "async_api_patterns"
 path = "examples/async_api_patterns.rs"
-required-features = ["async-tokio"]
+required-features = ["ecosystem"]
 
 [[example]]
 name = "async_tower_integration"
