@@ -34,8 +34,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Run tests (no features)
         run: cargo test --verbose
-      - name: Run tests (everything feature)
-        run: cargo test --verbose --features everything
+      - name: Run tests (all features)
+        run: cargo test --verbose --all-features
 
   feature-combinations:
     name: Feature ${{ matrix.features }} on ${{ matrix.os }}
@@ -47,21 +47,26 @@ jobs:
           - "--no-default-features"
           - "--features serde"
           - "--features std"
-          - "--features full"
           - "--features async"
-          - "--features async-full"
-          - "--features everything"
+          - "--features ecosystem"
+          - "--features full"
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+      - name: Install wasm32 target (no_std check)
+        if: matrix.features == '--no-default-features'
+        run: rustup target add wasm32-unknown-unknown
       - name: Check ${{ matrix.features }}
         run: cargo check ${{ matrix.features }}
+      - name: Build no_std library (wasm32)
+        if: matrix.features == '--no-default-features'
+        run: cargo build --target wasm32-unknown-unknown --no-default-features
       - name: Test ${{ matrix.features }}
         run: |
-          if [[ "${{ matrix.features }}" == "--features std" || "${{ matrix.features }}" == "--features full" ]]; then
+          if [[ "${{ matrix.features }}" == "--features std" || "${{ matrix.features }}" == "--features async" || "${{ matrix.features }}" == "--features ecosystem" || "${{ matrix.features }}" == "--features full" ]]; then
             RUST_BACKTRACE=1 cargo test ${{ matrix.features }}
           else
             cargo test ${{ matrix.features }}
@@ -69,7 +74,12 @@ jobs:
       - name: Clippy ${{ matrix.features }}
         run: cargo clippy ${{ matrix.features }} -- -D warnings
       - name: Check benchmarks compilation ${{ matrix.features }}
-        run: cargo bench --no-run ${{ matrix.features }}
+        run: |
+          if [[ "${{ matrix.features }}" == "--no-default-features" ]]; then
+            echo "Skipping benches for no_std (no default features)"
+          else
+            cargo bench --no-run ${{ matrix.features }}
+          fi
 
   msrv:
     name: Check MSRV
@@ -93,8 +103,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Check MSRV compatibility
         run: cargo check
-      - name: Check MSRV compatibility (everything features)
-        run: cargo check --features everything
+      - name: Check MSRV compatibility (full features)
+        run: cargo check --features full
 
   unused_dependencies:
     name: Check for unused dependencies
@@ -150,7 +160,7 @@ jobs:
       - name: Build documentation with broken link check
         run: |
           RUSTDOCFLAGS="-D warnings -D rustdoc::broken_intra_doc_links --cfg docsrs" \
-          cargo +nightly doc --no-deps --features everything
+          cargo +nightly doc --no-deps --all-features
 
       - name: Verify docs directory exists
         run: |
