@@ -1,5 +1,5 @@
 //! Tests for Tower integration.
-#![cfg(feature = "tower")]
+#![cfg(feature = "ecosystem")]
 
 use std::future::Future;
 use std::pin::Pin;

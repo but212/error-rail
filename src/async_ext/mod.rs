@@ -48,7 +48,7 @@ mod validation;
 #[cfg(feature = "ecosystem")]
 mod tokio_ext;
 
-#[cfg(feature = "tracing")]
+#[cfg(feature = "ecosystem")]
 mod tracing_ext;
 
 pub use context_future::ContextFuture;
@@ -69,5 +69,5 @@ pub use tokio_ext::{
     retry_transient, retry_transient_n, try_with_timeout, TimeoutError, TimeoutResult,
 };
 
-#[cfg(feature = "tracing")]
+#[cfg(feature = "ecosystem")]
 pub use tracing_ext::{instrument_error, FutureSpanExt, ResultSpanExt, SpanContextFuture};

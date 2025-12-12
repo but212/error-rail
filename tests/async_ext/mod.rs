@@ -21,5 +21,5 @@ mod retry;
 #[cfg(feature = "ecosystem")]
 mod tokio_tests;
 
-#[cfg(feature = "tracing")]
+#[cfg(feature = "ecosystem")]
 mod tracing_tests;

@@ -89,5 +89,5 @@ pub use crate::async_ext::{
 };
 
 // Tracing integration exports
-#[cfg(feature = "tracing")]
+#[cfg(feature = "ecosystem")]
 pub use crate::async_ext::{instrument_error, FutureSpanExt, ResultSpanExt, SpanContextFuture};
