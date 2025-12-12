@@ -419,10 +419,20 @@ macro_rules! validate {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```rust,no_run
 /// use error_rail::prelude_async::*;
 ///
-/// async fn example() -> BoxedResult<Data, ApiError> {
+/// #[derive(Debug)]
+/// struct Data;
+///
+/// #[derive(Debug)]
+/// struct ApiError;
+///
+/// async fn fetch_data(_id: u64) -> Result<Data, ApiError> {
+///     Err(ApiError)
+/// }
+///
+/// async fn example(id: u64) -> BoxedResult<Data, ApiError> {
 ///     rail_async!(fetch_data(id))
 ///         .with_context("fetching data")
 ///         .finish_boxed()
@@ -449,16 +459,37 @@ macro_rules! rail_async {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```rust,no_run
 /// use error_rail::prelude_async::*;
+///
+/// #[derive(Debug)]
+/// struct User;
+///
+/// #[derive(Debug)]
+/// struct Profile;
+///
+/// #[derive(Debug)]
+/// struct ApiError;
+///
+/// async fn fetch_user(_id: u64) -> Result<User, ApiError> {
+///     Err(ApiError)
+/// }
+///
+/// async fn fetch_profile(_id: u64) -> Result<Profile, ApiError> {
+///     Err(ApiError)
+/// }
 ///
 /// async fn example(id: u64) -> BoxedResult<User, ApiError> {
 ///     // Static message
-///     let user = ctx_async!(fetch_user(id), "fetching user").await?;
-///     
+///     let user = ctx_async!(fetch_user(id), "fetching user")
+///         .await
+///         .map_err(Box::new)?;
+///
 ///     // With formatting (lazy evaluation)
-///     let profile = ctx_async!(fetch_profile(id), "fetching profile for user {}", id).await?;
-///     
+///     let _profile = ctx_async!(fetch_profile(id), "fetching profile for user {}", id)
+///         .await
+///         .map_err(Box::new)?;
+///
 ///     Ok(user)
 /// }
 /// ```

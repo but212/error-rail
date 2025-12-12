@@ -24,8 +24,18 @@ use super::context_future::ContextFuture;
 ///
 /// ## Basic Usage
 ///
-/// ```ignore
+/// ```rust,no_run
 /// use error_rail::prelude_async::*;
+///
+/// #[derive(Debug)]
+/// struct User;
+///
+/// #[derive(Debug)]
+/// struct ApiError;
+///
+/// async fn fetch_from_db(_id: u64) -> Result<User, ApiError> {
+///     Err(ApiError)
+/// }
 ///
 /// async fn fetch_user(id: u64) -> BoxedResult<User, ApiError> {
 ///     fetch_from_db(id)
@@ -37,8 +47,18 @@ use super::context_future::ContextFuture;
 ///
 /// ## With Lazy Context
 ///
-/// ```ignore
+/// ```rust,no_run
 /// use error_rail::prelude_async::*;
+///
+/// #[derive(Debug)]
+/// struct Order;
+///
+/// #[derive(Debug)]
+/// struct OrderError;
+///
+/// async fn validate_order(_order_id: u64) -> Result<Order, OrderError> {
+///     Err(OrderError)
+/// }
 ///
 /// async fn process_order(order_id: u64) -> BoxedResult<Order, OrderError> {
 ///     validate_order(order_id)
@@ -87,8 +107,18 @@ pub trait FutureResultExt<T, E>: Future<Output = Result<T, E>> + Sized {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```rust,no_run
     /// use error_rail::prelude_async::*;
+    ///
+    /// #[derive(Debug)]
+    /// struct User;
+    ///
+    /// #[derive(Debug)]
+    /// struct ApiError;
+    ///
+    /// async fn fetch_from_db(_id: u64) -> Result<User, ApiError> {
+    ///     Err(ApiError)
+    /// }
     ///
     /// async fn fetch_user(id: u64) -> BoxedResult<User, ApiError> {
     ///     fetch_from_db(id)

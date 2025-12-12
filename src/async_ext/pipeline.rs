@@ -19,10 +19,20 @@ use super::future_ext::FutureResultExt;
 ///
 /// ## Basic Usage
 ///
-/// ```ignore
+/// ```rust,no_run
 /// use error_rail::prelude_async::*;
 ///
-/// async fn example() -> BoxedResult<Data, ApiError> {
+/// #[derive(Debug)]
+/// struct Data;
+///
+/// #[derive(Debug)]
+/// struct ApiError;
+///
+/// async fn fetch_data(_id: u64) -> Result<Data, ApiError> {
+///     Err(ApiError)
+/// }
+///
+/// async fn example(id: u64) -> BoxedResult<Data, ApiError> {
 ///     AsyncErrorPipeline::new(fetch_data(id))
 ///         .with_context("fetching data")
 ///         .finish_boxed()
@@ -32,13 +42,25 @@ use super::future_ext::FutureResultExt;
 ///
 /// ## With Multiple Contexts
 ///
-/// ```ignore
+/// ```rust,no_run
 /// use error_rail::prelude_async::*;
+///
+/// #[derive(Debug)]
+/// struct Order;
+///
+/// #[derive(Debug)]
+/// struct OrderError;
+///
+/// async fn load_order(_order_id: u64) -> Result<Order, OrderError> {
+///     Err(OrderError)
+/// }
 ///
 /// async fn process_order(order_id: u64) -> BoxedResult<Order, OrderError> {
 ///     AsyncErrorPipeline::new(load_order(order_id))
-///         .with_context("loading order")
-///         .with_context(format!("order_id: {}", order_id))
+///         .with_context(group!(
+///             message("loading order"),
+///             metadata("order_id", format!("{}", order_id))
+///         ))
 ///         .finish_boxed()
 ///         .await
 /// }
@@ -132,11 +154,21 @@ where
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```rust,no_run
     /// use error_rail::async_ext::AsyncErrorPipeline;
     ///
+    /// #[derive(Debug)]
+    /// struct User;
+    ///
+    /// #[derive(Debug)]
+    /// struct ApiError;
+    ///
+    /// async fn fetch_user(_id: u64) -> Result<User, ApiError> {
+    ///     Err(ApiError)
+    /// }
+    ///
     /// let id = 42u64;
-    /// let pipeline = AsyncErrorPipeline::new(fetch_user(id))
+    /// let _pipeline = AsyncErrorPipeline::new(fetch_user(id))
     ///     .with_context_fn(|| format!("user_id: {}", id));
     /// ```
     #[inline]

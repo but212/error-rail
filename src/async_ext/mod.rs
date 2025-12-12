@@ -14,13 +14,24 @@
 //!
 //! # Examples
 //!
-//! ```ignore
+//! ```rust,no_run
 //! use error_rail::prelude_async::*;
+//!
+//! #[derive(Debug)]
+//! struct User;
+//!
+//! #[derive(Debug)]
+//! struct ApiError;
+//!
+//! async fn fetch_from_db(_id: u64) -> Result<User, ApiError> {
+//!     Err(ApiError)
+//! }
 //!
 //! async fn fetch_user(id: u64) -> BoxedResult<User, ApiError> {
 //!     fetch_from_db(id)
 //!         .ctx("fetching user from database")
 //!         .await
+//!         .map_err(Box::new)
 //! }
 //! ```
 
