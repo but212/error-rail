@@ -39,13 +39,13 @@ mod context_future;
 mod future_ext;
 mod pipeline;
 
-#[cfg(feature = "async-retry")]
+#[cfg(feature = "async")]
 mod retry;
 
-#[cfg(feature = "async-validation")]
+#[cfg(feature = "async")]
 mod validation;
 
-#[cfg(feature = "async-tokio")]
+#[cfg(feature = "ecosystem")]
 mod tokio_ext;
 
 #[cfg(feature = "tracing")]
@@ -55,16 +55,16 @@ pub use context_future::ContextFuture;
 pub use future_ext::FutureResultExt;
 pub use pipeline::AsyncErrorPipeline;
 
-#[cfg(feature = "async-retry")]
+#[cfg(feature = "async")]
 pub use retry::{
     retry_with_metadata, retry_with_policy, ExponentialBackoff, FixedDelay, RetryPolicy,
     RetryResult,
 };
 
-#[cfg(feature = "async-validation")]
+#[cfg(feature = "async")]
 pub use validation::{validate_all_async, validate_seq_async};
 
-#[cfg(feature = "async-tokio")]
+#[cfg(feature = "ecosystem")]
 pub use tokio_ext::{
     retry_transient, retry_transient_n, try_with_timeout, TimeoutError, TimeoutResult,
 };

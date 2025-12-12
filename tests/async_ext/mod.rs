@@ -9,16 +9,16 @@ mod macro_tests;
 #[cfg(feature = "async")]
 mod pipeline_tests;
 
-#[cfg(feature = "async-retry")]
+#[cfg(feature = "async")]
 mod retry_tests;
 
-#[cfg(feature = "async-validation")]
+#[cfg(feature = "async")]
 mod validation_tests;
 
-#[cfg(feature = "async-retry")]
+#[cfg(feature = "async")]
 mod retry;
 
-#[cfg(feature = "async-tokio")]
+#[cfg(feature = "ecosystem")]
 mod tokio_tests;
 
 #[cfg(feature = "tracing")]

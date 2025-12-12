@@ -5,11 +5,11 @@
 //!
 //! # Feature Flag
 //!
-//! Requires the `async-tokio` feature:
+//! Requires the `ecosystem` feature:
 //!
 //! ```toml
 //! [dependencies]
-//! error-rail = { version = "0.8", features = ["async-tokio"] }
+//! error-rail = { version = "0.8", features = ["ecosystem"] }
 //! ```
 
 use core::future::Future;
