@@ -83,11 +83,11 @@ pub use crate::async_ext::{
 pub use crate::async_ext::{validate_all_async, validate_seq_async};
 
 // Tokio integration exports
-#[cfg(feature = "ecosystem")]
+#[cfg(feature = "tokio")]
 pub use crate::async_ext::{
     retry_transient, retry_transient_n, try_with_timeout, TimeoutError, TimeoutResult,
 };
 
 // Tracing integration exports
-#[cfg(feature = "ecosystem")]
+#[cfg(feature = "tracing")]
 pub use crate::async_ext::{instrument_error, FutureSpanExt, ResultSpanExt, SpanContextFuture};

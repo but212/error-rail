@@ -410,7 +410,7 @@ async fn create_order(req: OrderRequest) -> BoxedResult<Order, ApiError> {
         .await
 }
 
-// Retry with exponential backoff (requires ecosystem feature)
+// Retry with exponential backoff (requires tokio feature)
 async fn call_external_api() -> Result<Data, ComposableError<ApiError>> {
     retry_transient(
         || external_service.call(),
@@ -524,9 +524,10 @@ ErrorPipeline::new(result)
 | `std`              | Standard library support (enables `backtrace!` macro)             | ❌ No    |
 | `serde`            | Serialization/deserialization support                             | ❌ No    |
 | `async`            | Core async support (runtime-agnostic; enables `prelude_async`)    | ❌ No    |
+| `tokio`            | Tokio integration (`retry_transient`, `try_with_timeout`)         | ❌ No    |
 | `tower`            | Tower integration (`ErrorRailLayer`, `ErrorRailService`)          | ❌ No    |
 | `tracing`          | Tracing integration (`FutureSpanExt`, `instrument_error`)         | ❌ No    |
-| `ecosystem`        | Async ecosystem (`async` + `tokio` + `tower` + `tracing`)         | ❌ No    |
+| `ecosystem`        | Convenience bundle (`tokio` + `tower` + `tracing`)                | ❌ No    |
 | `full`             | Serde + async ecosystem (`serde` + `ecosystem`)                   | ❌ No    |
 
 ### Usage Examples
@@ -548,9 +549,9 @@ error-rail = { version = "0.8", features = ["serde"] }
 [dependencies]
 error-rail = { version = "0.8", features = ["async"] }
 
-# Async with Tokio integration
+# Tokio integration
 [dependencies]
-error-rail = { version = "0.8", features = ["ecosystem"] }
+error-rail = { version = "0.8", features = ["tokio"] }
 
 # Full async ecosystem (Tokio + Tower + Tracing)
 [dependencies]
@@ -584,7 +585,7 @@ cargo run --example validation_collect  # Validation accumulation
 cargo run --example retry_integration   # Retry patterns & fingerprinting
 
 # Async examples (requires async features)
-cargo run --example async_api_patterns --features ecosystem
+cargo run --example async_api_patterns --features tokio
 cargo run --example async_tower_integration --features tower
 ```
 

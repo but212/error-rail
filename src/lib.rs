@@ -85,7 +85,7 @@ pub mod async_ext;
 pub mod prelude_async;
 
 /// Tower integration - Layer and Service implementations (requires `tower` feature)
-#[cfg(feature = "ecosystem")]
+#[cfg(feature = "tower")]
 pub mod tower;
 
 // Re-export common types that might be needed at root,

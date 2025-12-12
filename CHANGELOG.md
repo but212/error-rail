@@ -27,7 +27,7 @@
   - `retry_with_metadata` function returning `RetryResult<T, E>` with `result`, `attempts`, and `total_wait_time`
   - Structured context on failure (e.g., "exhausted N retry attempts", "permanent error, no retry")
 
-- **Tokio integration** (`ecosystem` feature)
+- **Tokio integration** (`tokio` feature)
   - `retry_transient` convenience function using `tokio::time::sleep`
   - `retry_transient_n` for simple retry with attempt count
   - `try_with_timeout` wrapper returning `TimeoutResult<T, E>`
@@ -45,6 +45,10 @@
   - `ResultSpanExt` trait providing `.with_current_span()` and `.with_span()` for Results
   - `SpanContextFuture`: Future wrapper capturing span context on error
   - `instrument_error` function to add current span context to any error
+
+- **Feature flag layout**
+  - `tokio`, `tower`, and `tracing` features are independently configurable
+  - `ecosystem` is a convenience bundle enabling `tokio` + `tower` + `tracing`
 
 - **Comprehensive test coverage** for async functionality
   - `tests/async_ext/future_ext_tests.rs`: lazy evaluation and context chaining

@@ -1,6 +1,6 @@
 [package]
 name = "error-rail"
-version = "0.7.1"
+version = "0.8.0"
 authors = ["jeong-il suk <wjddlf211@naver.com>"]
 edition = "2021"
 license = "Apache-2.0"
@@ -41,14 +41,17 @@ tower = { version = "0.5", default-features = false, features = ["util"] }
 default = []
 std = []
 serde = ["dep:serde", "smallvec/serde"]
-async = ["std", "dep:pin-project-lite", "dep:tokio"]
-ecosystem = ["async", "dep:tower", "dep:tracing"]
+async = ["std", "dep:pin-project-lite"]
+tower = ["std", "dep:tower", "dep:pin-project-lite"]
+tokio = ["async", "dep:tokio"]
+tracing = ["async", "dep:tracing"]
+ecosystem = ["tower", "tokio", "tracing"]
 full = ["serde", "ecosystem"]
 
 [[example]]
 name = "async_api_patterns"
 path = "examples/async_api_patterns.rs"
-required-features = ["ecosystem"]
+required-features = ["tokio"]
 
 [[example]]
 name = "async_tower_integration"

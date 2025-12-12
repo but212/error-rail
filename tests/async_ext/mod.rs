@@ -18,8 +18,8 @@ mod validation_tests;
 #[cfg(feature = "async")]
 mod retry;
 
-#[cfg(feature = "ecosystem")]
+#[cfg(feature = "tokio")]
 mod tokio_tests;
 
-#[cfg(feature = "ecosystem")]
+#[cfg(feature = "tracing")]
 mod tracing_tests;

@@ -48,6 +48,9 @@ jobs:
           - "--features serde"
           - "--features std"
           - "--features async"
+          - "--features tokio"
+          - "--features tower"
+          - "--features tracing"
           - "--features ecosystem"
           - "--features full"
       fail-fast: false
@@ -66,7 +69,7 @@ jobs:
         run: cargo build --target wasm32-unknown-unknown --no-default-features
       - name: Test ${{ matrix.features }}
         run: |
-          if [[ "${{ matrix.features }}" == "--features std" || "${{ matrix.features }}" == "--features async" || "${{ matrix.features }}" == "--features ecosystem" || "${{ matrix.features }}" == "--features full" ]]; then
+          if [[ "${{ matrix.features }}" == "--features std" || "${{ matrix.features }}" == "--features async" || "${{ matrix.features }}" == "--features tokio" || "${{ matrix.features }}" == "--features tower" || "${{ matrix.features }}" == "--features tracing" || "${{ matrix.features }}" == "--features ecosystem" || "${{ matrix.features }}" == "--features full" ]]; then
             RUST_BACKTRACE=1 cargo test ${{ matrix.features }}
           else
             cargo test ${{ matrix.features }}
