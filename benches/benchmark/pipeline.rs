@@ -1,8 +1,11 @@
+use crate::common::{
+    configure_criterion, simulate_auth_check, simulate_db_query, simulate_validation, DomainError,
+    UserData,
+};
 use criterion::{criterion_group, Criterion};
+use error_rail::context;
 use error_rail::{ComposableError, ErrorContext, ErrorPipeline};
 use std::hint::black_box;
-use crate::common::{configure_criterion, simulate_auth_check, simulate_db_query, simulate_validation, DomainError, UserData};
-use error_rail::context;
 
 fn realistic_user_service(user_id: u64) -> Result<UserData, ComposableError<DomainError>> {
     ErrorPipeline::new(simulate_db_query(user_id))
