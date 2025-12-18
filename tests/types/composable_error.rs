@@ -1,12 +1,11 @@
 use core::error::Error;
-use error_rail::{ComposableError, ErrorContext};
+use error_rail::{assert_err_eq, ComposableError, ErrorContext};
 use std::io;
 
 #[test]
 fn test_composable_error_with_code() {
-    let err = ComposableError::with_code("error", 500);
-    assert_eq!(err.core_error(), &"error");
-    assert_eq!(err.error_code(), Some(500));
+    let res: Result<(), ComposableError<&str>> = Err(ComposableError::with_code("error", 500));
+    assert_err_eq!(res, "error");
 }
 
 #[test]

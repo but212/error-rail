@@ -10,6 +10,9 @@
   - New `ErrorFormatBuilder::cascade(bool)` and `.cascaded()` methods for ergonomic configuration
   - Improved readability of long error chains by visually representing context levels
 
+- **Test utility macro `assert_err_eq!`**
+  - Added a simple macro for integration tests to verify internal error tags or messages in one line.
+
 ### Breaking Changes - 0.9.0
 
 - **Modified `ErrorFormatConfig` struct fields**
