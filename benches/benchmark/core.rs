@@ -60,13 +60,15 @@ pub fn bench_error_cloning_deep(c: &mut Criterion) {
 
 pub fn bench_error_ops_recover(c: &mut Criterion) {
     c.bench_function("core/ops_recover", |b| {
-        b.iter(|| black_box(Err::<i32, &str>("missing").recover(|_| Ok(42))))
+        b.iter(|| black_box(black_box(Err::<i32, &str>("missing")).recover(|_| Ok(42))))
     });
 }
 
 pub fn bench_error_ops_bimap(c: &mut Criterion) {
     c.bench_function("core/ops_bimap", |b| {
-        b.iter(|| black_box(Ok::<i32, &str>(21).bimap_result(|x| x * 2, |e| e.to_uppercase())))
+        b.iter(|| {
+            black_box(black_box(Ok::<i32, &str>(21)).bimap_result(|x| x * 2, |e| e.to_uppercase()))
+        })
     });
 }
 
