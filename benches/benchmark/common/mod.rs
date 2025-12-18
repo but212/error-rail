@@ -6,10 +6,6 @@ use std::time::Duration;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-// ============================================================================
-// Test Data & Domain Types
-// ============================================================================
-
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub struct UserData {
@@ -82,10 +78,6 @@ impl TransientError for DomainError {
     }
 }
 
-// ============================================================================
-// Simulation Functions
-// ============================================================================
-
 pub fn simulate_db_query(user_id: u64) -> Result<UserData, DomainError> {
     if user_id % 100 == 0 {
         Err(DomainError::Database("Connection timeout".to_string()))
@@ -133,10 +125,6 @@ pub fn validate_user_name(name: &str) -> Result<String, DomainError> {
         Err(DomainError::Validation("Name length invalid".to_string()))
     }
 }
-
-// ============================================================================
-// Criterion Configuration
-// ============================================================================
 
 pub fn configure_criterion() -> Criterion {
     Criterion::default()

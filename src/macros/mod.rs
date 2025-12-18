@@ -408,10 +408,6 @@ macro_rules! validate {
     }};
 }
 
-// ============================================================================
-// Async Macros (feature = "async")
-// ============================================================================
-
 /// Wraps a future in an [`AsyncErrorPipeline`](crate::async_ext::AsyncErrorPipeline).
 ///
 /// This macro provides a convenient way to create an async error pipeline

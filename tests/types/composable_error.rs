@@ -73,10 +73,6 @@ fn test_display_format_no_context() {
     assert_eq!(alternate, "Error: core error");
 }
 
-// ============================================================================
-// Fingerprint Tests
-// ============================================================================
-
 #[test]
 fn test_fingerprint_same_errors_same_fingerprint() {
     use error_rail::ErrorContext;

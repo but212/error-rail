@@ -165,10 +165,6 @@ fn test_recover_safe_on_ok_is_noop() {
     assert_eq!(result_ok, 10);
 }
 
-// ============================================================================
-// Transient Error / Retry Tests
-// ============================================================================
-
 use error_rail::traits::TransientError;
 use std::time::Duration;
 
