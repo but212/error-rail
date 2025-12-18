@@ -1,6 +1,7 @@
 use crate::common::{configure_criterion, DomainError, UserData};
 use criterion::{criterion_group, Criterion};
-use error_rail::{ComposableError, ErrorContext, ErrorPipeline};
+use error_rail::ErrorPipeline;
+#[cfg(feature = "serde")]
 use std::hint::black_box;
 
 #[cfg(feature = "std")]
@@ -33,6 +34,8 @@ pub fn bench_backtrace_lazy_error(c: &mut Criterion) {
 
 #[cfg(feature = "serde")]
 pub fn bench_composable_error_serialization(c: &mut Criterion) {
+    use error_rail::{ComposableError, ErrorContext};
+
     let err = ComposableError::new(DomainError::Network("API rate limit exceeded".to_string()))
         .with_context(ErrorContext::tag("external_api"))
         .with_context(ErrorContext::metadata("endpoint", "/api/v2/users"))
