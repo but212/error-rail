@@ -147,3 +147,24 @@ fn timeout_error_display() {
     let err = TimeoutError(Duration::from_secs(5));
     assert!(err.to_string().contains("5s"));
 }
+
+#[test]
+fn test_timeout_result_into_result() {
+    #[derive(Debug, PartialEq)]
+    struct MyError;
+    impl From<TimeoutError> for MyError {
+        fn from(_: TimeoutError) -> Self {
+            MyError
+        }
+    }
+
+    let ok: TimeoutResult<i32, MyError> = TimeoutResult::Ok(42);
+    assert!(ok.into_result().is_ok());
+
+    let err: TimeoutResult<i32, MyError> =
+        TimeoutResult::Err(Box::new(ComposableError::new(MyError)));
+    assert!(err.into_result().is_err());
+
+    let timeout: TimeoutResult<i32, MyError> = TimeoutResult::Timeout(Duration::from_secs(1));
+    assert!(timeout.into_result().is_err());
+}

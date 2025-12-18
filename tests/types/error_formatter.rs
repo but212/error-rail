@@ -1,6 +1,5 @@
 use core::fmt::Display;
 use error_rail::types::alloc_type::Vec;
-
 use error_rail::types::error_formatter::ErrorFormatConfig;
 use error_rail::types::error_formatter::ErrorFormatter;
 
@@ -276,4 +275,25 @@ fn test_zero_width_characters() {
     let result = config.format_chain(items.into_iter());
     assert!(result.contains("error\u{200B}zero\u{200C}width"));
     assert!(result.contains("normal"));
+}
+
+struct SimpleFormatter;
+impl ErrorFormatter for SimpleFormatter {}
+
+#[test]
+fn test_error_format_config_custom() {
+    let mut config = ErrorFormatConfig::default();
+    config.context_prefix = Some("P: ".into());
+    config.root_suffix = Some(" (ROOT)".into());
+
+    let chain: Vec<&dyn Display> = vec![&"ctx", &"err"];
+    let s = config.format_chain(chain.into_iter());
+    assert_eq!(s, "P: ctx -> P: err (ROOT)");
+}
+
+#[test]
+fn test_format_chain_empty() {
+    let fmt = SimpleFormatter;
+    let chain: Vec<&dyn Display> = vec![];
+    assert_eq!(fmt.format_chain(chain.into_iter()), "");
 }

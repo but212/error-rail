@@ -61,3 +61,30 @@ fn test_location_append_message() {
         .build();
     assert_eq!(ctx.message(), "at file.rs:10: appended");
 }
+
+#[test]
+fn test_error_context_constructors() {
+    let tag = ErrorContext::tag("network");
+    assert_eq!(tag.message(), "[network]");
+
+    let meta = ErrorContext::metadata("k", "v");
+    assert_eq!(meta.message(), "(k=v)");
+}
+
+#[test]
+fn test_error_context_message_composition() {
+    let ctx = ErrorContext::builder()
+        .location("file.rs", 10)
+        .message("failed")
+        .build();
+    assert_eq!(ctx.message(), "at file.rs:10: failed");
+
+    let ctx_no_loc = ErrorContext::builder().message("msg").build();
+    assert_eq!(ctx_no_loc.message(), "msg");
+}
+
+#[test]
+fn test_error_context_empty_group() {
+    let ctx = ErrorContext::builder().build();
+    assert_eq!(ctx.message(), "");
+}

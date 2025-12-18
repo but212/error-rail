@@ -339,3 +339,24 @@ fn test_recover_transient_failure() {
     assert!(result.is_err());
     assert!(!result.unwrap_err().core_error().is_transient());
 }
+
+#[test]
+fn test_error_pipeline_aliases() {
+    let p = ErrorPipeline::<i32, &str>::new(Err("e"))
+        .context("ctx")
+        .step(|x| Ok(x + 1));
+
+    let err = p.finish_boxed().unwrap_err();
+    assert!(err.error_chain().contains("ctx"));
+}
+
+#[test]
+fn test_error_pipeline_retry_context() {
+    let p = ErrorPipeline::<i32, &str>::new(Err("e")).with_retry_context(2);
+
+    let err = p.finish_boxed().unwrap_err();
+    assert!(err.error_chain().contains("retry_attempt=2"));
+
+    let ok_p = ErrorPipeline::<i32, &str>::new(Ok(1)).with_retry_context(2);
+    assert!(ok_p.finish_boxed().is_ok());
+}

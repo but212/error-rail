@@ -70,6 +70,12 @@ impl<C> ErrorRailLayer<C> {
     pub fn new(context: C) -> Self {
         Self { context }
     }
+
+    /// Returns a reference to the context.
+    #[inline]
+    pub fn context(&self) -> &C {
+        &self.context
+    }
 }
 
 impl<S, C: Clone> Layer<S> for ErrorRailLayer<C> {
@@ -116,6 +122,12 @@ impl<S, C> ErrorRailService<S, C> {
     #[inline]
     pub fn into_inner(self) -> S {
         self.inner
+    }
+
+    /// Returns a reference to the context.
+    #[inline]
+    pub fn context(&self) -> &C {
+        &self.context
     }
 }
 
@@ -196,15 +208,3 @@ pub trait ServiceErrorExt<Request>: Service<Request> + Sized {
 }
 
 impl<S, Request> ServiceErrorExt<Request> for S where S: Service<Request> {}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn layer_clones_context() {
-        let layer = ErrorRailLayer::new("test-context");
-        let layer2 = layer.clone();
-        assert_eq!(layer.context, layer2.context);
-    }
-}

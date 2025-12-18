@@ -79,7 +79,8 @@ async fn service_wraps_error_with_context() {
 
 #[tokio::test]
 async fn service_error_ext_trait() {
-    let mut service = MockService::failing().with_error_context("user-service");
+    let mut service: ErrorRailService<MockService, &str> =
+        MockService::failing().with_error_context("user-service");
 
     let result = service.call("request".to_string()).await;
 
@@ -136,4 +137,104 @@ async fn multiple_layers_stack() {
     let chain = err.error_chain();
     assert!(chain.contains("layer-2"));
     // Inner layer context is in the nested error
+}
+
+#[test]
+fn layer_clones_context() {
+    let layer = ErrorRailLayer::new("test-context");
+    let layer2 = layer.clone();
+    assert_eq!(*layer.context(), *layer2.context());
+}
+
+#[tokio::test]
+async fn test_service_inner_access() {
+    let mut service = ErrorRailService::new("inner", "ctx");
+    assert_eq!(*service.inner(), "inner");
+    assert_eq!(*service.inner_mut(), "inner");
+    assert_eq!(service.into_inner(), "inner");
+}
+
+struct MockStrService {
+    #[allow(dead_code)]
+    should_fail: bool,
+}
+
+impl MockStrService {
+    fn failing() -> Self {
+        Self { should_fail: true }
+    }
+}
+
+impl Service<&'static str> for MockStrService {
+    type Response = &'static str;
+    type Error = &'static str;
+    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
+
+    fn poll_ready(&mut self, _cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        Poll::Ready(Err("not ready"))
+    }
+
+    fn call(&mut self, _req: &'static str) -> Self::Future {
+        Box::pin(async { Err("failed") })
+    }
+}
+
+#[test]
+fn test_service_poll_ready_error() {
+    let mut service = ErrorRailService::new(MockStrService::failing(), "ctx");
+    let waker = unsafe {
+        use core::task::{RawWaker, RawWakerVTable, Waker};
+        fn noop(_: *const ()) {}
+        fn clone(p: *const ()) -> RawWaker {
+            RawWaker::new(p, &VTABLE)
+        }
+        static VTABLE: RawWakerVTable = RawWakerVTable::new(clone, noop, noop, noop);
+        Waker::from_raw(RawWaker::new(core::ptr::null(), &VTABLE))
+    };
+    let mut cx = Context::from_waker(&waker);
+    assert!(service.poll_ready(&mut cx).is_ready());
+    let res = match service.poll_ready(&mut cx) {
+        Poll::Ready(Err(e)) => e,
+        _ => panic!("expected error"),
+    };
+    assert_eq!(*res.core_error(), "not ready");
+}
+
+#[tokio::test]
+async fn test_future_pending() {
+    struct PendingService;
+    impl Service<()> for PendingService {
+        type Response = ();
+        type Error = ();
+        type Future = PendingFuture;
+        fn poll_ready(&mut self, _: &mut Context<'_>) -> Poll<Result<(), ()>> {
+            Poll::Ready(Ok(()))
+        }
+        fn call(&mut self, _: ()) -> Self::Future {
+            PendingFuture
+        }
+    }
+
+    struct PendingFuture;
+    impl Future for PendingFuture {
+        type Output = Result<(), ()>;
+        fn poll(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Self::Output> {
+            Poll::Pending
+        }
+    }
+
+    let mut service = ErrorRailService::new(PendingService, "ctx");
+    let mut fut = service.call(());
+
+    let waker = unsafe {
+        use core::task::{RawWaker, RawWakerVTable, Waker};
+        fn noop(_: *const ()) {}
+        fn clone(p: *const ()) -> RawWaker {
+            RawWaker::new(p, &VTABLE)
+        }
+        static VTABLE: RawWakerVTable = RawWakerVTable::new(clone, noop, noop, noop);
+        Waker::from_raw(RawWaker::new(core::ptr::null(), &VTABLE))
+    };
+    let mut cx = Context::from_waker(&waker);
+    assert_eq!(Pin::new(&mut fut).poll(&mut cx), Poll::Pending);
 }
