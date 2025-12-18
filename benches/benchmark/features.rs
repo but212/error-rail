@@ -1,5 +1,8 @@
-use crate::common::{configure_criterion, DomainError, UserData};
+#[cfg(feature = "std")]
+use crate::common::UserData;
+use crate::common::{configure_criterion, DomainError};
 use criterion::{criterion_group, Criterion};
+#[cfg(feature = "std")]
 use error_rail::ErrorPipeline;
 #[cfg(feature = "serde")]
 use std::hint::black_box;
