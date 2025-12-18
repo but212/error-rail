@@ -102,6 +102,7 @@ async fn fetch_user(id: u64) -> BoxedResult<User, DbError> {
 [dependencies]
 error-rail = "0.8"                                    # Core (no_std)
 error-rail = { version = "0.8", features = ["std"] }  # + backtraces
+error-rail = { version = "0.8", features = ["serde"] } # + serde support
 error-rail = { version = "0.8", features = ["async"] } # + async support
 error-rail = { version = "0.8", features = ["tokio"] } # + retry, timeout
 error-rail = { version = "0.8", features = ["tower"] } # + Tower middleware
