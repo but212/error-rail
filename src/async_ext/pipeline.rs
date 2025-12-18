@@ -143,7 +143,7 @@ where
 
     /// Marks the error as transient or permanent based on a closure.
     ///
-    /// This allows for flexible retry control without implementing the [`TransientError`]
+    /// This allows for flexible retry control without implementing the [`crate::traits::TransientError`]
     /// trait for the error type.
     ///
     /// # Arguments
@@ -154,6 +154,7 @@ where
     ///
     /// ```rust
     /// use error_rail::prelude_async::*;
+    /// use error_rail::types::MarkedError;
     ///
     /// async fn example() -> Result<(), MarkedError<&'static str, impl Fn(&&str) -> bool>> {
     ///     AsyncErrorPipeline::new(async { Err("error") })

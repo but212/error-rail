@@ -142,7 +142,7 @@ impl<T, E> ErrorPipeline<T, E> {
 
     /// Marks the error as transient or permanent based on a closure.
     ///
-    /// This allows for flexible retry control without implementing the [`TransientError`]
+    /// This allows for flexible retry control without implementing the [`crate::traits::TransientError`]
     /// trait for the error type.
     ///
     /// # Arguments
@@ -406,7 +406,7 @@ impl<T, E> ErrorPipeline<T, E> {
 
     /// Checks if the current error (if any) is transient and may be retried.
     ///
-    /// This method integrates with the [`TransientError`] trait to help determine
+    /// This method integrates with the [`crate::traits::TransientError`] trait to help determine
     /// whether a retry operation might succeed.
     ///
     /// # Returns

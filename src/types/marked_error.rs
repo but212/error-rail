@@ -5,7 +5,7 @@ use core::fmt::{Debug, Display};
 ///
 /// This type is primarily used by the `.mark_transient_if()` method on pipelines,
 /// allowing users to dynamically classify errors without implementing the
-/// [`TransientError`] trait for their specific error types.
+/// [`crate::traits::TransientError`] trait for their specific error types.
 pub struct MarkedError<E, F> {
     pub(crate) inner: E,
     pub(crate) classifier: F,
