@@ -35,7 +35,7 @@ fn test_error_context_builder_group_with_message() {
     );
 
     let expected_msg =
-        format!("[network] at {}:{}: processing failed (timeout=30s)", file!(), line!() - 8);
+        format!("[network] at {}:{}: processing failed (timeout=30s)", file!(), line!() - 6);
 
     assert_eq!(err.context().len(), 1);
     assert_eq!(err.context()[0].message(), expected_msg);
