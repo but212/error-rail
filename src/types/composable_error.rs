@@ -670,29 +670,32 @@ where
 
 impl<E: Display> Display for ComposableError<E> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        if f.alternate() {
-            write!(f, "Error: {}", self.core_error)?;
-            if let Some(code) = &self.error_code {
-                write!(f, " (code: {})", code)?;
-            }
+        if !f.alternate() {
+            return Display::fmt(&self.fmt(), f);
+        }
 
-            if !self.context.is_empty() {
-                writeln!(f)?;
-                writeln!(f, "Context:")?;
-                for ctx in self.context.iter().rev() {
-                    for (i, line) in ctx.message().lines().enumerate() {
-                        if i == 0 {
-                            writeln!(f, "  - {}", line)?;
-                        } else {
-                            writeln!(f, "    {}", line)?;
-                        }
-                    }
+        write!(f, "Error: {}", self.core_error)?;
+        if let Some(code) = &self.error_code {
+            write!(f, " (code: {})", code)?;
+        }
+
+        if self.context.is_empty() {
+            return Ok(());
+        }
+
+        writeln!(f)?;
+        writeln!(f, "Context:")?;
+        for ctx in self.context.iter().rev() {
+            let message = ctx.message();
+            let mut lines = message.lines();
+            if let Some(first) = lines.next() {
+                writeln!(f, "  - {}", first)?;
+                for line in lines {
+                    writeln!(f, "    {}", line)?;
                 }
             }
-            Ok(())
-        } else {
-            Display::fmt(&self.fmt(), f)
         }
+        Ok(())
     }
 }
 
