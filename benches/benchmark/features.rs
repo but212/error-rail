@@ -2,7 +2,6 @@
 use crate::common::UserData;
 #[cfg(feature = "serde")]
 use crate::common::{configure_criterion, DomainError};
-#[cfg(feature = "serde")]
 use criterion::{criterion_group, Criterion};
 #[cfg(feature = "std")]
 use error_rail::ErrorPipeline;
