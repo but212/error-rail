@@ -674,28 +674,8 @@ impl<E: Display> Display for ComposableError<E> {
             return Display::fmt(&self.fmt(), f);
         }
 
-        write!(f, "Error: {}", self.core_error)?;
-        if let Some(code) = &self.error_code {
-            write!(f, " (code: {})", code)?;
-        }
-
-        if self.context.is_empty() {
-            return Ok(());
-        }
-
-        writeln!(f)?;
-        writeln!(f, "Context:")?;
-        for ctx in self.context.iter().rev() {
-            let message = ctx.message();
-            let mut lines = message.lines();
-            if let Some(first) = lines.next() {
-                writeln!(f, "  - {}", first)?;
-                for line in lines {
-                    writeln!(f, "    {}", line)?;
-                }
-            }
-        }
-        Ok(())
+        // Use cascaded indentation for alternate format
+        Display::fmt(&self.fmt().cascaded(), f)
     }
 }
 

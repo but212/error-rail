@@ -1,5 +1,25 @@
 # CHANGELOG
 
+## [0.9.0]
+
+### Added - 0.9.0
+
+- **Cascaded error chain display**
+  - Added `cascade` and `cascaded` options to `ErrorFormatConfig` for hierarchical indentation
+  - `ComposableError` alternate display (`{:#}`) now uses cascaded indentation by default
+  - New `ErrorFormatBuilder::cascade(bool)` and `.cascaded()` methods for ergonomic configuration
+  - Improved readability of long error chains by visually representing context levels
+
+### Breaking Changes - 0.9.0
+
+- **Modified `ErrorFormatConfig` struct fields**
+  - Added `cascade: bool` field to `ErrorFormatConfig`. Any code using struct literal syntax to instantiate this type will need to be updated.
+  - **Migration**: Use `ErrorFormatConfig::default()` or the provided factory methods (`pretty()`, `compact()`, `cascaded()`) and change fields as needed.
+
+- **Changed `ComposableError` alternate display (`{:#}`) output**
+  - Removed the explicit `Error:` and `Context:` headings in favor of a clean, cascaded indentation format.
+  - This may break code that relies on parsing the specific string output of `{:#}`.
+
 ## [0.8.0]
 
 ### Added - 0.8.0

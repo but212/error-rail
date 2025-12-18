@@ -28,10 +28,20 @@ fn test_composable_error_display_multiline() {
         .set_code(500);
 
     let formatted = format!("{:#}", err);
-    assert!(formatted.contains("Error: error (code: 500)"));
-    assert!(formatted.contains("Context:"));
-    assert!(formatted.contains("- ctx1"));
-    assert!(formatted.contains("multiline"));
+    assert!(formatted.contains("ctx1\nmultiline"));
+    assert!(formatted.contains("error (code: 500)"));
+}
+
+#[test]
+fn test_cascaded_display() {
+    let err = ComposableError::<&str>::new("core error")
+        .with_context("ctx1")
+        .with_context("ctx2")
+        .set_code(500);
+
+    let cascaded = format!("{}", err.fmt().cascaded());
+    let expected = "ctx2\n  ctx1\n    core error (code: 500)";
+    assert_eq!(cascaded, expected);
 }
 
 #[test]
@@ -55,9 +65,9 @@ fn test_display_format() {
     // Standard display
     assert_eq!(format!("{}", err), "ctx2 -> ctx1 -> core error (code: 500)");
 
-    // Alternate display
+    // Alternate display now uses cascaded format
     let alternate = format!("{:#}", err);
-    let expected = "Error: core error (code: 500)\nContext:\n  - ctx2\n  - ctx1\n";
+    let expected = "ctx2\n  ctx1\n    core error (code: 500)";
     assert_eq!(alternate, expected);
 }
 
@@ -70,7 +80,7 @@ fn test_display_format_no_context() {
 
     // Alternate
     let alternate = format!("{:#}", err);
-    assert_eq!(alternate, "Error: core error");
+    assert_eq!(alternate, "core error");
 }
 
 #[test]

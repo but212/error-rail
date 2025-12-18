@@ -43,6 +43,7 @@ pub struct ErrorFormatConfig {
     pub multiline: bool,
     pub indent: alloc_type::String,
     pub show_code: bool,
+    pub cascade: bool,
 }
 
 impl Default for ErrorFormatConfig {
@@ -56,6 +57,7 @@ impl Default for ErrorFormatConfig {
             multiline: false,
             indent: "  ".into(),
             show_code: true,
+            cascade: false,
         }
     }
 }
@@ -68,8 +70,14 @@ impl ErrorFormatConfig {
             context_prefix: Some("├─ ".into()),
             root_prefix: Some("└─ ".into()),
             multiline: true,
+            cascade: true,
             ..Default::default()
         }
+    }
+
+    #[inline]
+    pub fn cascaded() -> Self {
+        Self { separator: "\n".into(), multiline: true, cascade: true, ..Default::default() }
     }
 
     #[inline]
@@ -128,6 +136,16 @@ impl ErrorFormatter for ErrorFormatConfig {
                     result.push_str(p);
                 }
                 result.push_str(&items[item_count - 1].to_string());
+            }
+        } else if self.cascade {
+            for (i, item) in items.iter().enumerate() {
+                if i > 0 {
+                    result.push_str(&self.separator);
+                    for _ in 0..i {
+                        result.push_str(&self.indent);
+                    }
+                }
+                result.push_str(&item.to_string());
             }
         } else {
             let last_idx = item_count - 1;
@@ -196,6 +214,22 @@ impl<'a, E> ErrorFormatBuilder<'a, E> {
 
     pub fn compact(mut self) -> Self {
         self.config = ErrorFormatConfig::compact();
+        self
+    }
+
+    pub fn cascade(mut self, enabled: bool) -> Self {
+        self.config.cascade = enabled;
+        if enabled {
+            self.config.multiline = true;
+            if self.config.separator == " -> " {
+                self.config.separator = "\n".into();
+            }
+        }
+        self
+    }
+
+    pub fn cascaded(mut self) -> Self {
+        self.config = ErrorFormatConfig::cascaded();
         self
     }
 }
