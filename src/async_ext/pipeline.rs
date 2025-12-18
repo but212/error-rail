@@ -156,9 +156,9 @@ where
     /// use error_rail::prelude_async::*;
     /// use error_rail::types::MarkedError;
     ///
-    /// async fn example() -> Result<(), MarkedError<&'static str, impl Fn(&&str) -> bool>> {
-    ///     AsyncErrorPipeline::new(async { Err("error") })
-    ///         .mark_transient_if(|e| e.contains("error"))
+    /// async fn example() -> Result<(), MarkedError<String, impl Fn(&String) -> bool>> {
+    ///     AsyncErrorPipeline::new(async { Err("error".to_string()) })
+    ///         .mark_transient_if(|e: &String| e.contains("error"))
     ///         .finish()
     ///         .await
     /// }
