@@ -1,0 +1,120 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  schedule:
+    - cron: "0 0 * * 0"
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-D warnings --allow deprecated"
+  CARGO_INCREMENTAL: 0
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test ${{ matrix.rust }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          # MSRV and stable: all OS
+          - rust: 1.81.0
+            os: ubuntu-latest
+          - rust: 1.81.0
+            os: windows-latest
+          - rust: 1.81.0
+            os: macos-latest
+          - rust: stable
+            os: ubuntu-latest
+          - rust: stable
+            os: windows-latest
+          - rust: stable
+            os: macos-latest
+          # Nightly: Linux only
+          - rust: nightly
+            os: ubuntu-latest
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust ${{ matrix.rust }}
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
+      - uses: Swatinem/rust-cache@v2
+      - name: Run tests (no features)
+        run: cargo test --verbose
+      - name: Run tests (all features)
+        run: cargo test --verbose --all-features
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      - name: Clippy (no features)
+        run: cargo clippy -- -D warnings
+      - name: Clippy (all features)
+        run: cargo clippy --all-features -- -D warnings
+
+  msrv:
+    name: Check MSRV
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract MSRV
+        id: msrv
+        run: |
+          MSRV=$(grep -A 1 "\[package.metadata\]" Cargo.toml | grep -m 1 "msrv" | cut -d '"' -f 2)
+          if [ -z "$MSRV" ]; then
+            MSRV="1.81.0"
+          fi
+          echo "msrv=$MSRV" >> $GITHUB_OUTPUT
+          echo "Using MSRV: $MSRV"
+
+      - name: Install Rust ${{ steps.msrv.outputs.msrv }}
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ steps.msrv.outputs.msrv }}
+      - uses: Swatinem/rust-cache@v2
+      - name: Check MSRV compatibility
+        run: cargo check
+      - name: Check MSRV compatibility (full features)
+        run: cargo check --features full
+
+  docs:
+    name: Build Docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install nightly toolchain
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rust-docs
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build documentation with broken link check
+        run: |
+          RUSTDOCFLAGS="-D warnings -D rustdoc::broken_intra_doc_links --cfg docsrs" \
+          cargo +nightly doc --no-deps --all-features
+
+      - name: Verify docs directory exists
+        run: |
+          if [ ! -d "./target/doc" ]; then
+            echo "::error::Documentation build failed: target/doc directory not found"
+            exit 1
+          fi
