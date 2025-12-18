@@ -64,4 +64,5 @@ rustdoc-args = ["--cfg", "docsrs", "--generate-link-to-definition"]
 
 [[bench]]
 name = "benchmark"
+path = "benches/benchmark/main.rs"
 harness = false
