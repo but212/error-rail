@@ -1,6 +1,5 @@
 #[cfg(feature = "std")]
 use crate::common::UserData;
-#[cfg(feature = "serde")]
 use crate::common::{configure_criterion, DomainError};
 use criterion::{criterion_group, Criterion};
 #[cfg(feature = "std")]
