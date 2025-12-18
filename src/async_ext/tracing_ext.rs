@@ -99,11 +99,36 @@ where
 
 /// Converts a tracing span to an error context.
 ///
-/// Extracts the span name and formats it as an error context message.
-/// The span must be valid (not disabled) to produce meaningful context.
+/// Extracts the span's metadata (name, target, level, fields) and creates
+/// a structured error context. This provides rich observability when errors
+/// occur within instrumented code.
+///
+/// # Fields Captured
+///
+/// - **Tag**: The span name (e.g., `fetch_user`)
+/// - **Metadata `target`**: The module path where the span was created
+/// - **Metadata `level`**: The span's log level (TRACE, DEBUG, INFO, WARN, ERROR)
+/// - **Metadata `fields`**: Names of fields defined on the span (values require subscriber)
 fn span_to_context(span: &Span) -> ErrorContext {
-    let name = span.metadata().map(|m| m.name()).unwrap_or("unknown");
-    ErrorContext::new(alloc::format!("in span '{}'", name))
+    let Some(meta) = span.metadata() else {
+        return ErrorContext::new("in unknown span");
+    };
+
+    let mut builder = ErrorContext::builder().tag(meta.name());
+
+    // Add target module path
+    builder = builder.metadata("target", meta.target());
+
+    // Add log level
+    builder = builder.metadata("level", meta.level().as_str());
+
+    // Add field names (values not accessible without subscriber integration)
+    let field_names: alloc::vec::Vec<&str> = meta.fields().iter().map(|f| f.name()).collect();
+    if !field_names.is_empty() {
+        builder = builder.metadata("fields", field_names.join(", "));
+    }
+
+    builder.build()
 }
 
 /// Extension trait for `Result` types to add span context to errors.
