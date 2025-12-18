@@ -113,8 +113,5 @@ fn error_pipeline_helper_function_matches_constructor() {
         .with_context(ErrorContext::tag("fn"))
         .finish_boxed();
 
-    assert_eq!(
-        pipeline_from_fn.unwrap_err().context(),
-        pipeline_from_new.unwrap_err().context()
-    );
+    assert_eq!(pipeline_from_fn.unwrap_err().context(), pipeline_from_new.unwrap_err().context());
 }

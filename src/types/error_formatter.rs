@@ -74,18 +74,12 @@ impl ErrorFormatConfig {
 
     #[inline]
     pub fn compact() -> Self {
-        Self {
-            separator: " | ".into(),
-            ..Default::default()
-        }
+        Self { separator: " | ".into(), ..Default::default() }
     }
 
     #[inline]
     pub fn no_code() -> Self {
-        Self {
-            show_code: false,
-            ..Default::default()
-        }
+        Self { show_code: false, ..Default::default() }
     }
 }
 
@@ -112,14 +106,13 @@ impl ErrorFormatter for ErrorFormatConfig {
             return String::new();
         }
 
-        let mut result = String::new();
         let item_count = items.len();
+        let mut result = String::with_capacity(item_count * 32);
 
         if self.multiline && self.context_prefix.is_some() {
-            if item_count > 0 {
-                result.push_str("┌ ");
-                result.push_str(&items[0].to_string());
-            }
+            result.push_str("┌ ");
+            result.push_str(&items[0].to_string());
+
             for item in items.iter().take(item_count.saturating_sub(1)).skip(1) {
                 result.push_str(&self.separator);
                 if let Some(prefix) = &self.context_prefix {
@@ -127,38 +120,41 @@ impl ErrorFormatter for ErrorFormatConfig {
                 }
                 result.push_str(&item.to_string());
             }
+
             if item_count > 1 {
                 result.push_str(&self.separator);
-                if let Some(prefix) = &self.root_prefix {
-                    result.push_str(prefix);
-                } else if let Some(prefix) = &self.context_prefix {
-                    result.push_str(prefix);
+                let prefix = self.root_prefix.as_ref().or(self.context_prefix.as_ref());
+                if let Some(p) = prefix {
+                    result.push_str(p);
                 }
                 result.push_str(&items[item_count - 1].to_string());
             }
         } else {
+            let last_idx = item_count - 1;
             for (i, item) in items.iter().enumerate() {
                 if i > 0 {
                     result.push_str(&self.separator);
                 }
-                if i == item_count - 1 {
-                    if let Some(prefix) = &self.root_prefix {
-                        result.push_str(prefix);
-                    } else if let Some(prefix) = &self.context_prefix {
-                        result.push_str(prefix);
-                    }
-                } else if let Some(prefix) = &self.context_prefix {
-                    result.push_str(prefix);
+
+                let is_last = i == last_idx;
+                let prefix = if is_last {
+                    self.root_prefix.as_ref().or(self.context_prefix.as_ref())
+                } else {
+                    self.context_prefix.as_ref()
+                };
+                if let Some(p) = prefix {
+                    result.push_str(p);
                 }
+
                 result.push_str(&item.to_string());
-                if i == item_count - 1 {
-                    if let Some(suffix) = &self.root_suffix {
-                        result.push_str(suffix);
-                    } else if let Some(suffix) = &self.context_suffix {
-                        result.push_str(suffix);
-                    }
-                } else if let Some(suffix) = &self.context_suffix {
-                    result.push_str(suffix);
+
+                let suffix = if is_last {
+                    self.root_suffix.as_ref().or(self.context_suffix.as_ref())
+                } else {
+                    self.context_suffix.as_ref()
+                };
+                if let Some(s) = suffix {
+                    result.push_str(s);
                 }
             }
         }
@@ -175,11 +171,7 @@ pub struct ErrorFormatBuilder<'a, E> {
 
 impl<'a, E> ErrorFormatBuilder<'a, E> {
     pub fn new(error: &'a ComposableError<E>) -> Self {
-        Self {
-            error,
-            config: ErrorFormatConfig::default(),
-            reverse_context: false,
-        }
+        Self { error, config: ErrorFormatConfig::default(), reverse_context: false }
     }
 
     pub fn with_separator(mut self, separator: impl Into<alloc_type::String>) -> Self {

@@ -28,10 +28,7 @@ fn test_ctx_with_lazy_on_ok() {
         called = true;
         "should not be called".to_string()
     });
-    assert!(
-        !called,
-        "Closure for ctx_with should not be called on Ok result"
-    );
+    assert!(!called, "Closure for ctx_with should not be called on Ok result");
 }
 
 #[test]
@@ -44,10 +41,7 @@ fn test_ctx_with_lazy_on_err() {
         called = true;
         "should be called".to_string()
     });
-    assert!(
-        called,
-        "Closure for ctx_with should be called on Err result"
-    );
+    assert!(called, "Closure for ctx_with should be called on Err result");
 }
 
 #[test]

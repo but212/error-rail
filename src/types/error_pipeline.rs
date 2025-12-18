@@ -66,10 +66,7 @@ impl<T, E> ErrorPipeline<T, E> {
     /// ```
     #[inline]
     pub fn new(result: Result<T, E>) -> Self {
-        Self {
-            result,
-            pending_contexts: Accumulator::new(),
-        }
+        Self { result, pending_contexts: Accumulator::new() }
     }
 
     /// Adds a context entry to the pending context stack.
@@ -170,10 +167,7 @@ impl<T, E> ErrorPipeline<T, E> {
     where
         F: FnOnce(E) -> NewE,
     {
-        ErrorPipeline {
-            result: self.result.map_err(f),
-            pending_contexts: self.pending_contexts,
-        }
+        ErrorPipeline { result: self.result.map_err(f), pending_contexts: self.pending_contexts }
     }
 
     /// Attempts to recover from an error using a fallback function.
@@ -203,19 +197,10 @@ impl<T, E> ErrorPipeline<T, E> {
         F: FnOnce(E) -> Result<T, E>,
     {
         match self.result {
-            Ok(v) => ErrorPipeline {
-                result: Ok(v),
-                pending_contexts: self.pending_contexts,
-            },
+            Ok(v) => ErrorPipeline { result: Ok(v), pending_contexts: self.pending_contexts },
             Err(e) => match recovery(e) {
-                Ok(v) => ErrorPipeline {
-                    result: Ok(v),
-                    pending_contexts: Accumulator::new(),
-                },
-                Err(e) => ErrorPipeline {
-                    result: Err(e),
-                    pending_contexts: self.pending_contexts,
-                },
+                Ok(v) => ErrorPipeline { result: Ok(v), pending_contexts: Accumulator::new() },
+                Err(e) => ErrorPipeline { result: Err(e), pending_contexts: self.pending_contexts },
             },
         }
     }
@@ -243,14 +228,8 @@ impl<T, E> ErrorPipeline<T, E> {
     #[inline]
     pub fn fallback(self, value: T) -> ErrorPipeline<T, E> {
         match self.result {
-            Ok(v) => ErrorPipeline {
-                result: Ok(v),
-                pending_contexts: self.pending_contexts,
-            },
-            Err(_) => ErrorPipeline {
-                result: Ok(value),
-                pending_contexts: Accumulator::new(),
-            },
+            Ok(v) => ErrorPipeline { result: Ok(v), pending_contexts: self.pending_contexts },
+            Err(_) => ErrorPipeline { result: Ok(value), pending_contexts: Accumulator::new() },
         }
     }
 
@@ -277,14 +256,8 @@ impl<T, E> ErrorPipeline<T, E> {
         F: FnOnce(E) -> T,
     {
         match self.result {
-            Ok(v) => ErrorPipeline {
-                result: Ok(v),
-                pending_contexts: self.pending_contexts,
-            },
-            Err(e) => ErrorPipeline {
-                result: Ok(f(e)),
-                pending_contexts: Accumulator::new(),
-            },
+            Ok(v) => ErrorPipeline { result: Ok(v), pending_contexts: self.pending_contexts },
+            Err(e) => ErrorPipeline { result: Ok(f(e)), pending_contexts: Accumulator::new() },
         }
     }
 
@@ -310,10 +283,7 @@ impl<T, E> ErrorPipeline<T, E> {
     where
         F: FnOnce(T) -> Result<U, E>,
     {
-        ErrorPipeline {
-            result: self.result.and_then(f),
-            pending_contexts: self.pending_contexts,
-        }
+        ErrorPipeline { result: self.result.and_then(f), pending_contexts: self.pending_contexts }
     }
 
     /// Transforms the success value using a mapping function.
@@ -338,10 +308,7 @@ impl<T, E> ErrorPipeline<T, E> {
     where
         F: FnOnce(T) -> U,
     {
-        ErrorPipeline {
-            result: self.result.map(f),
-            pending_contexts: self.pending_contexts,
-        }
+        ErrorPipeline { result: self.result.map(f), pending_contexts: self.pending_contexts }
     }
 
     /// Finalizes the pipeline into a boxed [`ComposableResult`].
@@ -369,7 +336,7 @@ impl<T, E> ErrorPipeline<T, E> {
             Err(e) => {
                 let composable = ComposableError::new(e).with_contexts(self.pending_contexts);
                 Err(Box::new(composable))
-            }
+            },
         }
     }
 
@@ -398,7 +365,7 @@ impl<T, E> ErrorPipeline<T, E> {
             Err(e) => {
                 let composable = ComposableError::new(e).with_contexts(self.pending_contexts);
                 Err(composable)
-            }
+            },
         }
     }
 
@@ -486,24 +453,12 @@ impl<T, E> ErrorPipeline<T, E> {
         F: FnOnce(E) -> Result<T, E>,
     {
         match self.result {
-            Ok(v) => ErrorPipeline {
-                result: Ok(v),
-                pending_contexts: self.pending_contexts,
-            },
+            Ok(v) => ErrorPipeline { result: Ok(v), pending_contexts: self.pending_contexts },
             Err(e) if e.is_transient() => match recovery(e) {
-                Ok(v) => ErrorPipeline {
-                    result: Ok(v),
-                    pending_contexts: Accumulator::new(),
-                },
-                Err(e) => ErrorPipeline {
-                    result: Err(e),
-                    pending_contexts: self.pending_contexts,
-                },
+                Ok(v) => ErrorPipeline { result: Ok(v), pending_contexts: Accumulator::new() },
+                Err(e) => ErrorPipeline { result: Err(e), pending_contexts: self.pending_contexts },
             },
-            Err(e) => ErrorPipeline {
-                result: Err(e),
-                pending_contexts: self.pending_contexts,
-            },
+            Err(e) => ErrorPipeline { result: Err(e), pending_contexts: self.pending_contexts },
         }
     }
 
@@ -612,10 +567,7 @@ impl<T, E> ErrorPipeline<T, E> {
     #[inline]
     pub fn with_retry_context(self, attempt: u32) -> Self {
         if self.result.is_err() {
-            self.with_context(ErrorContext::metadata(
-                "retry_attempt",
-                format!("{}", attempt),
-            ))
+            self.with_context(ErrorContext::metadata("retry_attempt", format!("{}", attempt)))
         } else {
             self
         }

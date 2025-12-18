@@ -31,10 +31,7 @@ fn test_error_pipeline_recover_clears_context() {
     // 4. Assert that the final error has no context from before recovery
     let err = pipeline.finish_boxed().unwrap_err();
     assert_eq!(err.core_error(), &"new error");
-    assert!(
-        err.context().is_empty(),
-        "All contexts from before recovery should be cleared."
-    );
+    assert!(err.context().is_empty(), "All contexts from before recovery should be cleared.");
 }
 
 #[test]
@@ -50,10 +47,7 @@ fn test_error_pipeline_recover_failed_preserves_context() {
     // 3. Assert that the error still has all original contexts
     let err = pipeline.finish_boxed().unwrap_err();
     assert_eq!(err.core_error(), &"recovery failed");
-    assert!(
-        !err.context().is_empty(),
-        "All contexts should be preserved when recovery fails."
-    );
+    assert!(!err.context().is_empty(), "All contexts should be preserved when recovery fails.");
     assert!(err
         .context()
         .iter()
@@ -136,10 +130,7 @@ fn test_pipeline_recovery_clears_context() {
     // 4. Assert that the final error has no context from before recovery
     let err = pipeline.finish_boxed().unwrap_err();
     assert_eq!(err.core_error(), &"new error");
-    assert!(
-        err.context().is_empty(),
-        "Context from before recovery should be cleared."
-    );
+    assert!(err.context().is_empty(), "Context from before recovery should be cleared.");
 }
 
 #[test]
@@ -157,10 +148,7 @@ fn test_pipeline_recover_safe_clears_context() {
     // 4. Assert that the final error has no context from before recovery
     let err = pipeline.finish_boxed().unwrap_err();
     assert_eq!(err.core_error(), &"new error");
-    assert!(
-        err.context().is_empty(),
-        "Context from before recovery should be cleared."
-    );
+    assert!(err.context().is_empty(), "Context from before recovery should be cleared.");
 }
 
 #[test]
@@ -176,10 +164,6 @@ fn test_recover_safe_on_ok_is_noop() {
     let result_ok = pipeline_ok.finish_boxed().unwrap();
     assert_eq!(result_ok, 10);
 }
-
-// ============================================================================
-// Transient Error / Retry Tests
-// ============================================================================
 
 use error_rail::traits::TransientError;
 use std::time::Duration;
@@ -203,17 +187,11 @@ impl TransientError for TestTransientError {
 #[test]
 fn test_pipeline_is_transient() {
     let transient_err: ErrorPipeline<i32, TestTransientError> =
-        ErrorPipeline::new(Err(TestTransientError {
-            transient: true,
-            retry_after: None,
-        }));
+        ErrorPipeline::new(Err(TestTransientError { transient: true, retry_after: None }));
     assert!(transient_err.is_transient());
 
     let permanent_err: ErrorPipeline<i32, TestTransientError> =
-        ErrorPipeline::new(Err(TestTransientError {
-            transient: false,
-            retry_after: None,
-        }));
+        ErrorPipeline::new(Err(TestTransientError { transient: false, retry_after: None }));
     assert!(!permanent_err.is_transient());
 
     let ok: ErrorPipeline<i32, TestTransientError> = ErrorPipeline::new(Ok(42));
@@ -222,11 +200,9 @@ fn test_pipeline_is_transient() {
 
 #[test]
 fn test_pipeline_recover_transient_on_transient_error() {
-    let pipeline = ErrorPipeline::new(Err(TestTransientError {
-        transient: true,
-        retry_after: None,
-    }))
-    .recover_transient(|_| Ok(42));
+    let pipeline =
+        ErrorPipeline::new(Err(TestTransientError { transient: true, retry_after: None }))
+            .recover_transient(|_| Ok(42));
 
     let result = pipeline.finish();
     assert!(result.is_ok());
@@ -235,11 +211,9 @@ fn test_pipeline_recover_transient_on_transient_error() {
 
 #[test]
 fn test_pipeline_recover_transient_skips_permanent_error() {
-    let pipeline = ErrorPipeline::new(Err(TestTransientError {
-        transient: false,
-        retry_after: None,
-    }))
-    .recover_transient(|_| Ok(42));
+    let pipeline =
+        ErrorPipeline::new(Err(TestTransientError { transient: false, retry_after: None }))
+            .recover_transient(|_| Ok(42));
 
     let result = pipeline.finish();
     assert!(result.is_err());
@@ -248,17 +222,11 @@ fn test_pipeline_recover_transient_skips_permanent_error() {
 #[test]
 fn test_pipeline_should_retry_transient() {
     let transient: ErrorPipeline<i32, TestTransientError> =
-        ErrorPipeline::new(Err(TestTransientError {
-            transient: true,
-            retry_after: None,
-        }));
+        ErrorPipeline::new(Err(TestTransientError { transient: true, retry_after: None }));
     assert!(transient.should_retry().is_some());
 
     let permanent: ErrorPipeline<i32, TestTransientError> =
-        ErrorPipeline::new(Err(TestTransientError {
-            transient: false,
-            retry_after: None,
-        }));
+        ErrorPipeline::new(Err(TestTransientError { transient: false, retry_after: None }));
     assert!(permanent.should_retry().is_none());
 
     let ok: ErrorPipeline<i32, TestTransientError> = ErrorPipeline::new(Ok(42));
@@ -275,10 +243,7 @@ fn test_pipeline_retry_after_hint() {
     assert_eq!(with_hint.retry_after_hint(), Some(Duration::from_secs(5)));
 
     let without_hint: ErrorPipeline<i32, TestTransientError> =
-        ErrorPipeline::new(Err(TestTransientError {
-            transient: true,
-            retry_after: None,
-        }));
+        ErrorPipeline::new(Err(TestTransientError { transient: true, retry_after: None }));
     assert_eq!(without_hint.retry_after_hint(), None);
 
     let ok: ErrorPipeline<i32, TestTransientError> = ErrorPipeline::new(Ok(42));
@@ -324,18 +289,31 @@ fn test_recover_transient_on_ok() {
 #[test]
 fn test_recover_transient_failure() {
     let pipeline: ErrorPipeline<i32, TestTransientError> =
-        ErrorPipeline::new(Err(TestTransientError {
-            transient: true,
-            retry_after: None,
-        }))
-        .recover_transient(|_| {
-            Err(TestTransientError {
-                transient: false,
-                retry_after: None,
-            })
-        });
+        ErrorPipeline::new(Err(TestTransientError { transient: true, retry_after: None }))
+            .recover_transient(|_| Err(TestTransientError { transient: false, retry_after: None }));
 
     let result = pipeline.finish();
     assert!(result.is_err());
     assert!(!result.unwrap_err().core_error().is_transient());
+}
+
+#[test]
+fn test_error_pipeline_aliases() {
+    let p = ErrorPipeline::<i32, &str>::new(Err("e"))
+        .context("ctx")
+        .step(|x| Ok(x + 1));
+
+    let err = p.finish_boxed().unwrap_err();
+    assert!(err.error_chain().contains("ctx"));
+}
+
+#[test]
+fn test_error_pipeline_retry_context() {
+    let p = ErrorPipeline::<i32, &str>::new(Err("e")).with_retry_context(2);
+
+    let err = p.finish_boxed().unwrap_err();
+    assert!(err.error_chain().contains("retry_attempt=2"));
+
+    let ok_p = ErrorPipeline::<i32, &str>::new(Ok(1)).with_retry_context(2);
+    assert!(ok_p.finish_boxed().is_ok());
 }

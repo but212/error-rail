@@ -126,10 +126,7 @@ mod advanced_example {
 
         // LazyContext for deferred evaluation
         let lazy = LazyContext::new(|| {
-            format!(
-                "computed at: {}",
-                std::time::SystemTime::now().elapsed().unwrap().as_secs()
-            )
+            format!("computed at: {}", std::time::SystemTime::now().elapsed().unwrap().as_secs())
         });
         println!(
             "LazyContext created (not yet evaluated): {}",

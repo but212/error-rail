@@ -10,10 +10,7 @@ struct TestError {
 
 impl TestError {
     fn new(message: &str, is_transient: bool) -> Self {
-        Self {
-            message: message.to_string(),
-            is_transient,
-        }
+        Self { message: message.to_string(), is_transient }
     }
 }
 

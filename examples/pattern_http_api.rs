@@ -41,11 +41,9 @@ fn error_to_status_code(err: &ComposableError<ApiError>) -> u16 {
 // API handler
 fn get_resource(resource_id: &str) -> Result<String, Box<ComposableError<ApiError>>> {
     if resource_id.is_empty() {
-        return ErrorPipeline::new(Err(ApiError::BadRequest(
-            "resource_id cannot be empty".into(),
-        )))
-        .with_context("validating resource_id")
-        .finish_boxed();
+        return ErrorPipeline::new(Err(ApiError::BadRequest("resource_id cannot be empty".into())))
+            .with_context("validating resource_id")
+            .finish_boxed();
     }
 
     // Simulate resource fetch
@@ -68,7 +66,7 @@ fn handle_request(resource_id: &str) -> (u16, String) {
                 e.core_error().to_string()
             };
             (status, body)
-        }
+        },
     }
 }
 

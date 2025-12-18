@@ -1,6 +1,6 @@
 [package]
 name = "error-rail"
-version = "0.7.1"
+version = "0.8.0"
 authors = ["jeong-il suk <wjddlf211@naver.com>"]
 edition = "2021"
 license = "Apache-2.0"
@@ -20,16 +20,43 @@ serde = { version = "1.0", default-features = false, features = [
     "alloc",
 ], optional = true }
 smallvec = "1.15.1"
+pin-project-lite = { version = "0.2", optional = true }
+futures-core = { version = "0.3", optional = true, default-features = false }
+
+tokio = { version = "1", optional = true, default-features = false, features = [
+    "time",
+] }
+tower = { version = "0.5", optional = true, default-features = false, features = [
+    "util",
+] }
+tracing = { version = "0.1", optional = true }
 
 [dev-dependencies]
 serde_json = "1.0.145"
 criterion = "0.7.0"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time"] }
+tower = { version = "0.5", default-features = false, features = ["util"] }
 
 [features]
 default = []
 std = []
 serde = ["dep:serde", "smallvec/serde"]
-full = ["serde", "std"]
+async = ["std", "dep:pin-project-lite"]
+tower = ["std", "dep:tower", "dep:pin-project-lite"]
+tokio = ["async", "dep:tokio"]
+tracing = ["async", "dep:tracing"]
+ecosystem = ["tower", "tokio", "tracing"]
+full = ["serde", "ecosystem"]
+
+[[example]]
+name = "async_api_patterns"
+path = "examples/async_api_patterns.rs"
+required-features = ["tokio"]
+
+[[example]]
+name = "async_tower_integration"
+path = "examples/async_tower_integration.rs"
+required-features = ["tower"]
 
 [package.metadata.docs.rs]
 all-features = true
@@ -37,4 +64,5 @@ rustdoc-args = ["--cfg", "docsrs", "--generate-link-to-definition"]
 
 [[bench]]
 name = "benchmark"
+path = "benches/benchmark/main.rs"
 harness = false

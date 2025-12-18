@@ -66,7 +66,7 @@ impl<T, E> WithError<E> for Validation<E, T> {
             Validation::Valid(t) => Validation::Valid(t),
             Validation::Invalid(e) => {
                 Validation::Invalid(e.into_inner().into_iter().map(f).collect())
-            }
+            },
         }
     }
 

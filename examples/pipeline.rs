@@ -19,6 +19,6 @@ fn main() {
         Ok(body) => println!("success: {body}"),
         Err(err) => {
             eprintln!("error chain => {}", err.error_chain());
-        }
+        },
     }
 }

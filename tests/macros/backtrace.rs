@@ -64,19 +64,13 @@ fn backtrace_lazy_evaluation_works() {
     });
 
     // The closure should not have been called during LazyContext::new()
-    assert!(
-        !was_called.load(Ordering::SeqCst),
-        "Closure was called during LazyContext::new()"
-    );
+    assert!(!was_called.load(Ordering::SeqCst), "Closure was called during LazyContext::new()");
 
     // Pass to with_context() - this should trigger the evaluation
     let err = ComposableError::<&str>::new("test error").with_context(lazy_context);
 
     // Now the closure should have been called during with_context()
-    assert!(
-        was_called.load(Ordering::SeqCst),
-        "Closure was not called during with_context()"
-    );
+    assert!(was_called.load(Ordering::SeqCst), "Closure was not called during with_context()");
 
     // Verify the message was correctly stored
     let context = err.context();

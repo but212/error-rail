@@ -84,7 +84,7 @@ mod tests {
         let result = process_user_data(&large_input);
         assert!(result.is_err());
         match result.unwrap_err() {
-            MyLibError::ProcessingFailed => {} // Expected
+            MyLibError::ProcessingFailed => {}, // Expected
             _ => panic!("Expected ProcessingFailed error"),
         }
     }

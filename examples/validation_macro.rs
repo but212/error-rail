@@ -46,13 +46,13 @@ fn main() {
             println!("  Username: {}", u);
             println!("  Email: {}", e);
             println!("  Age: {}", a);
-        }
+        },
         Validation::Invalid(errors) => {
             println!("✗ Validation errors:");
             for err in errors.into_inner() {
                 println!("  - {}", err);
             }
-        }
+        },
     }
 
     // Example 2: Some invalid
@@ -69,13 +69,13 @@ fn main() {
             println!("  Username: {}", u);
             println!("  Email: {}", e);
             println!("  Age: {}", a);
-        }
+        },
         Validation::Invalid(errors) => {
             println!("✗ Found {} validation errors:", errors.len());
             for err in errors.into_inner() {
                 println!("  - {}", err);
             }
-        }
+        },
     }
 
     // Example 3: All invalid
@@ -93,7 +93,7 @@ fn main() {
             for err in errors.into_inner() {
                 println!("  - {}", err);
             }
-        }
+        },
     }
 
     println!("\n✓ Example completed!");

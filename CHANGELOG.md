@@ -1,5 +1,67 @@
 # CHANGELOG
 
+## [0.8.0]
+
+### Added - 0.8.0
+
+- **Runtime-agnostic async support** (`async` feature)
+  - New `async_ext` module with core async types
+  - `FutureResultExt` trait providing `.ctx()` and `.with_ctx()` methods on `Future<Output = Result<T, E>>`
+  - `ContextFuture` wrapper for lazy error context evaluation (cancel-safe)
+  - `AsyncErrorPipeline` for chainable async error handling operations
+  - `prelude_async` module re-exporting all prelude items plus async-specific functionality
+  - `rail_async!` macro for wrapping async operations into `AsyncErrorPipeline`
+  - `ctx_async!` macro for attaching formatted context to futures ergonomically
+  - Added `docs/QUICK_START_ASYNC.md` with async usage patterns and best practices
+
+- **Async validation support** (`async` feature)
+  - `validate_all_async<I>` function for running multiple async validations sequentially and accumulating all errors
+  - `validate_seq_async` function for sequential validation where each step depends on previous result
+  - Runtime-neutral design mirroring synchronous `Validation` semantics
+
+- **Async retry support** (`async` feature)
+  - `RetryPolicy` trait for pluggable retry strategies
+  - `ExponentialBackoff` policy with builder pattern (`with_initial_delay`, `with_max_delay`, `with_max_attempts`, `with_multiplier`)
+  - `FixedDelay` policy for constant-delay retries
+  - `retry_with_policy` function: runtime-agnostic retry loop accepting custom `sleep_fn`
+  - `retry_with_metadata` function returning `RetryResult<T, E>` with `result`, `attempts`, and `total_wait_time`
+  - Structured context on failure (e.g., "exhausted N retry attempts", "permanent error, no retry")
+
+- **Tokio integration** (`tokio` feature)
+  - `retry_transient` convenience function using `tokio::time::sleep`
+  - `retry_transient_n` for simple retry with attempt count
+  - `try_with_timeout` wrapper returning `TimeoutResult<T, E>`
+  - `TimeoutResult` enum with `Ok`, `Err`, and `Timeout` variants
+  - `TimeoutError` type for timeout representation
+
+- **Tower integration** (`tower` feature)
+  - `ErrorRailLayer`: Tower `Layer` wrapping service errors in `ComposableError` with context
+  - `ErrorRailService`: Tower `Service` wrapper for error context attachment
+  - `ErrorRailFuture`: Future wrapper for lazy context evaluation
+  - `ServiceErrorExt` trait providing `.with_error_context()` extension for any `Service`
+
+- **Tracing integration** (`tracing` feature)
+  - `FutureSpanExt` trait providing `.with_span_context()` and `.with_span()` for futures
+  - `ResultSpanExt` trait providing `.with_current_span()` and `.with_span()` for Results
+  - `SpanContextFuture`: Future wrapper capturing span context on error
+  - `instrument_error` function to add current span context to any error
+
+- **Feature flag layout**
+  - `tokio`, `tower`, and `tracing` features are independently configurable
+  - `ecosystem` is a convenience bundle enabling `tokio` + `tower` + `tracing`
+
+- **Comprehensive test coverage** for async functionality
+  - `tests/async_ext/future_ext_tests.rs`: lazy evaluation and context chaining
+  - `tests/async_ext/pipeline_tests.rs`: AsyncErrorPipeline operations
+  - `tests/async_ext/validation_tests.rs`: all-valid, some-invalid, and sequential validation scenarios
+  - `tests/async_ext/retry_tests.rs`: transient/permanent errors and exhausted attempts
+  - `tests/async_ext/tokio_tests.rs`: Tokio-specific retry and timeout functionality
+  - `tests/async_ext/tracing_tests.rs`: span context attachment
+
+- **New examples**
+  - `examples/async_api_patterns.rs`: demonstrates 7 common async error handling patterns
+  - `examples/async_tower_integration.rs`: demonstrates Tower layer and service usage
+
 ## [0.7.1]
 
 ### Changed - 0.7.1

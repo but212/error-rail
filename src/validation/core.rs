@@ -270,7 +270,7 @@ impl<E, A> Validation<E, A> {
             (Validation::Invalid(mut e1), Validation::Invalid(e2)) => {
                 e1.extend(e2.into_inner());
                 Validation::Invalid(e1)
-            }
+            },
         }
     }
 
@@ -303,7 +303,7 @@ impl<E, A> Validation<E, A> {
                 let mut acc = Accumulator::new();
                 acc.extend(errors.into_inner().into_iter().map(f));
                 Validation::Invalid(acc)
-            }
+            },
         }
     }
 

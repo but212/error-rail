@@ -407,3 +407,95 @@ macro_rules! validate {
         }
     }};
 }
+
+/// Wraps a future in an [`AsyncErrorPipeline`](crate::async_ext::AsyncErrorPipeline).
+///
+/// This macro provides a convenient way to create an async error pipeline
+/// from a future that returns a `Result`.
+///
+/// # Examples
+///
+/// ```rust,no_run
+/// use error_rail::prelude_async::*;
+///
+/// #[derive(Debug)]
+/// struct Data;
+///
+/// #[derive(Debug)]
+/// struct ApiError;
+///
+/// async fn fetch_data(_id: u64) -> Result<Data, ApiError> {
+///     Err(ApiError)
+/// }
+///
+/// async fn example(id: u64) -> BoxedResult<Data, ApiError> {
+///     rail_async!(fetch_data(id))
+///         .with_context("fetching data")
+///         .finish_boxed()
+///         .await
+/// }
+/// ```
+#[macro_export]
+#[cfg(feature = "async")]
+macro_rules! rail_async {
+    ($fut:expr $(,)?) => {
+        $crate::async_ext::AsyncErrorPipeline::new($fut)
+    };
+}
+
+/// Attaches context to a future's error with format string support.
+///
+/// This macro provides a convenient shorthand for attaching context to
+/// async operations, similar to how `context!` works for sync code.
+///
+/// # Syntax
+///
+/// - `ctx_async!(future, "literal message")` - Static message
+/// - `ctx_async!(future, "format {}", arg)` - Formatted message (lazy)
+///
+/// # Examples
+///
+/// ```rust,no_run
+/// use error_rail::prelude_async::*;
+///
+/// #[derive(Debug)]
+/// struct User;
+///
+/// #[derive(Debug)]
+/// struct Profile;
+///
+/// #[derive(Debug)]
+/// struct ApiError;
+///
+/// async fn fetch_user(_id: u64) -> Result<User, ApiError> {
+///     Err(ApiError)
+/// }
+///
+/// async fn fetch_profile(_id: u64) -> Result<Profile, ApiError> {
+///     Err(ApiError)
+/// }
+///
+/// async fn example(id: u64) -> BoxedResult<User, ApiError> {
+///     // Static message
+///     let user = ctx_async!(fetch_user(id), "fetching user")
+///         .await
+///         .map_err(Box::new)?;
+///
+///     // With formatting (lazy evaluation)
+///     let _profile = ctx_async!(fetch_profile(id), "fetching profile for user {}", id)
+///         .await
+///         .map_err(Box::new)?;
+///
+///     Ok(user)
+/// }
+/// ```
+#[macro_export]
+#[cfg(feature = "async")]
+macro_rules! ctx_async {
+    ($fut:expr, $msg:literal $(,)?) => {
+        $crate::async_ext::FutureResultExt::ctx($fut, $msg)
+    };
+    ($fut:expr, $fmt:literal, $($arg:tt)* $(,)?) => {
+        $crate::async_ext::FutureResultExt::with_ctx($fut, || format!($fmt, $($arg)*))
+    };
+}

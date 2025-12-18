@@ -63,7 +63,7 @@ pub fn validation_to_result<T, E>(validation: Validation<E, T>) -> Result<T, E> 
                 .pop()
                 .expect("Validation::Invalid must contain at least one error");
             Err(error)
-        }
+        },
     }
 }
 
@@ -288,7 +288,7 @@ impl<T, E> Iterator for SplitValidationIter<T, E> {
             Self::Valid(opt) => {
                 let len = if opt.is_some() { 1 } else { 0 };
                 (len, Some(len))
-            }
+            },
             Self::Invalid(iter) => iter.size_hint(),
         }
     }
