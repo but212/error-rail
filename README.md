@@ -22,13 +22,13 @@ Most error handling libraries format context eagerly—even on success paths whe
 
 ### **Benchmark Results** ([full methodology](docs/BENCHMARKS.md))
 
-| Metric                     | Performance                      |
-|----------------------------|----------------------------------|
-| Error creation             | ~296 ns                          |
+| Metric                     | Performance                                        |
+|----------------------------|----------------------------------------------------|
+| Error creation             | ~296 ns                                            |
 | Error propagation overhead | ~9% overhead vs plain Rust Result (770ns vs 706ns) |
-| Serialization              | ~684 ns                          |
-| Validation overhead        | ~5% vs manual collection         |
-| Validation throughput      | 5.37 M elements/sec (5000 items) |
+| Serialization              | ~684 ns                                            |
+| Validation overhead        | ~5% vs manual collection                           |
+| Validation throughput      | 5.37 M elements/sec (5000 items)                   |
 
 ## Requirements
 
