@@ -215,7 +215,7 @@ impl<T, E> ErrorOps<E> for Result<T, E> {
 ///
 /// fn parse_config() -> Result<i32, Box<error_rail::ComposableError<&'static str>>> {
 ///     Err("invalid format")
-///         .ctx_with(|| format!("parsing failed at {}", chrono::Utc::now()))
+///         .ctx_with(|| format!("parsing failed at line {}", 42))
 /// }
 /// ```
 pub trait ResultExt<T, E> {
