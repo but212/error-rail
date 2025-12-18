@@ -126,7 +126,19 @@ impl RetryPolicy for ExponentialBackoff {
 
 /// Fixed delay retry policy.
 ///
-/// Waits the same duration between each retry attempt.
+/// Waits the same duration between each retry attempt. This is simpler than
+/// exponential backoff but may not be suitable for services under heavy load.
+///
+/// # Example
+///
+/// ```rust
+/// use error_rail::async_ext::FixedDelay;
+/// use core::time::Duration;
+///
+/// let policy = FixedDelay::new(Duration::from_millis(500), 3);
+///
+/// // Delays: 500ms, 500ms, 500ms (then stops)
+/// ```
 #[derive(Clone, Debug)]
 pub struct FixedDelay {
     /// Delay between retry attempts.
@@ -224,20 +236,94 @@ where
 }
 
 /// Result of a retry operation with metadata about attempts.
+///
+/// This struct provides detailed information about a retry operation,
+/// including the final result and statistics about the retry process.
+///
+/// # Type Parameters
+///
+/// * `T` - The success type of the operation
+/// * `E` - The error type of the operation
+///
+/// # Example
+///
+/// ```rust,ignore
+/// use error_rail::async_ext::{retry_with_metadata, ExponentialBackoff, RetryResult};
+///
+/// let retry_result: RetryResult<Data, ApiError> = retry_with_metadata(
+///     || fetch_data(),
+///     ExponentialBackoff::default(),
+///     |d| tokio::time::sleep(d),
+/// ).await;
+///
+/// if retry_result.attempts > 1 {
+///     log::warn!(
+///         "Operation succeeded after {} attempts (waited {:?})",
+///         retry_result.attempts,
+///         retry_result.total_wait_time
+///     );
+/// }
+/// ```
 #[derive(Debug)]
 pub struct RetryResult<T, E> {
-    /// The final result.
+    /// The final result of the operation.
+    ///
+    /// Contains `Ok(T)` if the operation eventually succeeded, or
+    /// `Err(ComposableError<E>)` if all retry attempts were exhausted
+    /// or a permanent error occurred.
     pub result: Result<T, ComposableError<E>>,
+
     /// Total number of attempts made.
+    ///
+    /// This is always at least 1 (the initial attempt). A value greater
+    /// than 1 indicates that retries occurred.
     pub attempts: u32,
-    /// Total time spent waiting (not including operation time).
+
+    /// Total time spent waiting between retries.
+    ///
+    /// This does not include the time spent executing the operation itself,
+    /// only the delays between retry attempts. A value of `Duration::ZERO`
+    /// indicates either immediate success or immediate permanent failure.
     pub total_wait_time: Duration,
 }
 
 /// Retries an operation with detailed result metadata.
 ///
 /// Similar to [`retry_with_policy`], but returns additional information about
-/// the retry process.
+/// the retry process, including the number of attempts made and total wait time.
+///
+/// # Arguments
+///
+/// * `operation` - A closure that returns the future to retry
+/// * `policy` - The retry policy to use
+/// * `sleep_fn` - A function that returns a sleep future for the given duration
+///
+/// # Returns
+///
+/// A [`RetryResult`] containing:
+/// - The final result (success or error with context)
+/// - Total number of attempts made
+/// - Total time spent waiting between retries
+///
+/// # Example
+///
+/// ```rust,ignore
+/// use error_rail::async_ext::{retry_with_metadata, ExponentialBackoff};
+///
+/// let retry_result = retry_with_metadata(
+///     || fetch_data(),
+///     ExponentialBackoff::default(),
+///     |d| tokio::time::sleep(d),
+/// ).await;
+///
+/// println!("Attempts: {}", retry_result.attempts);
+/// println!("Total wait time: {:?}", retry_result.total_wait_time);
+///
+/// match retry_result.result {
+///     Ok(data) => println!("Success: {:?}", data),
+///     Err(e) => println!("Failed after retries: {:?}", e),
+/// }
+/// ```
 pub async fn retry_with_metadata<F, Fut, T, E, P, S, SFut>(
     mut operation: F,
     mut policy: P,
@@ -264,12 +350,9 @@ where
                     sleep_fn(delay).await;
                     attempt += 1;
                     continue;
-                } else {
-                    break Err(ComposableError::new(e).with_context(crate::context!(
-                        "exhausted {} retry attempts",
-                        attempt + 1
-                    )));
                 }
+                break Err(ComposableError::new(e)
+                    .with_context(crate::context!("exhausted {} retry attempts", attempt + 1)));
             },
             Err(e) => {
                 break Err(ComposableError::new(e)

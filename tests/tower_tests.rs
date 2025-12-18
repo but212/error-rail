@@ -9,6 +9,27 @@ use error_rail::tower::{ErrorRailLayer, ErrorRailService, ServiceErrorExt};
 use error_rail::ComposableError;
 use tower::{Layer, Service};
 
+#[derive(Clone)]
+struct SimpleService;
+
+impl tower::Service<()> for SimpleService {
+    type Response = ();
+    type Error = &'static str;
+    type Future =
+        std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), &'static str>> + Send>>;
+
+    fn poll_ready(
+        &mut self,
+        _cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Result<(), Self::Error>> {
+        std::task::Poll::Ready(Ok(()))
+    }
+
+    fn call(&mut self, _req: ()) -> Self::Future {
+        Box::pin(async { Ok(()) })
+    }
+}
+
 /// A simple mock service for testing.
 #[derive(Clone)]
 struct MockService {
@@ -237,4 +258,35 @@ async fn test_future_pending() {
     };
     let mut cx = Context::from_waker(&waker);
     assert_eq!(Pin::new(&mut fut).poll(&mut cx), Poll::Pending);
+}
+
+#[test]
+fn test_error_rail_service_context() {
+    let layer = ErrorRailLayer::new("test-context");
+    let service: ErrorRailService<SimpleService, &str> = layer.layer(SimpleService);
+
+    let ctx = service.context();
+    assert_eq!(*ctx, "test-context");
+}
+
+#[test]
+fn test_error_rail_service_context_owned_string() {
+    let context = String::from("owned-context");
+    let layer = ErrorRailLayer::new(context);
+    let service: ErrorRailService<SimpleService, String> = layer.layer(SimpleService);
+
+    let ctx = service.context();
+    assert_eq!(ctx, "owned-context");
+}
+
+#[test]
+fn test_error_rail_service_context_with_error_context() {
+    use error_rail::ErrorContext;
+
+    let context = ErrorContext::tag("api");
+    let layer = ErrorRailLayer::new(context.clone());
+    let service: ErrorRailService<SimpleService, ErrorContext> = layer.layer(SimpleService);
+
+    let ctx = service.context();
+    assert_eq!(ctx.message(), "[api]");
 }

@@ -62,22 +62,14 @@ where
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = self.project();
 
-        match this.future.poll(cx) {
-            Poll::Ready(Ok(value)) => {
-                // Success: don't evaluate context_fn (lazy!)
-                Poll::Ready(Ok(value))
-            },
-            Poll::Ready(Err(error)) => {
-                // Error: evaluate context now
+        this.future.poll(cx).map(|res| {
+            res.map_err(|err| {
                 let context_fn = this
                     .context_fn
                     .take()
                     .expect("ContextFuture polled after completion");
-                let context = context_fn();
-                let composable = ComposableError::new(error).with_context(context);
-                Poll::Ready(Err(composable))
-            },
-            Poll::Pending => Poll::Pending,
-        }
+                ComposableError::new(err).with_context(context_fn())
+            })
+        })
     }
 }

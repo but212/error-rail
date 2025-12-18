@@ -39,11 +39,9 @@ where
     I: IntoIterator<Item = Fut>,
     Fut: Future<Output = Validation<E, T>>,
 {
-    let futures: Vec<_> = validations.into_iter().collect();
-    let mut results = Vec::with_capacity(futures.len());
+    let mut results = Vec::new();
 
-    // Sequential execution (parallel requires runtime, deferred to Phase 3)
-    for fut in futures {
+    for fut in validations {
         results.push(fut.await);
     }
 
@@ -80,24 +78,38 @@ where
     F: FnOnce(T) -> Fut,
     Fut: Future<Output = Validation<E, T>>,
 {
-    let mut current = Validation::Valid(initial);
+    let mut current = initial;
 
     for validator in validators {
-        match current {
-            Validation::Valid(v) => {
-                current = validator(v).await;
-            },
+        match validator(current).await {
+            Validation::Valid(v) => current = v,
             invalid => return invalid,
         }
     }
 
-    current
+    Validation::Valid(current)
 }
 
 /// Collects validation results into a single `Validation`.
 ///
-/// - If all results are `Valid`, returns `Valid(Vec<T>)` with all values.
-/// - If any result is `Invalid`, returns `Invalid` with all accumulated errors.
+/// This helper function aggregates multiple validation results, accumulating
+/// all errors rather than short-circuiting on the first failure.
+///
+/// # Behavior
+///
+/// - If **all** results are `Valid`, returns `Valid(Vec<T>)` containing all values
+///   in their original order.
+/// - If **any** result is `Invalid`, returns `Invalid` with all accumulated errors
+///   from all invalid results combined.
+///
+/// # Arguments
+///
+/// * `results` - A vector of `Validation<E, T>` results to collect
+///
+/// # Returns
+///
+/// A single `Validation<E, Vec<T>>` that either contains all success values
+/// or all accumulated errors.
 fn collect_validation_results<T, E>(results: Vec<Validation<E, T>>) -> Validation<E, Vec<T>> {
     let mut errors: Vec<E> = Vec::new();
     let mut values = Vec::with_capacity(results.len());

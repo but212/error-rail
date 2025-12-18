@@ -632,33 +632,30 @@ where
         let contexts = &self.error.context;
         let mut first = true;
 
-        // Helper to write separator
-        let mut write_sep = |f: &mut core::fmt::Formatter<'_>| -> core::fmt::Result {
-            if !first {
-                write!(f, "{}", self.separator)?;
-            }
-            first = false;
-            Ok(())
-        };
-
         // Write contexts
         if self.reverse_context {
-            // FIFO order (oldest first)
             for ctx in contexts.iter() {
-                write_sep(f)?;
-                write!(f, "{}", ctx.message())?;
+                if !first {
+                    f.write_str(self.separator)?;
+                }
+                first = false;
+                f.write_str(ctx.message().as_ref())?;
             }
         } else {
-            // LIFO order (newest first) - default
             for ctx in contexts.iter().rev() {
-                write_sep(f)?;
-                write!(f, "{}", ctx.message())?;
+                if !first {
+                    f.write_str(self.separator)?;
+                }
+                first = false;
+                f.write_str(ctx.message().as_ref())?;
             }
         }
 
         // Write core error
-        write_sep(f)?;
-        write!(f, "{}", self.error.core_error)?;
+        if !first {
+            f.write_str(self.separator)?;
+        }
+        Display::fmt(&self.error.core_error, f)?;
 
         // Write error code
         if self.show_code {
@@ -674,11 +671,6 @@ where
 impl<E: Display> Display for ComposableError<E> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         if f.alternate() {
-            // Multi-line format
-            // Error: core error (code: 500)
-            // Context:
-            //   - ctx1
-            //   - ctx2
             write!(f, "Error: {}", self.core_error)?;
             if let Some(code) = &self.error_code {
                 write!(f, " (code: {})", code)?;
@@ -688,13 +680,12 @@ impl<E: Display> Display for ComposableError<E> {
                 writeln!(f)?;
                 writeln!(f, "Context:")?;
                 for ctx in self.context.iter().rev() {
-                    let msg = ctx.message();
-                    let mut lines = msg.lines();
-                    if let Some(first_line) = lines.next() {
-                        writeln!(f, "  - {}", first_line)?;
-                    }
-                    for line in lines {
-                        writeln!(f, "    {}", line)?;
+                    for (i, line) in ctx.message().lines().enumerate() {
+                        if i == 0 {
+                            writeln!(f, "  - {}", line)?;
+                        } else {
+                            writeln!(f, "    {}", line)?;
+                        }
                     }
                 }
             }
@@ -796,94 +787,120 @@ impl<'a, E> FingerprintConfig<'a, E> {
     }
 
     /// Computes the fingerprint using the configured options.
+    ///
+    /// Uses FNV-1a hash algorithm to generate a stable 64-bit fingerprint
+    /// based on the configured components (tags, code, message, metadata).
+    ///
+    /// # Algorithm Details
+    ///
+    /// The fingerprint is computed using FNV-1a (Fowler-Noll-Vo) hash:
+    /// - Deterministic: Same input always produces same output
+    /// - Fast: Simple byte-by-byte computation
+    /// - Good distribution: Minimizes collisions for similar inputs
+    ///
+    /// Components are hashed in a fixed order with prefixes to prevent
+    /// collision between different component types:
+    /// 1. Tags (sorted alphabetically, prefixed with "tag:")
+    /// 2. Error code (prefixed with "code:")
+    /// 3. Core message (prefixed with "msg:")
+    /// 4. Metadata (sorted by key, prefixed with "meta:")
+    ///
+    /// # Returns
+    ///
+    /// A 64-bit unsigned integer representing the fingerprint.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use error_rail::{ComposableError, ErrorContext};
+    ///
+    /// let err = ComposableError::new("timeout")
+    ///     .with_context(ErrorContext::tag("network"))
+    ///     .set_code(504);
+    ///
+    /// let fp = err.fingerprint_config().compute();
+    /// assert_ne!(fp, 0); // Fingerprint is computed
+    /// ```
     #[must_use]
     pub fn compute(&self) -> u64
     where
         E: Display,
     {
-        // FNV-1a constants for 64-bit
+        // FNV-1a 64-bit offset basis
+        // This is the standard starting value for FNV-1a hash
         const FNV_OFFSET: u64 = 0xcbf29ce484222325;
-        const FNV_PRIME: u64 = 0x100000001b3;
 
         let mut hash = FNV_OFFSET;
 
-        // Hash helper
-        let mut hash_bytes = |bytes: &[u8]| {
-            for byte in bytes {
-                hash ^= *byte as u64;
-                hash = hash.wrapping_mul(FNV_PRIME);
+        /// Hashes a byte slice into the running hash using FNV-1a algorithm.
+        ///
+        /// FNV-1a works by XORing each byte with the hash, then multiplying
+        /// by the FNV prime. This order (XOR then multiply) is what makes
+        /// it "1a" variant, which has better avalanche characteristics.
+        #[inline(always)]
+        fn hash_bytes(hash: &mut u64, bytes: &[u8]) {
+            // FNV-1a 64-bit prime
+            const FNV_PRIME: u64 = 0x100000001b3;
+            for &byte in bytes {
+                *hash ^= byte as u64;
+                *hash = hash.wrapping_mul(FNV_PRIME);
             }
-        };
+        }
 
-        // Include tags in sorted order
+        // Include tags in sorted order for deterministic fingerprinting
+        // Sorting ensures ["a", "b"] and ["b", "a"] produce the same fingerprint
         if self.include_tags {
             let mut tags: crate::types::alloc_type::Vec<_> = self
                 .error
                 .context
                 .iter()
-                .filter_map(|ctx| {
-                    if let ErrorContext::Group(g) = ctx {
-                        Some(
-                            g.tags
-                                .iter()
-                                .cloned()
-                                .collect::<crate::types::alloc_type::Vec<_>>(),
-                        )
-                    } else {
-                        None
-                    }
+                .filter_map(|ctx| match ctx {
+                    ErrorContext::Group(g) => Some(g.tags.iter()),
+                    _ => None,
                 })
                 .flatten()
                 .collect();
-            tags.sort();
+            tags.sort_unstable();
 
-            for tag in &tags {
-                hash_bytes(b"tag:");
-                hash_bytes(tag.as_bytes());
+            for tag in tags {
+                hash_bytes(&mut hash, b"tag:");
+                hash_bytes(&mut hash, tag.as_bytes());
             }
         }
 
-        // Include error code
+        // Include error code as little-endian bytes
         if self.include_code {
             if let Some(code) = self.error.error_code {
-                hash_bytes(b"code:");
-                hash_bytes(&code.to_le_bytes());
+                hash_bytes(&mut hash, b"code:");
+                hash_bytes(&mut hash, &code.to_le_bytes());
             }
         }
 
         // Include core error message
         if self.include_message {
-            hash_bytes(b"msg:");
-            hash_bytes(self.error.core_error.to_string().as_bytes());
+            hash_bytes(&mut hash, b"msg:");
+            hash_bytes(&mut hash, self.error.core_error.to_string().as_bytes());
         }
 
-        // Include metadata
+        // Include metadata in sorted order by key for deterministic fingerprinting
         if self.include_metadata {
             let mut metadata: crate::types::alloc_type::Vec<_> = self
                 .error
                 .context
                 .iter()
-                .filter_map(|ctx| {
-                    if let ErrorContext::Group(g) = ctx {
-                        Some(
-                            g.metadata
-                                .iter()
-                                .cloned()
-                                .collect::<crate::types::alloc_type::Vec<_>>(),
-                        )
-                    } else {
-                        None
-                    }
+                .filter_map(|ctx| match ctx {
+                    ErrorContext::Group(g) => Some(g.metadata.iter()),
+                    _ => None,
                 })
                 .flatten()
                 .collect();
-            metadata.sort_by(|a, b| a.0.cmp(&b.0));
+            metadata.sort_unstable_by(|a, b| a.0.cmp(&b.0));
 
-            for (key, value) in &metadata {
-                hash_bytes(b"meta:");
-                hash_bytes(key.as_bytes());
-                hash_bytes(b"=");
-                hash_bytes(value.as_bytes());
+            for (key, value) in metadata {
+                hash_bytes(&mut hash, b"meta:");
+                hash_bytes(&mut hash, key.as_bytes());
+                hash_bytes(&mut hash, b"=");
+                hash_bytes(&mut hash, value.as_bytes());
             }
         }
 

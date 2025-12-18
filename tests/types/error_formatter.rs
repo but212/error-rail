@@ -2,6 +2,7 @@ use core::fmt::Display;
 use error_rail::types::alloc_type::Vec;
 use error_rail::types::error_formatter::ErrorFormatConfig;
 use error_rail::types::error_formatter::ErrorFormatter;
+use error_rail::ComposableError;
 
 struct TestDisplay(String);
 
@@ -293,4 +294,131 @@ fn test_format_chain_empty() {
     let fmt = SimpleFormatter;
     let chain: Vec<&dyn Display> = vec![];
     assert_eq!(fmt.format_chain(chain.into_iter()), "");
+}
+
+#[test]
+fn test_format_item_with_prefix() {
+    let config = ErrorFormatConfig { context_prefix: Some("[P] ".into()), ..Default::default() };
+
+    let item = TestDisplay("test".into());
+    let formatted = config.format_item(&item as &dyn Display);
+    assert_eq!(formatted, "[P] test");
+}
+
+#[test]
+fn test_format_item_with_suffix() {
+    let config = ErrorFormatConfig { context_suffix: Some(" [S]".into()), ..Default::default() };
+
+    let item = TestDisplay("test".into());
+    let formatted = config.format_item(&item as &dyn Display);
+    assert_eq!(formatted, "test [S]");
+}
+
+#[test]
+fn test_format_item_with_both_prefix_and_suffix() {
+    let config = ErrorFormatConfig {
+        context_prefix: Some(">> ".into()),
+        context_suffix: Some(" <<".into()),
+        ..Default::default()
+    };
+
+    let item = TestDisplay("message".into());
+    let formatted = config.format_item(&item as &dyn Display);
+    assert_eq!(formatted, ">> message <<");
+}
+
+#[test]
+fn test_format_item_no_prefix_no_suffix() {
+    let config = ErrorFormatConfig::default();
+
+    let item = TestDisplay("plain".into());
+    let formatted = config.format_item(&item as &dyn Display);
+    assert_eq!(formatted, "plain");
+}
+
+#[test]
+fn test_separator_method() {
+    let config = ErrorFormatConfig { separator: " ==> ".into(), ..Default::default() };
+
+    assert_eq!(config.separator(), " ==> ");
+}
+
+#[test]
+fn test_separator_default() {
+    let config = ErrorFormatConfig::default();
+    assert_eq!(config.separator(), " -> ");
+}
+
+#[test]
+fn test_error_format_builder_pretty() {
+    let err = ComposableError::new("error")
+        .with_context("ctx1")
+        .with_context("ctx2");
+
+    let formatted = err.format_with(|b| b.pretty());
+    assert!(formatted.contains("┌"));
+    assert!(formatted.contains("├─"));
+    assert!(formatted.contains("└─"));
+}
+
+#[test]
+fn test_error_format_builder_compact() {
+    let err = ComposableError::new("error")
+        .with_context("ctx1")
+        .with_context("ctx2");
+
+    let formatted = err.format_with(|b| b.compact());
+    assert!(formatted.contains(" | "));
+}
+
+#[test]
+fn test_error_format_builder_pretty_single_item() {
+    let err = ComposableError::<&str>::new("single error");
+
+    let formatted = err.format_with(|b| b.pretty());
+    assert!(formatted.contains("┌"));
+    assert!(formatted.contains("single error"));
+}
+
+#[test]
+fn test_error_format_builder_compact_single_item() {
+    let err = ComposableError::<&str>::new("single error");
+
+    let formatted = err.format_with(|b| b.compact());
+    assert_eq!(formatted, "single error");
+}
+
+#[test]
+fn test_format_chain_multiline_with_prefix() {
+    let config = ErrorFormatConfig::pretty();
+
+    let d1 = TestDisplay("context1".into());
+    let d2 = TestDisplay("context2".into());
+    let d3 = TestDisplay("error".into());
+
+    let mut items = Vec::new();
+    items.push(&d1 as &dyn Display);
+    items.push(&d2 as &dyn Display);
+    items.push(&d3 as &dyn Display);
+
+    let result = config.format_chain(items.into_iter());
+    assert!(result.starts_with("┌ context1"));
+    assert!(result.contains("├─ context2"));
+    assert!(result.contains("└─ error"));
+}
+
+#[test]
+fn test_format_chain_two_items_multiline() {
+    let config = ErrorFormatConfig::pretty();
+
+    let d1 = TestDisplay("context".into());
+    let d2 = TestDisplay("error".into());
+
+    let mut items = Vec::new();
+    items.push(&d1 as &dyn Display);
+    items.push(&d2 as &dyn Display);
+
+    let result = config.format_chain(items.into_iter());
+    assert!(result.starts_with("┌ context"));
+    assert!(result.contains("└─ error"));
 }

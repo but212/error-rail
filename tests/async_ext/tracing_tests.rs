@@ -95,3 +95,44 @@ async fn test_span_context_future_pending() {
 
     assert_eq!(wrapped.as_mut().poll(&mut cx), Poll::Pending);
 }
+
+#[tokio::test]
+async fn test_future_with_span_success() {
+    let span = tracing::info_span!("test_span");
+
+    let result = async { Ok::<_, &str>(42) }.with_span(span).await;
+
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap(), 42);
+}
+
+#[tokio::test]
+async fn test_future_with_span_error() {
+    let span = tracing::info_span!("error_span");
+
+    let result = async { Err::<i32, _>("failed") }.with_span(span).await;
+
+    assert!(result.is_err());
+    let err = result.unwrap_err();
+    assert!(err.error_chain().contains("failed"));
+}
+
+#[tokio::test]
+async fn test_future_with_named_span() {
+    let span = tracing::info_span!("custom_operation", operation = "fetch_data");
+
+    let result = async { Err::<i32, _>("timeout") }.with_span(span).await;
+
+    assert!(result.is_err());
+    let err = result.unwrap_err();
+    assert!(err.error_chain().contains("timeout"));
+}
+
+#[tokio::test]
+async fn test_future_with_span_none() {
+    let span = Span::none();
+
+    let result = async { Err::<i32, _>("error") }.with_span(span).await;
+
+    assert!(result.is_err());
+}

@@ -90,8 +90,7 @@ where
             Poll::Ready(Ok(value)) => Poll::Ready(Ok(value)),
             Poll::Ready(Err(error)) => {
                 let context = span_to_context(this.span);
-                let composable = ComposableError::new(error).with_context(context);
-                Poll::Ready(Err(Box::new(composable)))
+                Poll::Ready(Err(Box::new(ComposableError::new(error).with_context(context))))
             },
             Poll::Pending => Poll::Pending,
         }

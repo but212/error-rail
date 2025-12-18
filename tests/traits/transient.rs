@@ -1,3 +1,4 @@
+use std::io::{Error, ErrorKind};
 use std::time::Duration;
 
 use error_rail::{TransientError, TransientErrorExt};
@@ -66,4 +67,79 @@ fn test_default_hints() {
     let err = DefaultHintError;
     assert_eq!(err.retry_after_hint(), None);
     assert_eq!(err.max_retries_hint(), None);
+}
+
+#[test]
+fn test_io_error_connection_refused_is_transient() {
+    let err = Error::new(ErrorKind::ConnectionRefused, "connection refused");
+    assert!(err.is_transient());
+    assert!(!err.is_permanent());
+}
+
+#[test]
+fn test_io_error_connection_reset_is_transient() {
+    let err = Error::new(ErrorKind::ConnectionReset, "connection reset");
+    assert!(err.is_transient());
+}
+
+#[test]
+fn test_io_error_connection_aborted_is_transient() {
+    let err = Error::new(ErrorKind::ConnectionAborted, "connection aborted");
+    assert!(err.is_transient());
+}
+
+#[test]
+fn test_io_error_timed_out_is_transient() {
+    let err = Error::new(ErrorKind::TimedOut, "operation timed out");
+    assert!(err.is_transient());
+}
+
+#[test]
+fn test_io_error_interrupted_is_transient() {
+    let err = Error::new(ErrorKind::Interrupted, "operation interrupted");
+    assert!(err.is_transient());
+}
+
+#[test]
+fn test_io_error_would_block_is_transient() {
+    let err = Error::new(ErrorKind::WouldBlock, "would block");
+    assert!(err.is_transient());
+}
+
+#[test]
+fn test_io_error_not_found_is_permanent() {
+    let err = Error::new(ErrorKind::NotFound, "file not found");
+    assert!(!err.is_transient());
+    assert!(err.is_permanent());
+}
+
+#[test]
+fn test_io_error_permission_denied_is_permanent() {
+    let err = Error::new(ErrorKind::PermissionDenied, "permission denied");
+    assert!(!err.is_transient());
+    assert!(err.is_permanent());
+}
+
+#[test]
+fn test_io_error_already_exists_is_permanent() {
+    let err = Error::new(ErrorKind::AlreadyExists, "file already exists");
+    assert!(!err.is_transient());
+}
+
+#[test]
+fn test_io_error_invalid_input_is_permanent() {
+    let err = Error::new(ErrorKind::InvalidInput, "invalid input");
+    assert!(!err.is_transient());
+}
+
+#[test]
+fn test_io_error_invalid_data_is_permanent() {
+    let err = Error::new(ErrorKind::InvalidData, "invalid data");
+    assert!(!err.is_transient());
+}
+
+#[test]
+fn test_io_error_other_is_permanent() {
+    let err = Error::other("some other error");
+    assert!(!err.is_transient());
 }
