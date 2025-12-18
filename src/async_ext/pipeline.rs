@@ -6,7 +6,7 @@ use core::future::Future;
 
 use crate::traits::IntoErrorContext;
 use crate::types::alloc_type::Box;
-use crate::types::ComposableError;
+use crate::types::{ComposableError, MarkedError};
 
 use super::future_ext::FutureResultExt;
 
@@ -139,6 +139,46 @@ where
         C: IntoErrorContext,
     {
         AsyncErrorPipeline { future: self.future.ctx(context) }
+    }
+
+    /// Marks the error as transient or permanent based on a closure.
+    ///
+    /// This allows for flexible retry control without implementing the [`TransientError`]
+    /// trait for the error type.
+    ///
+    /// # Arguments
+    ///
+    /// * `classifier` - A closure that returns `true` if the error should be treated as transient
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use error_rail::prelude_async::*;
+    ///
+    /// async fn example() -> Result<(), MarkedError<&'static str, impl Fn(&&str) -> bool>> {
+    ///     AsyncErrorPipeline::new(async { Err("error") })
+    ///         .mark_transient_if(|e| e.contains("error"))
+    ///         .finish()
+    ///         .await
+    /// }
+    /// ```
+    #[inline]
+    pub fn mark_transient_if<F>(
+        self,
+        classifier: F,
+    ) -> AsyncErrorPipeline<impl Future<Output = Result<T, MarkedError<E, F>>>>
+    where
+        F: Fn(&E) -> bool + Send + 'static,
+        E: Send + 'static,
+        T: Send + 'static,
+    {
+        AsyncErrorPipeline {
+            future: async move {
+                self.future
+                    .await
+                    .map_err(|e| MarkedError { inner: e, classifier })
+            },
+        }
     }
 
     /// Adds a lazily-evaluated context using a closure.

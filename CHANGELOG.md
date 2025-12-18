@@ -13,6 +13,11 @@
 - **Test utility macro `assert_err_eq!`**
   - Added a simple macro for integration tests to verify internal error tags or messages in one line.
 
+- **Dynamic transient error classification**
+  - Added `.mark_transient_if(|e| ...)` to `ErrorPipeline` and `AsyncErrorPipeline`
+  - Introduced `MarkedError` utility type for wrapping errors with a classification closure
+  - Enables flexible retry control without implementing the `TransientError` trait.
+
 ### Breaking Changes - 0.9.0
 
 - **Modified `ErrorFormatConfig` struct fields**

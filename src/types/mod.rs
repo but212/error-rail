@@ -24,6 +24,7 @@ pub mod error_context;
 pub mod error_formatter;
 pub mod error_pipeline;
 pub mod lazy_context;
+pub mod marked_error;
 pub mod retry;
 
 pub use alloc_type::*;
@@ -31,6 +32,7 @@ pub use composable_error::{ComposableError, FingerprintConfig};
 pub use error_context::*;
 pub use error_pipeline::*;
 pub use lazy_context::*;
+pub use marked_error::MarkedError;
 
 /// SmallVec-backed collection used for accumulating contexts/errors.
 ///
