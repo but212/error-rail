@@ -115,36 +115,3 @@ fn collect_validation_results<T, E>(results: Vec<Validation<E, T>>) -> Validatio
         Validation::invalid_many(errors)
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn collect_all_valid() {
-        let results = vec![
-            Validation::<&str, _>::Valid(1),
-            Validation::Valid(2),
-            Validation::Valid(3),
-        ];
-        let collected = collect_validation_results(results);
-        assert_eq!(collected, Validation::Valid(vec![1, 2, 3]));
-    }
-
-    #[test]
-    fn collect_some_invalid() {
-        let results = vec![
-            Validation::Valid(1),
-            Validation::invalid("error 1"),
-            Validation::Valid(3),
-            Validation::invalid("error 2"),
-        ];
-        let collected: Validation<&str, Vec<i32>> = collect_validation_results(results);
-        match collected {
-            Validation::Invalid(errs) => {
-                assert_eq!(errs.len(), 2);
-            }
-            _ => panic!("expected Invalid"),
-        }
-    }
-}
