@@ -83,6 +83,33 @@ let results: Validation<&str, Vec<_>> = vec![
 // Both errors collected, not just the first
 ```
 
+### Macros
+
+```rust
+use error_rail::prelude::*;
+
+// rail! - Wrap any Result in ErrorPipeline and box it
+let result = rail!(std::fs::read_to_string("config.toml"));
+
+// context! - Lazy formatted context (only evaluated on error)
+result.ctx(context!("loading config for user {}", user_id))
+
+// group! - Structured context with tags & metadata
+result.ctx(group!(tag("config"), metadata("path", "config.toml")))
+```
+
+```rust
+use error_rail::prelude_async::*;
+
+// rail_async! - Async version of rail!
+async fn load() -> BoxedResult<String, IoError> {
+    rail_async!(tokio::fs::read_to_string("config.toml"))
+        .with_context("loading config")
+        .finish_boxed()
+        .await
+}
+```
+
 ### Async Support
 
 ```rust
