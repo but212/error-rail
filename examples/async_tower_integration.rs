@@ -57,14 +57,8 @@ impl Service<u64> for DatabaseService {
     fn call(&mut self, id: u64) -> Self::Future {
         Box::pin(async move {
             match id {
-                1 => Ok(User {
-                    id: 1,
-                    name: "Alice".to_string(),
-                }),
-                2 => Ok(User {
-                    id: 2,
-                    name: "Bob".to_string(),
-                }),
+                1 => Ok(User { id: 1, name: "Alice".to_string() }),
+                2 => Ok(User { id: 2, name: "Bob".to_string() }),
                 _ => Err(ApiError(format!("user {} not found", id))),
             }
         })

@@ -143,10 +143,7 @@ impl ErrorContext {
     #[inline]
     pub fn location<S: Into<Cow<'static, str>>>(file: S, line: u32) -> Self {
         Self::Group(GroupContext {
-            location: Some(Location {
-                file: file.into(),
-                line,
-            }),
+            location: Some(Location { file: file.into(), line }),
             ..Default::default()
         })
     }
@@ -168,10 +165,7 @@ impl ErrorContext {
     /// ```
     #[inline]
     pub fn tag<S: Into<Cow<'static, str>>>(tag: S) -> Self {
-        Self::Group(GroupContext {
-            tags: smallvec::smallvec![tag.into()],
-            ..Default::default()
-        })
+        Self::Group(GroupContext { tags: smallvec::smallvec![tag.into()], ..Default::default() })
     }
 
     /// Adds arbitrary key/value metadata for downstream logging/filters.
@@ -270,7 +264,7 @@ impl ErrorContext {
                 } else {
                     Cow::Owned(parts.join(" "))
                 }
-            }
+            },
         }
     }
 
@@ -376,10 +370,7 @@ impl ErrorContextBuilder {
     ///     .build();
     /// ```
     pub fn location<S: Into<Cow<'static, str>>>(mut self, file: S, line: u32) -> Self {
-        self.context.location = Some(Location {
-            file: file.into(),
-            line,
-        });
+        self.context.location = Some(Location { file: file.into(), line });
         self
     }
 

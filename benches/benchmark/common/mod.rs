@@ -122,9 +122,7 @@ pub fn validate_user_age(age: i32) -> Result<i32, DomainError> {
     if age >= 18 && age <= 120 {
         Ok(age)
     } else {
-        Err(DomainError::Validation(
-            "Age out of valid range".to_string(),
-        ))
+        Err(DomainError::Validation("Age out of valid range".to_string()))
     }
 }
 

@@ -74,18 +74,12 @@ impl ErrorFormatConfig {
 
     #[inline]
     pub fn compact() -> Self {
-        Self {
-            separator: " | ".into(),
-            ..Default::default()
-        }
+        Self { separator: " | ".into(), ..Default::default() }
     }
 
     #[inline]
     pub fn no_code() -> Self {
-        Self {
-            show_code: false,
-            ..Default::default()
-        }
+        Self { show_code: false, ..Default::default() }
     }
 }
 
@@ -175,11 +169,7 @@ pub struct ErrorFormatBuilder<'a, E> {
 
 impl<'a, E> ErrorFormatBuilder<'a, E> {
     pub fn new(error: &'a ComposableError<E>) -> Self {
-        Self {
-            error,
-            config: ErrorFormatConfig::default(),
-            reverse_context: false,
-        }
+        Self { error, config: ErrorFormatConfig::default(), reverse_context: false }
     }
 
     pub fn with_separator(mut self, separator: impl Into<alloc_type::String>) -> Self {

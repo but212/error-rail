@@ -181,11 +181,8 @@ fn collecting_results_empty_iterator_is_valid_with_empty_collection() {
 
 #[test]
 fn collecting_validations_preserves_all_errors() {
-    let items = vec![
-        Validation::valid(10),
-        Validation::invalid("bad"),
-        Validation::invalid("worse"),
-    ];
+    let items =
+        vec![Validation::valid(10), Validation::invalid("bad"), Validation::invalid("worse")];
 
     let collected: Validation<&str, Vec<i32>> = items.into_iter().collect();
     assert!(collected.is_invalid());

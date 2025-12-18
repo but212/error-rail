@@ -138,9 +138,7 @@ where
     where
         C: IntoErrorContext,
     {
-        AsyncErrorPipeline {
-            future: self.future.ctx(context),
-        }
+        AsyncErrorPipeline { future: self.future.ctx(context) }
     }
 
     /// Adds a lazily-evaluated context using a closure.
@@ -180,9 +178,7 @@ where
         F: FnOnce() -> C,
         C: IntoErrorContext,
     {
-        AsyncErrorPipeline {
-            future: self.future.with_ctx(f),
-        }
+        AsyncErrorPipeline { future: self.future.with_ctx(f) }
     }
 }
 
@@ -235,8 +231,6 @@ where
     where
         F: FnOnce(ComposableError<E>) -> ComposableError<E2>,
     {
-        AsyncErrorPipeline {
-            future: async move { self.future.await.map_err(f) },
-        }
+        AsyncErrorPipeline { future: async move { self.future.await.map_err(f) } }
     }
 }

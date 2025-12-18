@@ -42,7 +42,7 @@ fn step2_error_pipeline() {
         Ok(content) => println!("Config loaded: {} bytes", content.len()),
         Err(e) => {
             println!("Error chain: {}", e.error_chain());
-        }
+        },
     }
 }
 
@@ -108,7 +108,7 @@ fn step4_validation() {
             for err in errors {
                 println!("  - {}", err);
             }
-        }
+        },
     }
 }
 

@@ -29,9 +29,7 @@ fn demonstrate_serde_logging() {
     println!("=== Serde Feature Enabled ===");
 
     // 1. Create a base error
-    let base_error = MyError {
-        details: "Database connection timeout".to_string(),
-    };
+    let base_error = MyError { details: "Database connection timeout".to_string() };
 
     // 2. Wrap it in ComposableError and add rich context using group!
     let error = ComposableError::<MyError>::new(base_error)
@@ -50,10 +48,10 @@ fn demonstrate_serde_logging() {
     match serde_json::to_string_pretty(&error) {
         Ok(json) => {
             println!("Structured Error Log:\n{}", json);
-        }
+        },
         Err(e) => {
             eprintln!("Failed to serialize error: {}", e);
-        }
+        },
     }
 }
 
@@ -65,9 +63,7 @@ fn demonstrate_basic_logging() {
     println!("\nHowever, you can still use ComposableError for basic error handling:");
 
     // Demonstrate basic error handling without serde
-    let base_error = MyError {
-        details: "Database connection timeout".to_string(),
-    };
+    let base_error = MyError { details: "Database connection timeout".to_string() };
 
     let error = ComposableError::<MyError>::new(base_error)
         .with_context(group!(

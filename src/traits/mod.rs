@@ -156,7 +156,7 @@ impl<T, E> WithError<E> for Result<T, E> {
                 let mut error_vec = ErrorVec::new();
                 error_vec.push(e);
                 Err(error_vec)
-            }
+            },
         }
     }
 }

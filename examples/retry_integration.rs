@@ -43,7 +43,7 @@ impl std::fmt::Display for ApiError {
         match self {
             Self::RateLimited { retry_after_secs } => {
                 write!(f, "rate limited, retry after {} seconds", retry_after_secs)
-            }
+            },
             Self::Timeout => write!(f, "request timed out"),
             Self::ServiceUnavailable => write!(f, "service temporarily unavailable"),
             Self::BadRequest(msg) => write!(f, "bad request: {}", msg),
@@ -65,7 +65,7 @@ impl TransientError for ApiError {
         match self {
             ApiError::RateLimited { retry_after_secs } => {
                 Some(Duration::from_secs(*retry_after_secs))
-            }
+            },
             ApiError::Timeout => Some(Duration::from_millis(100)),
             ApiError::ServiceUnavailable => Some(Duration::from_secs(1)),
             _ => None,
@@ -90,9 +90,7 @@ impl TransientError for ApiError {
 fn call_api(attempt: u32) -> Result<String, ApiError> {
     match attempt {
         1 => Err(ApiError::Timeout),
-        2 => Err(ApiError::RateLimited {
-            retry_after_secs: 1,
-        }),
+        2 => Err(ApiError::RateLimited { retry_after_secs: 1 }),
         3 => Ok("Success!".to_string()),
         _ => Err(ApiError::ServiceUnavailable),
     }
@@ -106,10 +104,7 @@ fn manual_retry_example() -> Result<String, ComposableError<ApiError>> {
         let result = call_api(attempt);
 
         let pipeline = ErrorPipeline::new(result)
-            .with_context(group!(
-                tag("api"),
-                metadata("attempt", format!("{}", attempt))
-            ))
+            .with_context(group!(tag("api"), metadata("attempt", format!("{}", attempt))))
             .with_retry_context(attempt);
 
         // Use is_transient() to check without consuming pipeline

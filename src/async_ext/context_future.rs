@@ -47,10 +47,7 @@ impl<Fut, F> ContextFuture<Fut, F> {
     /// Creates a new `ContextFuture` with the given future and context generator.
     #[inline]
     pub fn new(future: Fut, context_fn: F) -> Self {
-        Self {
-            future,
-            context_fn: Some(context_fn),
-        }
+        Self { future, context_fn: Some(context_fn) }
     }
 }
 
@@ -69,7 +66,7 @@ where
             Poll::Ready(Ok(value)) => {
                 // Success: don't evaluate context_fn (lazy!)
                 Poll::Ready(Ok(value))
-            }
+            },
             Poll::Ready(Err(error)) => {
                 // Error: evaluate context now
                 let context_fn = this
@@ -79,7 +76,7 @@ where
                 let context = context_fn();
                 let composable = ComposableError::new(error).with_context(context);
                 Poll::Ready(Err(composable))
-            }
+            },
             Poll::Pending => Poll::Pending,
         }
     }

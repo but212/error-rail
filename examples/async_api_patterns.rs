@@ -78,16 +78,8 @@ async fn fetch_user_from_db(id: u64) -> Result<User, ApiError> {
     tokio::time::sleep(Duration::from_millis(10)).await;
 
     match id {
-        1 => Ok(User {
-            id: 1,
-            name: "Alice".to_string(),
-            email: "alice@example.com".to_string(),
-        }),
-        2 => Ok(User {
-            id: 2,
-            name: "Bob".to_string(),
-            email: "bob@example.com".to_string(),
-        }),
+        1 => Ok(User { id: 1, name: "Alice".to_string(), email: "alice@example.com".to_string() }),
+        2 => Ok(User { id: 2, name: "Bob".to_string(), email: "bob@example.com".to_string() }),
         _ => Err(ApiError::NotFound(format!("user {}", id))),
     }
 }
@@ -97,16 +89,8 @@ async fn fetch_orders_for_user(user_id: u64) -> Result<Vec<Order>, ApiError> {
 
     match user_id {
         1 => Ok(vec![
-            Order {
-                id: 101,
-                user_id: 1,
-                total: 99.99,
-            },
-            Order {
-                id: 102,
-                user_id: 1,
-                total: 149.50,
-            },
+            Order { id: 101, user_id: 1, total: 99.99 },
+            Order { id: 102, user_id: 1, total: 149.50 },
         ]),
         _ => Ok(vec![]),
     }
@@ -198,11 +182,7 @@ async fn call_with_retry() -> BoxedResult<String, ApiError> {
     CALL_COUNT.store(0, Ordering::SeqCst);
 
     // Use retry_transient with automatic backoff
-    retry_transient(
-        flaky_external_service,
-        ExponentialBackoff::new().with_max_attempts(5),
-    )
-    .await
+    retry_transient(flaky_external_service, ExponentialBackoff::new().with_max_attempts(5)).await
 }
 
 // =============================================================================
@@ -250,7 +230,7 @@ async fn main() {
         Ok((user, orders)) => {
             println!("   User: {:?}", user);
             println!("   Orders: {} total", orders.len());
-        }
+        },
         Err(e) => println!("   Error: {}", e.error_chain()),
     }
 

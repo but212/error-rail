@@ -11,19 +11,11 @@ struct RetryTestError {
 
 impl RetryTestError {
     fn new(message: &str, is_transient: bool) -> Self {
-        Self {
-            message: message.to_string(),
-            is_transient,
-            retry_after: None,
-        }
+        Self { message: message.to_string(), is_transient, retry_after: None }
     }
 
     fn with_retry_after(message: &str, is_transient: bool, retry_after: u64) -> Self {
-        Self {
-            message: message.to_string(),
-            is_transient,
-            retry_after: Some(retry_after),
-        }
+        Self { message: message.to_string(), is_transient, retry_after: Some(retry_after) }
     }
 }
 
@@ -157,9 +149,8 @@ fn test_retry_ops_should_retry_success() {
 
 #[test]
 fn test_retry_ops_retry_after_hint() {
-    let pipeline: ErrorPipeline<u32, RetryTestError> = ErrorPipeline::new(Err(
-        RetryTestError::with_retry_after("rate limited", true, 60),
-    ));
+    let pipeline: ErrorPipeline<u32, RetryTestError> =
+        ErrorPipeline::new(Err(RetryTestError::with_retry_after("rate limited", true, 60)));
     assert_eq!(pipeline.retry_after_hint(), Some(Duration::from_secs(60)));
 }
 
@@ -219,16 +210,13 @@ fn test_retry_ops_backoff_simulation() {
     let attempt_count = std::cell::Cell::new(0);
 
     // Test that recover_transient only attempts recovery once, even with retry hints
-    let result = ErrorPipeline::new(Err(RetryTestError::with_retry_after(
-        "service unavailable",
-        true,
-        60,
-    )))
-    .recover_transient(|_err| {
-        attempt_count.set(attempt_count.get() + 1);
-        Ok(200) // Single recovery attempt with backoff hint
-    })
-    .finish();
+    let result =
+        ErrorPipeline::new(Err(RetryTestError::with_retry_after("service unavailable", true, 60)))
+            .recover_transient(|_err| {
+                attempt_count.set(attempt_count.get() + 1);
+                Ok(200) // Single recovery attempt with backoff hint
+            })
+            .finish();
 
     assert!(result.is_ok());
     assert_eq!(result.unwrap(), 200);

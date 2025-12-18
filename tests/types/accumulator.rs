@@ -155,10 +155,7 @@ fn test_accumulator_clone() {
     let acc2 = acc1.clone();
 
     assert_eq!(acc1.len(), acc2.len());
-    assert_eq!(
-        acc1.iter().collect::<Vec<_>>(),
-        acc2.iter().collect::<Vec<_>>()
-    );
+    assert_eq!(acc1.iter().collect::<Vec<_>>(), acc2.iter().collect::<Vec<_>>());
 
     // Verify they are independent
     acc1.push("extra");
@@ -283,10 +280,7 @@ fn test_accumulator_with_strings() {
     assert_eq!(acc.len(), 3);
 
     let items: Vec<String> = acc.iter().cloned().collect();
-    assert_eq!(
-        items,
-        vec!["hello".to_string(), "world".to_string(), "test".to_string()]
-    );
+    assert_eq!(items, vec!["hello".to_string(), "world".to_string(), "test".to_string()]);
 }
 
 #[test]
@@ -298,14 +292,8 @@ fn test_accumulator_with_complex_types() {
     }
 
     let mut acc = Accumulator::new();
-    acc.push(TestStruct {
-        id: 1,
-        name: "first".to_string(),
-    });
-    acc.push(TestStruct {
-        id: 2,
-        name: "second".to_string(),
-    });
+    acc.push(TestStruct { id: 1, name: "first".to_string() });
+    acc.push(TestStruct { id: 2, name: "second".to_string() });
 
     assert_eq!(acc.len(), 2);
 

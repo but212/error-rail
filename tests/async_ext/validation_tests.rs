@@ -29,12 +29,9 @@ fn validate_less_than_100(n: i32) -> std::future::Ready<Validation<&'static str,
 
 #[tokio::test]
 async fn validate_all_async_all_valid() {
-    let result = validate_all_async([
-        validate_positive(10),
-        validate_even(10),
-        validate_less_than_100(10),
-    ])
-    .await;
+    let result =
+        validate_all_async([validate_positive(10), validate_even(10), validate_less_than_100(10)])
+            .await;
 
     assert!(result.is_valid());
     let values = result.into_value().unwrap();
@@ -43,12 +40,9 @@ async fn validate_all_async_all_valid() {
 
 #[tokio::test]
 async fn validate_all_async_some_invalid() {
-    let result = validate_all_async([
-        validate_positive(-5),
-        validate_even(3),
-        validate_less_than_100(50),
-    ])
-    .await;
+    let result =
+        validate_all_async([validate_positive(-5), validate_even(3), validate_less_than_100(50)])
+            .await;
 
     assert!(result.is_invalid());
     let errors: Vec<_> = result.iter_errors().collect();
@@ -59,12 +53,9 @@ async fn validate_all_async_some_invalid() {
 
 #[tokio::test]
 async fn validate_all_async_all_invalid() {
-    let result = validate_all_async([
-        validate_positive(-1),
-        validate_even(3),
-        validate_less_than_100(200),
-    ])
-    .await;
+    let result =
+        validate_all_async([validate_positive(-1), validate_even(3), validate_less_than_100(200)])
+            .await;
 
     assert!(result.is_invalid());
     let errors: Vec<_> = result.iter_errors().collect();

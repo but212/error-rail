@@ -51,10 +51,7 @@ pub trait FutureSpanExt<T, E>: Future<Output = Result<T, E>> + Sized {
     /// When the future resolves to an error, the current span's name and
     /// metadata are attached as context to the error.
     fn with_span_context(self) -> SpanContextFuture<Self> {
-        SpanContextFuture {
-            inner: self,
-            span: Span::current(),
-        }
+        SpanContextFuture { inner: self, span: Span::current() }
     }
 
     /// Captures a specific span's metadata as error context on failure.
@@ -95,7 +92,7 @@ where
                 let context = span_to_context(this.span);
                 let composable = ComposableError::new(error).with_context(context);
                 Poll::Ready(Err(Box::new(composable)))
-            }
+            },
             Poll::Pending => Poll::Pending,
         }
     }
@@ -140,7 +137,7 @@ impl<T, E> ResultSpanExt<T, E> for Result<T, E> {
             Err(e) => {
                 let context = span_to_context(span);
                 Err(Box::new(ComposableError::new(e).with_context(context)))
-            }
+            },
         }
     }
 }

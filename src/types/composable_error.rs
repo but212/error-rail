@@ -103,11 +103,7 @@ impl<E> ComposableError<E> {
     /// ```
     #[inline]
     pub fn new(error: E) -> Self {
-        Self {
-            core_error: error,
-            context: ErrorVec::new(),
-            error_code: None,
-        }
+        Self { core_error: error, context: ErrorVec::new(), error_code: None }
     }
 
     /// Creates a composable error with a pre-set error code.
@@ -129,11 +125,7 @@ impl<E> ComposableError<E> {
     /// ```
     #[inline]
     pub fn with_code(error: E, code: u32) -> Self {
-        Self {
-            core_error: error,
-            context: ErrorVec::new(),
-            error_code: Some(code),
-        }
+        Self { core_error: error, context: ErrorVec::new(), error_code: Some(code) }
     }
 
     /// Adds a single context entry produced by `IntoErrorContext`.

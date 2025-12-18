@@ -25,10 +25,10 @@ fn validate_number(n: i32) -> Validation<&'static str, i32> {
         (Validation::Invalid(mut a), Validation::Invalid(b)) => {
             a.extend(b);
             Validation::Invalid(a)
-        }
+        },
         (Validation::Invalid(errors), _) | (_, Validation::Invalid(errors)) => {
             Validation::Invalid(errors)
-        }
+        },
     }
 }
 
@@ -44,6 +44,6 @@ fn main() {
             for err in errors {
                 println!("validation error: {err}");
             }
-        }
+        },
     }
 }

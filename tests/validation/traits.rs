@@ -59,10 +59,7 @@ fn with_error_to_result_first_invalid_returns_first_error() {
 #[test]
 fn test_validation_to_result_all() {
     let valid: Validation<&str, i32> = Validation::valid(42);
-    assert_eq!(
-        <Validation<&str, i32> as WithError<&str>>::to_result_all(valid),
-        Ok(42)
-    );
+    assert_eq!(<Validation<&str, i32> as WithError<&str>>::to_result_all(valid), Ok(42));
 
     let invalid: Validation<&str, i32> = Validation::invalid_many(["e1", "e2"]);
     let result = <Validation<&str, i32> as WithError<&str>>::to_result_all(invalid);

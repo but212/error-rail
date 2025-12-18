@@ -200,10 +200,7 @@ fn test_compact_formatter_single_item() {
 
 #[test]
 fn test_custom_separator_empty() {
-    let config = ErrorFormatConfig {
-        separator: " CUSTOM ".into(),
-        ..Default::default()
-    };
+    let config = ErrorFormatConfig { separator: " CUSTOM ".into(), ..Default::default() };
     let items: Vec<&dyn core::fmt::Display> = Vec::new();
 
     let result = config.format_chain(items.into_iter());

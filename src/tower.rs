@@ -82,10 +82,7 @@ impl<S, C: Clone> Layer<S> for ErrorRailLayer<C> {
     type Service = ErrorRailService<S, C>;
 
     fn layer(&self, inner: S) -> Self::Service {
-        ErrorRailService {
-            inner,
-            context: self.context.clone(),
-        }
+        ErrorRailService { inner, context: self.context.clone() }
     }
 }
 
@@ -148,10 +145,7 @@ where
 
     #[inline]
     fn call(&mut self, request: Request) -> Self::Future {
-        ErrorRailFuture {
-            inner: self.inner.call(request),
-            context: Some(self.context.clone()),
-        }
+        ErrorRailFuture { inner: self.inner.call(request), context: Some(self.context.clone()) }
     }
 }
 
@@ -182,7 +176,7 @@ where
                 let context = this.context.take().expect("polled after completion");
                 let composable = ComposableError::new(error).with_context(context);
                 Poll::Ready(Err(composable))
-            }
+            },
             Poll::Pending => Poll::Pending,
         }
     }

@@ -19,9 +19,7 @@ impl<T> Accumulator<T> {
     /// Creates a new empty accumulator.
     #[inline]
     pub fn new() -> Self {
-        Self {
-            items: ErrorVec::new(),
-        }
+        Self { items: ErrorVec::new() }
     }
 
     /// Adds a single item to the accumulator.
@@ -99,9 +97,7 @@ impl<T> From<ErrorVec<T>> for Accumulator<T> {
 
 impl<T> FromIterator<T> for Accumulator<T> {
     fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
-        Self {
-            items: iter.into_iter().collect(),
-        }
+        Self { items: iter.into_iter().collect() }
     }
 }
 

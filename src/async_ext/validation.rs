@@ -86,7 +86,7 @@ where
         match current {
             Validation::Valid(v) => {
                 current = validator(v).await;
-            }
+            },
             invalid => return invalid,
         }
     }

@@ -139,10 +139,7 @@ impl FixedDelay {
     /// Creates a new fixed delay policy.
     #[inline]
     pub fn new(delay: Duration, max_attempts: u32) -> Self {
-        Self {
-            delay,
-            max_attempts,
-        }
+        Self { delay, max_attempts }
     }
 }
 
@@ -216,12 +213,12 @@ where
                 // Exhausted retry attempts
                 return Err(ComposableError::new(e)
                     .with_context(crate::context!("exhausted {} retry attempts", attempt + 1)));
-            }
+            },
             Err(e) => {
                 // Permanent error, no retry
                 return Err(ComposableError::new(e)
                     .with_context(crate::context!("permanent error, no retry")));
-            }
+            },
         }
     }
 }
@@ -273,17 +270,13 @@ where
                         attempt + 1
                     )));
                 }
-            }
+            },
             Err(e) => {
                 break Err(ComposableError::new(e)
                     .with_context(crate::context!("permanent error, no retry")));
-            }
+            },
         }
     };
 
-    RetryResult {
-        result,
-        attempts: attempt + 1,
-        total_wait_time,
-    }
+    RetryResult { result, attempts: attempt + 1, total_wait_time }
 }

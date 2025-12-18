@@ -12,10 +12,7 @@ pub fn bench_composable_error_creation(c: &mut Criterion) {
                 ))
                 .with_context(ErrorContext::tag("database"))
                 .with_context(ErrorContext::metadata("query", "SELECT * FROM users"))
-                .with_context(ErrorContext::metadata(
-                    "host",
-                    "db-primary-01.company.local",
-                ))
+                .with_context(ErrorContext::metadata("host", "db-primary-01.company.local"))
                 .with_context(ErrorContext::metadata("retry_count", "3"))
                 .set_code(503),
             )

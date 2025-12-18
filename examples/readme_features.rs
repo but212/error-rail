@@ -86,12 +86,10 @@ fn feature3_validation() {
     println!("\n=== Feature 3: Validation Accumulation ===\n");
 
     // Collect all validation results - errors accumulate
-    let results: Validation<&str, Vec<String>> = vec![
-        validate_age(-5).map(|v| v.to_string()),
-        validate_name("").map(|v| v),
-    ]
-    .into_iter()
-    .collect();
+    let results: Validation<&str, Vec<String>> =
+        vec![validate_age(-5).map(|v| v.to_string()), validate_name("").map(|v| v)]
+            .into_iter()
+            .collect();
 
     match results {
         Validation::Valid(values) => println!("All valid: {:?}", values),
@@ -100,7 +98,7 @@ fn feature3_validation() {
             for err in errors {
                 println!("  - {}", err);
             }
-        }
+        },
     }
 }
 
@@ -120,9 +118,7 @@ fn process(_data: &LargePayload) -> Result<(), &'static str> {
 fn feature4_lazy_context() {
     println!("\n=== Feature 4: Zero-Cost Lazy Context ===\n");
 
-    let payload = LargePayload {
-        data: vec![1, 2, 3, 4, 5],
-    };
+    let payload = LargePayload { data: vec![1, 2, 3, 4, 5] };
     let payload_len = payload.data.len();
 
     // format!() is NEVER called on success path
@@ -140,9 +136,7 @@ fn feature4_lazy_context() {
         Err("processing failed")
     }
 
-    let payload2 = LargePayload {
-        data: vec![1, 2, 3],
-    };
+    let payload2 = LargePayload { data: vec![1, 2, 3] };
     let payload2_len = payload2.data.len();
 
     let result2 = ErrorPipeline::new(process_fail(&payload2))
@@ -246,10 +240,7 @@ fn feature7_transient_error() {
     println!("Timeout error:");
     if pipeline1.is_transient() {
         println!("  ✓ Is transient (can retry)");
-        println!(
-            "  ✓ Retry after: {:?}",
-            pipeline1.retry_after_hint().unwrap()
-        );
+        println!("  ✓ Retry after: {:?}", pipeline1.retry_after_hint().unwrap());
     }
 
     // Rate limited - retry with backoff
@@ -259,10 +250,7 @@ fn feature7_transient_error() {
     println!("\nRate limited error:");
     if pipeline2.is_transient() {
         println!("  ✓ Is transient (can retry)");
-        println!(
-            "  ✓ Retry after: {:?}",
-            pipeline2.retry_after_hint().unwrap()
-        );
+        println!("  ✓ Retry after: {:?}", pipeline2.retry_after_hint().unwrap());
     }
 
     // Permanent error - don't retry
@@ -312,10 +300,7 @@ fn feature8_fingerprinting() {
         .set_code(504);
 
     println!("\nSecond error with same tags/code:");
-    println!(
-        "  Same fingerprint: {}",
-        err2.fingerprint_hex() == err.fingerprint_hex()
-    );
+    println!("  Same fingerprint: {}", err2.fingerprint_hex() == err.fingerprint_hex());
 
     println!("\n> Use for Sentry grouping, log deduplication, alert throttling");
 }
@@ -351,11 +336,7 @@ fn feature9_ctx_comparison() {
     // 3. Multiple variables in lazy context
     println!("\n3. Multiple variables (context! macro):");
     let result3: Result<(), &str> = Err("permission denied");
-    match result3.ctx(context!(
-        "user '{}' (id: {}) access denied",
-        username,
-        user_id
-    )) {
+    match result3.ctx(context!("user '{}' (id: {}) access denied", username, user_id)) {
         Ok(_) => println!("   Success"),
         Err(e) => println!("   Error: {}", e.error_chain()),
     }
