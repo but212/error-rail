@@ -28,6 +28,19 @@
   - Removed the explicit `Error:` and `Context:` headings in favor of a clean, cascaded indentation format.
   - This may break code that relies on parsing the specific string output of `{:#}`.
 
+### Changed - 0.9.0
+
+- **Consolidated `BoxedResult` type alias**
+  - Removed duplicate `BoxedResult` definition from `types/mod.rs`
+  - `BoxedResult` is now defined only in `prelude.rs` and re-exported from the crate root
+  - No API changes - existing code continues to work unchanged
+
+- **Deprecated `ErrorFormatter` struct in favor of `ErrorFormatBuilder`**
+  - Renamed the legacy `ErrorFormatter` struct to `LegacyErrorFormatter` with `#[deprecated]` attribute
+  - The struct is now hidden from documentation (`#[doc(hidden)]`)
+  - `ComposableError::fmt()` already returns `ErrorFormatBuilder`, so no code changes are required
+  - **Migration**: Continue using `err.fmt().with_separator(" | ").to_string()` which uses `ErrorFormatBuilder`
+
 ## [0.8.0]
 
 ### Added - 0.8.0

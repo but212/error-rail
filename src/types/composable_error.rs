@@ -570,14 +570,14 @@ impl<E> ComposableError<E> {
     }
 }
 
-/// Formatter for customizing error display output.
+/// Legacy formatter for customizing error display output.
+///
+/// **Deprecated**: This struct is superseded by [`ErrorFormatBuilder`](crate::types::error_formatter::ErrorFormatBuilder).
+/// Use `ComposableError::fmt()` which returns `ErrorFormatBuilder` instead.
 ///
 /// This struct provides fine-grained control over how [`ComposableError`] instances
 /// are formatted as strings, including separator style, context ordering, and
 /// whether to display error codes.
-///
-/// Created via [`ComposableError::fmt`], it follows the builder pattern for
-/// configuring output options.
 ///
 /// # Examples
 ///
@@ -589,7 +589,7 @@ impl<E> ComposableError<E> {
 ///     .with_context("retry exhausted")
 ///     .set_code(503);
 ///
-/// // Customize formatting
+/// // Use the new ErrorFormatBuilder instead:
 /// let formatted = err.fmt()
 ///     .with_separator(" | ")
 ///     .show_code(false)
@@ -597,14 +597,17 @@ impl<E> ComposableError<E> {
 ///
 /// assert_eq!(formatted, "retry exhausted | [network] | connection failed");
 /// ```
-pub struct ErrorFormatter<'a, E> {
+#[deprecated(since = "0.9.0", note = "Use ErrorFormatBuilder via ComposableError::fmt() instead")]
+#[doc(hidden)]
+pub struct LegacyErrorFormatter<'a, E> {
     error: &'a ComposableError<E>,
     separator: &'a str,
     reverse_context: bool,
     show_code: bool,
 }
 
-impl<'a, E> ErrorFormatter<'a, E> {
+#[allow(deprecated)]
+impl<'a, E> LegacyErrorFormatter<'a, E> {
     /// Sets the separator between context elements (default: " -> ").
     pub fn with_separator(mut self, separator: &'a str) -> Self {
         self.separator = separator;
@@ -624,7 +627,8 @@ impl<'a, E> ErrorFormatter<'a, E> {
     }
 }
 
-impl<'a, E> Display for ErrorFormatter<'a, E>
+#[allow(deprecated)]
+impl<'a, E> Display for LegacyErrorFormatter<'a, E>
 where
     E: Display,
 {

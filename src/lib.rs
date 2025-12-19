@@ -92,10 +92,10 @@ pub mod tower;
 // but encourage using prelude/intermediate/advanced modules.
 pub use context::*;
 pub use convert::*;
+pub use prelude::BoxedResult;
 pub use traits::*;
 pub use types::{
-    error_formatter::ErrorFormatConfig, BoxedComposableResult, BoxedResult, ComposableError,
-    ComposableResult, ErrorContext, ErrorPipeline, ErrorVec, GroupContext, LazyContext,
-    LazyGroupContext,
+    error_formatter::ErrorFormatConfig, BoxedComposableResult, ComposableError, ComposableResult,
+    ErrorContext, ErrorPipeline, ErrorVec, GroupContext, LazyContext, LazyGroupContext,
 };
 pub use validation::*;
