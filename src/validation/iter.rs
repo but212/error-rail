@@ -123,6 +123,15 @@ impl<'a, E> ExactSizeIterator for ErrorsIter<'a, E> {
 
 impl<'a, E> FusedIterator for ErrorsIter<'a, E> {}
 
+impl<'a, E> DoubleEndedIterator for ErrorsIter<'a, E> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        match self {
+            ErrorsIter::Empty => None,
+            ErrorsIter::Multi(it) => it.next_back(),
+        }
+    }
+}
+
 /// Mutable iterator over the errors of a [`Validation`].
 ///
 /// This iterator yields mutable references to all accumulated errors in an invalid validation.
@@ -177,6 +186,15 @@ impl<'a, E> ExactSizeIterator for ErrorsIterMut<'a, E> {
 }
 
 impl<'a, E> FusedIterator for ErrorsIterMut<'a, E> {}
+
+impl<'a, E> DoubleEndedIterator for ErrorsIterMut<'a, E> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        match self {
+            ErrorsIterMut::Empty => None,
+            ErrorsIterMut::Multi(it) => it.next_back(),
+        }
+    }
+}
 
 /// Converts a [`Validation`] into an iterator over its valid value.
 ///
@@ -421,7 +439,7 @@ where
     C: FromIterator<A>,
 {
     fn from_iter<T: IntoIterator<Item = Result<A, E>>>(iter: T) -> Self {
-        let mut values: smallvec::SmallVec<[A; 2]> = smallvec::SmallVec::new();
+        let mut values: ErrorVec<A> = ErrorVec::new();
         let mut errors = ErrorVec::new();
 
         for item in iter {
@@ -462,7 +480,7 @@ where
     C: FromIterator<A>,
 {
     fn from_iter<T: IntoIterator<Item = Validation<E, A>>>(iter: T) -> Self {
-        let mut values: smallvec::SmallVec<[A; 2]> = smallvec::SmallVec::new();
+        let mut values: ErrorVec<A> = ErrorVec::new();
         let mut errors = ErrorVec::new();
 
         for item in iter {

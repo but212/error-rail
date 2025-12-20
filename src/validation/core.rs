@@ -89,7 +89,11 @@ impl<E, A> Validation<E, A> {
     ///
     /// # Arguments
     ///
-    /// * `errors` - An iterator of errors to collect
+    /// * `errors` - An iterator of errors to collect (must contain at least one error)
+    ///
+    /// # Panics
+    ///
+    /// Panics if the iterator is empty.
     ///
     /// # Examples
     ///
@@ -107,7 +111,44 @@ impl<E, A> Validation<E, A> {
     {
         let mut acc = Accumulator::new();
         acc.extend(errors);
+        assert!(!acc.is_empty(), "invalid_many requires at least one error");
         Self::Invalid(acc)
+    }
+
+    /// Creates an invalid value from an iterator of errors, returning `None` if empty.
+    ///
+    /// # Arguments
+    ///
+    /// * `errors` - An iterator of errors to collect
+    ///
+    /// # Returns
+    ///
+    /// * `Some(Validation::Invalid(...))` if the iterator contains at least one error
+    /// * `None` if the iterator is empty
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use error_rail::validation::Validation;
+    ///
+    /// let v = Validation::<&str, ()>::try_invalid_many(["missing", "invalid"]);
+    /// assert!(v.is_some());
+    ///
+    /// let empty: Option<Validation<&str, ()>> = Validation::try_invalid_many(Vec::<&str>::new());
+    /// assert!(empty.is_none());
+    /// ```
+    #[inline]
+    pub fn try_invalid_many<I>(errors: I) -> Option<Self>
+    where
+        I: IntoIterator<Item = E>,
+    {
+        let mut acc = Accumulator::new();
+        acc.extend(errors);
+        if acc.is_empty() {
+            None
+        } else {
+            Some(Self::Invalid(acc))
+        }
     }
 
     /// Returns `true` if the validation contains a value.
@@ -241,6 +282,11 @@ impl<E, A> Validation<E, A> {
     ///
     /// If both validations are valid, returns a tuple of both values.
     /// If either or both are invalid, accumulates all errors from both.
+    ///
+    /// # Error Order
+    ///
+    /// When both validations are invalid, errors from `self` appear first,
+    /// followed by errors from `other`.
     ///
     /// # Arguments
     ///

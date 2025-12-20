@@ -29,3 +29,5 @@ pub mod traits;
 
 pub use self::core::*;
 pub use self::iter::*;
+// Note: traits module provides impl blocks for WithError and ErrorCategory
+// which are automatically available when this module is compiled

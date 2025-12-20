@@ -95,7 +95,10 @@ impl<T, E> WithError<E> for Validation<E, T> {
     fn to_result_first(self) -> Result<Self::Success, E> {
         match self {
             Validation::Valid(t) => Ok(t),
-            Validation::Invalid(e) => Err(e.into_iter().next().unwrap()),
+            Validation::Invalid(e) => Err(e
+                .into_iter()
+                .next()
+                .expect("Validation::Invalid must contain at least one error")),
         }
     }
 

@@ -3,4 +3,4 @@
 //! This module provides the most commonly used items for validation.
 
 pub use crate::validate;
-pub use crate::validation::Validation;
+pub use crate::validation::{ErrorsIter, ErrorsIterMut, IntoIter, Iter, IterMut, Validation};
