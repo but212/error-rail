@@ -9,14 +9,6 @@
 
 > **std::error defines error types. error-rail defines how errors flow.**
 
-## Golden Path (3 Rules)
-
-```text
-1. Return BoxedResult at function boundaries
-2. Add .ctx() only after I/O or external calls
-3. Use Validation when multiple errors can occur
-```
-
 ```rust
 use error_rail::simple::*;
 
