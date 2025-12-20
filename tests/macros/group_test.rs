@@ -21,8 +21,9 @@ fn test_group_macro_basic() {
     assert!(msg.contains("(host=localhost:5432)"), "message should contain metadata");
 
     // Verify the structure: [tag] at file:line: message (metadata)
-    // Should have exactly 2 colons: one after line number, one in metadata
-    assert_eq!(msg.matches(':').count(), 2, "should have exactly 2 colons");
+    // Should have at least 2 colons: one after line number, one in metadata
+    // Note: On Windows, file path may contain an additional colon (e.g., C:\)
+    assert!(msg.matches(':').count() >= 2, "should have at least 2 colons");
 
     // Also verify using assert_err_eq for substring matching
     let res: Result<(), ComposableError<&str>> = Err(err);
