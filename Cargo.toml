@@ -7,7 +7,7 @@ license = "Apache-2.0"
 description = "ErrorRail is a no_std compatible Error Handling library for the Rust language."
 repository = "https://github.com/but212/error-rail"
 keywords = ["error", "error-handling", "no_std"]
-categories = ["algorithms", "no-std"]
+categories = ["rust-patterns", "no-std"]
 readme = "README.md"
 rust-version = "1.81.0"
 
@@ -41,7 +41,7 @@ tower = { version = "0.5", default-features = false, features = ["util"] }
 default = []
 std = []
 serde = ["dep:serde", "smallvec/serde"]
-async = ["std", "dep:pin-project-lite"]
+async = ["std", "dep:pin-project-lite", "dep:futures-core"]
 tower = ["std", "dep:tower", "dep:pin-project-lite"]
 tokio = ["async", "dep:tokio"]
 tracing = ["async", "dep:tracing"]
