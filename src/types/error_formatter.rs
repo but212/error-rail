@@ -5,21 +5,19 @@ use crate::types::ComposableError;
 use core::fmt::Display;
 
 #[cfg(not(feature = "std"))]
-use alloc::string::{String, ToString};
-#[cfg(feature = "std")]
-use std::string::{String, ToString};
+use alloc::string::ToString;
 
-#[cfg(not(feature = "std"))]
-use alloc::vec::Vec;
-#[cfg(feature = "std")]
-use std::vec::Vec;
+use crate::types::alloc_type::String;
+use crate::types::alloc_type::Vec;
 
 /// Trait for customizing error chain formatting.
 pub trait ErrorFormatter {
+    #[inline]
     fn format_item(&self, item: &dyn Display) -> String {
         item.to_string()
     }
 
+    #[inline]
     fn separator(&self) -> &str {
         " -> "
     }
@@ -35,13 +33,13 @@ pub trait ErrorFormatter {
 /// Configuration-based error formatter.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ErrorFormatConfig {
-    pub separator: alloc_type::String,
-    pub context_prefix: Option<alloc_type::String>,
-    pub context_suffix: Option<alloc_type::String>,
-    pub root_prefix: Option<alloc_type::String>,
-    pub root_suffix: Option<alloc_type::String>,
+    pub separator: String,
+    pub context_prefix: Option<String>,
+    pub context_suffix: Option<String>,
+    pub root_prefix: Option<String>,
+    pub root_suffix: Option<String>,
     pub multiline: bool,
-    pub indent: alloc_type::String,
+    pub indent: String,
     pub show_code: bool,
     pub cascade: bool,
 }
@@ -63,6 +61,8 @@ impl Default for ErrorFormatConfig {
 }
 
 impl ErrorFormatConfig {
+    /// Tree-style formatting with box-drawing characters.
+    /// Uses `multiline` + `context_prefix` branch (not cascade).
     #[inline]
     pub fn pretty() -> Self {
         Self {
@@ -70,11 +70,12 @@ impl ErrorFormatConfig {
             context_prefix: Some("├─ ".into()),
             root_prefix: Some("└─ ".into()),
             multiline: true,
-            cascade: true,
             ..Default::default()
         }
     }
 
+    /// Indented cascade formatting.
+    /// Each level adds `indent` spacing (uses cascade branch).
     #[inline]
     pub fn cascaded() -> Self {
         Self { separator: "\n".into(), multiline: true, cascade: true, ..Default::default() }
@@ -104,6 +105,7 @@ impl ErrorFormatter for ErrorFormatConfig {
         result
     }
 
+    #[inline]
     fn separator(&self) -> &str {
         &self.separator
     }
