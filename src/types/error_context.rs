@@ -71,12 +71,13 @@ use std::string::ToString;
 ///     .metadata("retry_count", "3")
 ///     .build();
 /// ```
+use crate::types::alloc_type::Box;
+
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ErrorContext {
     Simple(Cow<'static, str>),
-    Group(GroupContext),
+    Group(Box<GroupContext>),
 }
 
 /// A rich context containing multiple pieces of information.
@@ -142,10 +143,10 @@ impl ErrorContext {
     /// ```
     #[inline]
     pub fn location<S: Into<Cow<'static, str>>>(file: S, line: u32) -> Self {
-        Self::Group(GroupContext {
+        Self::Group(Box::new(GroupContext {
             location: Some(Location { file: file.into(), line }),
             ..Default::default()
-        })
+        }))
     }
 
     /// Annotates the error with a short tag (e.g. `auth`, `cache`).
@@ -165,7 +166,10 @@ impl ErrorContext {
     /// ```
     #[inline]
     pub fn tag<S: Into<Cow<'static, str>>>(tag: S) -> Self {
-        Self::Group(GroupContext { tags: smallvec::smallvec![tag.into()], ..Default::default() })
+        Self::Group(Box::new(GroupContext {
+            tags: smallvec::smallvec![tag.into()],
+            ..Default::default()
+        }))
     }
 
     /// Adds arbitrary key/value metadata for downstream logging/filters.
@@ -190,10 +194,10 @@ impl ErrorContext {
         key: K,
         value: V,
     ) -> Self {
-        Self::Group(GroupContext {
+        Self::Group(Box::new(GroupContext {
             metadata: smallvec::smallvec![(key.into(), value.into())],
             ..Default::default()
-        })
+        }))
     }
 
     /// Renders the context as a human-friendly string.
@@ -268,18 +272,18 @@ impl ErrorContext {
         }
     }
 
-    /// Helper function to add message to parts with proper location formatting
+    /// Helper function to add message to parts with proper location formatting.
+    /// If has_location is true and the last part is a location string (starts with "at "),
+    /// appends the message to that location. Otherwise, adds as a new part.
     fn add_message_to_parts(parts: &mut ErrorVec<String>, msg: &str, has_location: bool) {
-        if has_location {
-            // Try to append to the last location part
+        // Only attempt to merge with location if has_location is true AND
+        // there's actually a location part to merge with
+        let should_merge = has_location && parts.last().map_or(false, |p| p.starts_with("at "));
+
+        if should_merge {
+            // Safe: we just verified last() exists and starts with "at "
             if let Some(last_part) = parts.last_mut() {
-                if last_part.starts_with("at ") {
-                    *last_part = format!("{}: {}", last_part, msg);
-                } else {
-                    parts.push(msg.to_string());
-                }
-            } else {
-                parts.push(msg.to_string());
+                *last_part = format!("{}: {}", last_part, msg);
             }
         } else {
             parts.push(msg.to_string());
@@ -445,7 +449,7 @@ impl ErrorContextBuilder {
     ///     .build();
     /// ```
     pub fn build(self) -> ErrorContext {
-        ErrorContext::Group(self.context)
+        ErrorContext::Group(Box::new(self.context))
     }
 }
 

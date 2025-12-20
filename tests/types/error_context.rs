@@ -22,14 +22,14 @@ fn test_error_context_message_variants() {
 #[test]
 fn test_error_context_group_message_and_empty_group() {
     // GroupContext with explicit message should prefer the group message
-    let ctx_group_msg = ErrorContext::Group(GroupContext {
+    let ctx_group_msg = ErrorContext::Group(Box::new(GroupContext {
         message: Some("group-msg".into()),
         ..Default::default()
-    });
+    }));
     assert_eq!(ctx_group_msg.message(), "group-msg");
 
     // Completely empty GroupContext should render as an empty string
-    let ctx_empty = ErrorContext::Group(GroupContext::default());
+    let ctx_empty = ErrorContext::Group(Box::new(GroupContext::default()));
     assert_eq!(ctx_empty.message(), "");
 }
 

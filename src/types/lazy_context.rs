@@ -43,7 +43,6 @@ use crate::{
 /// let lazy = LazyContext::new(|| format!("user_id: {}", 123));
 /// // The closure is not called until `into_error_context` is invoked
 /// ```
-#[repr(transparent)]
 pub struct LazyContext<F> {
     generator: F,
 }
@@ -94,7 +93,6 @@ impl<F> LazyContext<F> {
 /// });
 /// // The closure is not called until `into_error_context` is invoked
 /// ```
-#[repr(transparent)]
 pub struct LazyGroupContext<F> {
     generator: F,
 }

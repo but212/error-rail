@@ -114,8 +114,8 @@ impl<T, E> ErrorPipeline<T, E> {
 
     /// Creates a retry operations builder for this pipeline.
     ///
-    /// Returns a `RetryOps` wrapper that provides fluent methods for configuring
-    /// retry behavior and checking transient error states.
+    /// Returns a `RetryHints` wrapper that provides fluent methods for attaching
+    /// retry metadata hints and checking transient error states.
     ///
     /// # Examples
     ///

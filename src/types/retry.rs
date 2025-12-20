@@ -8,11 +8,16 @@ use alloc::format;
 #[cfg(feature = "std")]
 use std::format;
 
-/// Operations for retry policies and transient error handling.
+/// Retry metadata hints builder.
 ///
-/// `RetryOps` provides a fluent API for configuring retry behavior and
-/// checking transient error states. It wraps an [`ErrorPipeline`] and
-/// adds retry-specific metadata to the error context.
+/// **Note**: This type does NOT perform actual retries. It only attaches
+/// retry-related metadata (hints) to the error context for downstream
+/// retry logic to consume.
+///
+/// `RetryOps` provides a fluent API for:
+/// - Checking if an error is transient via [`TransientError`]
+/// - Attaching `max_retries_hint` metadata
+/// - Attaching `retry_after_hint` metadata
 ///
 /// # Examples
 ///
@@ -29,7 +34,7 @@ use std::format;
 ///
 /// let pipeline: ErrorPipeline<(), NetworkError> = ErrorPipeline::new(Err(NetworkError));
 /// let retry_ops = pipeline.retry()
-///     .max_retries(3)
+///     .max_retries(3)      // Adds metadata hint, does NOT retry
 ///     .after_hint(Duration::from_secs(1));
 /// ```
 pub struct RetryOps<T, E> {
@@ -66,8 +71,8 @@ impl<T, E> RetryOps<T, E> {
 
     /// Attaches a maximum retry count hint to the error context.
     ///
-    /// This adds metadata that can be used by retry logic to limit retry attempts.
-    /// The hint is stored as context metadata and does not enforce retry limits itself.
+    /// **Note**: This only adds metadata; it does NOT enforce retry limits.
+    /// Downstream retry logic should read this hint and act accordingly.
     ///
     /// # Arguments
     ///

@@ -24,6 +24,13 @@
   - Added `cascade: bool` field to `ErrorFormatConfig`. Any code using struct literal syntax to instantiate this type will need to be updated.
   - **Migration**: Use `ErrorFormatConfig::default()` or the provided factory methods (`pretty()`, `compact()`, `cascaded()`) and change fields as needed.
 
+- **Changed `ErrorContext::Group` variant to use `Box<GroupContext>`**
+  - The `Group` variant now contains `Box<GroupContext>` instead of `GroupContext` directly to optimize memory usage
+  - **Migration**:
+    - Direct construction: Use `ErrorContext::Group(Box::new(GroupContext { ... }))` or use the provided constructor methods (`location()`, `tag()`, `metadata()`, `builder()`)
+    - Pattern matching: Update patterns from `ErrorContext::Group(ctx)` to `ErrorContext::Group(box ctx)` or handle the boxed type
+  - Note: Most code using the constructor methods (`ErrorContext::location()`, `ErrorContext::tag()`, etc.) requires no changes
+
 - **Changed `ComposableError` alternate display (`{:#}`) output**
   - Removed the explicit `Error:` and `Context:` headings in favor of a clean, cascaded indentation format.
   - This may break code that relies on parsing the specific string output of `{:#}`.
@@ -40,6 +47,13 @@
   - The struct is now hidden from documentation (`#[doc(hidden)]`)
   - `ComposableError::fmt()` already returns `ErrorFormatBuilder`, so no code changes are required
   - **Migration**: Continue using `err.fmt().with_separator(" | ").to_string()` which uses `ErrorFormatBuilder`
+
+- **Internal type safety and performance improvements**
+  - **Accumulator type safety**: `IntoIterator` now uses `<ErrorVec<T> as IntoIterator>::IntoIter` instead of hardcoded type
+  - **LazyContext cleanup**: Removed unnecessary `#[repr(transparent)]` attributes
+  - **RetryOps documentation**: Clarified that `RetryOps` only attaches metadata hints, doesn't perform actual retries
+  - **ErrorContext formatting**: Made `add_message_to_parts` more defensive with proper location checking
+  - **Module exports**: Added `RetryOps` to public exports from `types` module
 
 ## [0.8.0]
 

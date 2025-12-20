@@ -33,6 +33,7 @@ pub use error_context::*;
 pub use error_pipeline::*;
 pub use lazy_context::*;
 pub use marked_error::MarkedError;
+pub use retry::RetryOps;
 
 /// SmallVec-backed collection used for accumulating contexts/errors.
 ///

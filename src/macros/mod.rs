@@ -246,7 +246,7 @@ macro_rules! group {
     // Empty group
     () => {
         $crate::types::LazyGroupContext::new(move || {
-            $crate::types::ErrorContext::Group($crate::types::GroupContext::default())
+            $crate::types::ErrorContext::Group($crate::types::alloc_type::Box::new($crate::types::GroupContext::default()))
         })
     };
 

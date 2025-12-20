@@ -103,7 +103,7 @@ impl<T> FromIterator<T> for Accumulator<T> {
 
 impl<T> IntoIterator for Accumulator<T> {
     type Item = T;
-    type IntoIter = smallvec::IntoIter<[T; 2]>;
+    type IntoIter = <ErrorVec<T> as IntoIterator>::IntoIter;
 
     fn into_iter(self) -> Self::IntoIter {
         self.items.into_iter()
