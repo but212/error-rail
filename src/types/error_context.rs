@@ -229,13 +229,12 @@ impl ErrorContext {
                 let mut parts = ErrorVec::new();
 
                 // Add tags if present
-                if !g.tags.is_empty() {
+                if let Some((first, rest)) = g.tags.split_first() {
                     let mut tags_str = String::new();
                     tags_str.push('[');
-                    for (i, tag) in g.tags.iter().enumerate() {
-                        if i > 0 {
-                            tags_str.push_str(", ");
-                        }
+                    tags_str.push_str(first.as_ref());
+                    for tag in rest {
+                        tags_str.push_str(", ");
                         tags_str.push_str(tag.as_ref());
                     }
                     tags_str.push(']');
@@ -258,14 +257,12 @@ impl ErrorContext {
                 }
 
                 // Add metadata if present
-                if !g.metadata.is_empty() {
+                if let Some((first, rest)) = g.metadata.split_first() {
                     let mut meta_str = String::new();
-                    meta_str.push('(');
-                    for (i, (k, v)) in g.metadata.iter().enumerate() {
-                        if i > 0 {
-                            meta_str.push_str(", ");
-                        }
-                        let _ = write!(&mut meta_str, "{}={}", k, v);
+                    // Writing to a String never fails, so we can ignore the result.
+                    let _ = write!(&mut meta_str, "({}={}", first.0, first.1);
+                    for (k, v) in rest {
+                        let _ = write!(&mut meta_str, ", {}={}", k, v);
                     }
                     meta_str.push(')');
                     parts.push(meta_str);
