@@ -20,7 +20,7 @@ fn load_config() -> BoxedResult<String, std::io::Error> {
 
 ## Features
 
-- **Lazy context** — Format strings only when errors occur
+- **Lazy formatting** — Use `context!` / `.ctx_with(...)` to format strings only when errors occur
 - **Chainable context** — Build rich error traces with `.ctx()`
 - **Validation accumulation** — Collect all errors, not just the first
 - **Transient error classification** — Built-in retry support
@@ -91,6 +91,8 @@ result.ctx("database connection failed")
 
 // Lazy formatted context (evaluated only on error)
 result.ctx(context!("user {} not found", user_id))
+
+// NOTE: `result.ctx(format!(...))` is eager because `format!` runs before `.ctx()`.
 
 // Structured context with tags & metadata
 result.ctx(group!(
@@ -186,7 +188,7 @@ use error_rail::prelude::{BoxedResult, ResultExt, rail};
 Move to `prelude` when you need:
 
 - **Structured context** - tags and metadata for better error categorization
-- **Lazy formatted messages** - format strings only when errors occur
+- **Lazy formatted messages** - use `context!` / `.ctx_with(...)` so formatting only happens on error
 - **ErrorPipeline** - for building libraries or complex error chains
 - **Writing a library** - not just an application
 
