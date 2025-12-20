@@ -219,21 +219,9 @@ impl<E> ComposableError<E> {
         self.core_error
     }
 
-    /// Returns contexts in LIFO order (most recent first).
-    ///
-    /// This allocates a new `Vec` with cloned contexts. For zero-allocation iteration,
-    /// use [`context_iter`](Self::context_iter) instead.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use error_rail::{ComposableError, ErrorContext};
-    ///
-    /// let err = ComposableError::new("error")
-    ///     .with_context("first")
-    ///     .with_context("second");
-    ///```
     /// Returns an iterator in LIFO order (most recent first) that borrows the contexts.
+    ///
+    /// This is a zero-allocation method for iterating over contexts.
     ///
     /// # Examples
     ///

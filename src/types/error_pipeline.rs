@@ -186,6 +186,12 @@ impl<T, E> ErrorPipeline<T, E> {
         self.and_then(f)
     }
 
+    /// Transforms the error type using a mapping function.
+    ///
+    /// If the current result is `Err`, applies the function. Otherwise, preserves
+    /// the success value and pending contexts.
+    ///
+    /// # Arguments
     ///
     /// * `f` - Function to transform the error
     ///

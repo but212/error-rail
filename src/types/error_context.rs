@@ -30,18 +30,17 @@
 //! assert_eq!(msg.message(), "database connection failed");
 //! assert!(ctx.message().contains("[db]"));
 //! ```
-use crate::types::alloc_type::String;
-use crate::types::alloc_type::{Cow, Vec};
+use crate::types::alloc_type::{Box, Cow, String, Vec};
 use crate::ErrorVec;
 use core::fmt::Display;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
-use smallvec::SmallVec;
 
 #[cfg(not(feature = "std"))]
 use alloc::format;
 #[cfg(not(feature = "std"))]
 use alloc::string::ToString;
+use smallvec::SmallVec;
 #[cfg(feature = "std")]
 use std::format;
 #[cfg(feature = "std")]
@@ -71,8 +70,6 @@ use std::string::ToString;
 ///     .metadata("retry_count", "3")
 ///     .build();
 /// ```
-use crate::types::alloc_type::Box;
-
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ErrorContext {
