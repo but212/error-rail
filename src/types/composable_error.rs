@@ -26,11 +26,7 @@ use crate::types::{ErrorContext, ErrorVec};
 use serde::{Deserialize, Serialize};
 
 #[cfg(not(feature = "std"))]
-use alloc::format;
-#[cfg(not(feature = "std"))]
 use alloc::string::ToString;
-#[cfg(feature = "std")]
-use std::format;
 #[cfg(feature = "std")]
 use std::string::ToString;
 
@@ -210,7 +206,10 @@ impl<E> ComposableError<E> {
     /// For zero-allocation iteration, prefer [`context_iter()`](Self::context_iter) instead.
     #[inline]
     pub fn context(&self) -> ErrorVec<ErrorContext> {
-        self.context.iter().rev().cloned().collect()
+        // Pre-allocate exact capacity to avoid reallocation
+        let mut result = ErrorVec::with_capacity(self.context.len());
+        result.extend(self.context.iter().rev().cloned());
+        result
     }
 
     /// Consumes the composable error, returning the underlying core error.
@@ -392,8 +391,8 @@ impl<E> ComposableError<E> {
     {
         use crate::types::alloc_type::Vec;
 
-        // Collect contexts and error as Display trait objects
-        let mut items: Vec<&dyn Display> = Vec::new();
+        // Pre-allocate with exact capacity to avoid reallocation
+        let mut items: Vec<&dyn Display> = Vec::with_capacity(self.context.len() + 1);
 
         // Add contexts in LIFO order (most recent first)
         for ctx in self.context.iter().rev() {
@@ -513,7 +512,13 @@ impl<E> ComposableError<E> {
     where
         E: Display,
     {
-        format!("{:016x}", self.fingerprint())
+        // Pre-allocate exact capacity for hex string (16 chars for 64-bit)
+        let mut result = String::with_capacity(16);
+        let fp = self.fingerprint();
+        // Use write! to avoid intermediate allocation
+        use core::fmt::Write;
+        let _ = write!(result, "{:016x}", fp);
+        result
     }
 
     /// Internal fingerprint computation delegating to FingerprintConfig.
@@ -723,6 +728,42 @@ pub struct FingerprintConfig<'a, E> {
     include_metadata: bool,
 }
 
+/// FNV-1a prime constant for 64-bit hash.
+const FNV_PRIME: u64 = 0x100000001b3;
+
+/// Hashes a byte slice into the running hash using FNV-1a algorithm.
+///
+/// FNV-1a works by XORing each byte with the hash, then multiplying
+/// by the FNV prime. This order (XOR then multiply) is what makes
+/// it "1a" variant, which has better avalanche characteristics.
+#[inline(always)]
+fn hash_bytes(hash: &mut u64, bytes: &[u8]) {
+    for &byte in bytes {
+        *hash ^= byte as u64;
+        *hash = hash.wrapping_mul(FNV_PRIME);
+    }
+}
+
+/// Helper struct to hash Display implementations without allocating strings.
+struct DisplayHasher<'a> {
+    hash: &'a mut u64,
+}
+
+impl<'a> DisplayHasher<'a> {
+    #[inline(always)]
+    fn new(hash: &'a mut u64) -> Self {
+        Self { hash }
+    }
+}
+
+impl core::fmt::Write for DisplayHasher<'_> {
+    #[inline]
+    fn write_str(&mut self, s: &str) -> core::fmt::Result {
+        hash_bytes(self.hash, s.as_bytes());
+        Ok(())
+    }
+}
+
 impl<'a, E> FingerprintConfig<'a, E> {
     /// Whether to include tags in the fingerprint (default: true).
     ///
@@ -802,39 +843,30 @@ impl<'a, E> FingerprintConfig<'a, E> {
         E: Display,
     {
         // FNV-1a 64-bit offset basis
-        // This is the standard starting value for FNV-1a hash
         const FNV_OFFSET: u64 = 0xcbf29ce484222325;
 
         let mut hash = FNV_OFFSET;
 
-        /// Hashes a byte slice into the running hash using FNV-1a algorithm.
-        ///
-        /// FNV-1a works by XORing each byte with the hash, then multiplying
-        /// by the FNV prime. This order (XOR then multiply) is what makes
-        /// it "1a" variant, which has better avalanche characteristics.
-        #[inline(always)]
-        fn hash_bytes(hash: &mut u64, bytes: &[u8]) {
-            // FNV-1a 64-bit prime
-            const FNV_PRIME: u64 = 0x100000001b3;
-            for &byte in bytes {
-                *hash ^= byte as u64;
-                *hash = hash.wrapping_mul(FNV_PRIME);
-            }
-        }
-
         // Include tags in sorted order for deterministic fingerprinting
         // Sorting ensures ["a", "b"] and ["b", "a"] produce the same fingerprint
         if self.include_tags {
-            let mut tags: crate::types::alloc_type::Vec<_> = self
+            // Pre-calculate capacity to avoid reallocations
+            let tag_count: usize = self
                 .error
                 .context
                 .iter()
                 .filter_map(|ctx| match ctx {
-                    ErrorContext::Group(g) => Some(g.tags.iter()),
+                    ErrorContext::Group(g) => Some(g.tags.len()),
                     _ => None,
                 })
-                .flatten()
-                .collect();
+                .sum();
+
+            let mut tags = crate::types::alloc_type::Vec::with_capacity(tag_count);
+            for ctx in &self.error.context {
+                if let ErrorContext::Group(g) = ctx {
+                    tags.extend_from_slice(&g.tags);
+                }
+            }
             tags.sort_unstable();
 
             for tag in tags {
@@ -854,21 +886,31 @@ impl<'a, E> FingerprintConfig<'a, E> {
         // Include core error message
         if self.include_message {
             hash_bytes(&mut hash, b"msg:");
-            hash_bytes(&mut hash, self.error.core_error.to_string().as_bytes());
+            // Avoid to_string() allocation by hashing directly from Display
+            use core::fmt::Write;
+            let mut hasher = DisplayHasher::new(&mut hash);
+            let _ = write!(hasher, "{}", self.error.core_error);
         }
 
         // Include metadata in sorted order by key for deterministic fingerprinting
         if self.include_metadata {
-            let mut metadata: crate::types::alloc_type::Vec<_> = self
+            // Pre-calculate capacity to avoid reallocations
+            let meta_count: usize = self
                 .error
                 .context
                 .iter()
                 .filter_map(|ctx| match ctx {
-                    ErrorContext::Group(g) => Some(g.metadata.iter()),
+                    ErrorContext::Group(g) => Some(g.metadata.len()),
                     _ => None,
                 })
-                .flatten()
-                .collect();
+                .sum();
+
+            let mut metadata = crate::types::alloc_type::Vec::with_capacity(meta_count);
+            for ctx in &self.error.context {
+                if let ErrorContext::Group(g) = ctx {
+                    metadata.extend_from_slice(&g.metadata);
+                }
+            }
             metadata.sort_unstable_by(|a, b| a.0.cmp(&b.0));
 
             for (key, value) in metadata {
@@ -888,6 +930,11 @@ impl<'a, E> FingerprintConfig<'a, E> {
     where
         E: Display,
     {
-        format!("{:016x}", self.compute())
+        // Pre-allocate exact capacity for hex string (16 chars for 64-bit)
+        let mut result = String::with_capacity(16);
+        let fp = self.compute();
+        use core::fmt::Write;
+        let _ = write!(result, "{:016x}", fp);
+        result
     }
 }

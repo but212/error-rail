@@ -6,7 +6,7 @@ This guide covers async error handling with error-rail.
 
 ```toml
 [dependencies]
-error-rail = { version = "0.8", features = ["async"] }
+error-rail = { version = "0.9", features = ["async"] }
 tokio = { version = "1", features = ["full"] }
 ```
 

@@ -1,6 +1,6 @@
 use crate::traits::TransientError;
 use crate::types::accumulator::Accumulator;
-use crate::types::alloc_type::Box;
+use crate::types::alloc_type::{Box, Cow};
 use crate::types::composable_error::ComposableError;
 use crate::types::lazy_context::LazyGroupContext;
 use crate::types::marked_error::MarkedError;
@@ -10,6 +10,28 @@ use crate::{ComposableResult, ErrorContext, IntoErrorContext};
 use alloc::format;
 #[cfg(feature = "std")]
 use std::format;
+
+/// Lookup table for small numbers (0-99) to avoid heap allocation.
+/// Retry counts are typically small, so this covers most cases.
+static SMALL_NUMBERS: [&str; 100] = [
+    "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16",
+    "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32",
+    "33", "34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45", "46", "47", "48",
+    "49", "50", "51", "52", "53", "54", "55", "56", "57", "58", "59", "60", "61", "62", "63", "64",
+    "65", "66", "67", "68", "69", "70", "71", "72", "73", "74", "75", "76", "77", "78", "79", "80",
+    "81", "82", "83", "84", "85", "86", "87", "88", "89", "90", "91", "92", "93", "94", "95", "96",
+    "97", "98", "99",
+];
+
+/// Converts a u32 to a Cow<'static, str>, avoiding heap allocation for small numbers.
+#[inline]
+fn u32_to_cow(n: u32) -> Cow<'static, str> {
+    if n < 100 {
+        Cow::Borrowed(SMALL_NUMBERS[n as usize])
+    } else {
+        Cow::Owned(format!("{}", n))
+    }
+}
 
 /// A builder for composing error transformations with accumulated context.
 ///
@@ -609,8 +631,10 @@ impl<T, E> ErrorPipeline<T, E> {
     #[inline]
     pub fn with_retry_context(self, attempt: u32) -> Self {
         if self.result.is_err() {
+            // Use lookup table for small numbers to avoid heap allocation
+            let attempt_str = u32_to_cow(attempt);
             self.with_context(LazyGroupContext::new(move || {
-                ErrorContext::metadata("retry_attempt", format!("{}", attempt))
+                ErrorContext::metadata("retry_attempt", attempt_str)
             }))
         } else {
             self

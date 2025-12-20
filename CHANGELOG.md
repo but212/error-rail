@@ -1,17 +1,28 @@
 # CHANGELOG
 
+## [0.9.3]
+
+### Changed - 0.9.3
+
+- **Performance Improvements**
+  - **ComposableError fingerprint optimization**: Extracted `hash_bytes` to module level with `#[inline(always)]` to eliminate closure capture overhead and improve compiler inlining
+  - **ComposableError capacity pre-allocation**: Added exact capacity hints for tags/metadata Vec collections in fingerprint computation to prevent reallocations
+  - **ComposableError hex formatting optimization**: Replaced `format!` macro with pre-allocated `String` + `write!` in `fingerprint_hex()` to reduce allocations
+  - **ErrorPipeline retry context optimization**: Added static lookup table for numbers 0-99 in `with_retry_context()` to eliminate heap allocation for common retry counts
+  - **RetryOps max_retries optimization**: Added static lookup table for numbers 0-99 in `max_retries()` to eliminate heap allocation for retry hint metadata (22.9% improvement in retry/transient_success)
+
 ## [0.9.2]
 
 ### Changed - 0.9.2
 
 - **Documentation clarifications**
   - Clarified that lazy *string formatting* is provided by `context!` / `.ctx_with(...)` / async `.with_ctx(...)`, and that `ctx(format!(...))` is eager
-  - Updated README and guides to remove ambiguity around “lazy context” vs “lazy attachment”
+  - Updated README and guides to remove ambiguity around "lazy context" vs "lazy attachment"
   - Refined async rustdoc (`FutureResultExt`, `AsyncErrorPipeline`, `ctx_async!`) to make the same distinction explicit
 
 - **Performance Improvements**
   - Deferred retry hint metadata formatting to error paths (`RetryOps::max_retries`, `RetryOps::after_hint`, `ErrorPipeline::with_retry_context`) to avoid eager `format!` on success paths
-  - Reduced allocations in `ErrorContext::message()` by building tag/location/metadata strings directly (removes intermediate `join`/`Vec` allocations)
+  - Reduced allocations in `ErrorContext::message()` by building tag/location/metadata strings directly (removing intermediate `join`/`Vec` allocations)
 
 ## [0.9.1]
 

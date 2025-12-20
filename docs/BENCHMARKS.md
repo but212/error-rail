@@ -2,7 +2,7 @@
 
 This document summarizes performance benchmarks for `error-rail` using realistic production scenarios.
 
-> **Last Updated**: 2025-12-20  
+> **Last Updated**: 2025-12-21  
 > **Rust Version**: 1.92.0  
 > **Platform**: Windows 11 (x86_64)  
 > **CPU**: Intel(R) Core(TM) i5-9400F CPU @ 2.90GHz  
@@ -32,32 +32,32 @@ start target/criterion/report/index.html
 
 | Metric | Performance | Context |
 |--------|-------------|---------|
-| Error creation | ~482 ns | Basic error struct construction |
-| Lazy vs eager evaluation | **2.2x faster** on success paths | Lazy: 587ns vs Eager: 1.30µs |
-| Error propagation overhead | ~5% vs raw Result | Pipeline: 722ns vs Baseline: 691ns |
-| Validation overhead | ~7% vs manual collection | ErrorRail: 968ns vs Manual: 900ns |
-| Serialization | ~807 ns | JSON serialization with serde feature |
-| Validation throughput | 5.47 M elements/sec | 5000 items batch validation |
+| Error creation | ~475 ns | Basic error struct construction |
+| Lazy vs eager evaluation | **2.2x faster** on success paths | Lazy: 610ns vs Eager: 1.32µs |
+| Error propagation overhead | ~4% vs raw Result | Pipeline: 737ns vs Baseline: 710ns |
+| Validation overhead | ~6% vs manual collection | ErrorRail: 975ns vs Manual: 922ns |
+| Serialization | ~731 ns | JSON serialization with serde feature |
+| Validation throughput | 5.19 M elements/sec | 5000 items batch validation |
 
 ## 1. Core Operations
 
 **Note**: Basic ErrorRail operations - error creation, cloning, wrapping, and functional operations.
 
 ```text
-core/error_creation     → 482.05 ns/iter  (Create basic error with context)
-core/error_clone        → 180.46 ns/iter  (Clone error for async/ownership transfer)
-core/error_arc_wrap     → 248.00 ns/iter  (Wrap error in Arc for sharing)
-core/ops_recover        → 2.55 ns/iter    (Recover from error with fallback)
-core/ops_bimap          → 3.06 ns/iter    (Transform error types)
+core/error_creation     → 475.56 ns/iter  (Create basic error with context)
+core/error_clone        → 165.56 ns/iter  (Clone error for async/ownership transfer)
+core/error_arc_wrap     → 232.77 ns/iter  (Wrap error in Arc for sharing)
+core/ops_recover        → 2.57 ns/iter    (Recover from error with fallback)
+core/ops_bimap          → 3.08 ns/iter    (Transform error types)
 ```
 
 ### Deep Cloning Scaling
 
 ```text
-depth=5   → 1.40 µs/iter
-depth=10  → 5.72 µs/iter  (4.1x)
-depth=20  → 8.12 µs/iter  (1.4x)
-depth=50  → 21.31 µs/iter (2.6x from depth=20)
+depth=5   → 1.28 µs/iter
+depth=10  → 5.41 µs/iter  (4.2x)
+depth=20  → 10.69 µs/iter  (2.0x)
+depth=50  → 23.71 µs/iter (2.2x from depth=20)
 ```
 
 ## 2. Retry Operations
@@ -65,10 +65,10 @@ depth=50  → 21.31 µs/iter (2.6x from depth=20)
 **Note**: Retry logic performance with different error classifications (transient vs permanent).
 
 ```text
-retry/transient_success  → 471.33 ns/iter  (Retry succeeds after transient error)
-retry/permanent_skip     → 58.57 ns/iter   (Skip retry for permanent errors - 8x faster)
-retry/recover_transient  → 756.53 ns/iter  (Recover from transient error with retry)
-retry/should_retry_check → 115.91 ns/iter  (Check if error should be retried)
+retry/transient_success  → 381.54 ns/iter  (Retry succeeds after transient error)
+retry/permanent_skip     → 62.29 ns/iter   (Skip retry for permanent errors - 6.1x faster)
+retry/recover_transient  → 799.58 ns/iter  (Recover from transient error with retry)
+retry/should_retry_check → 126.15 ns/iter  (Check if error should be retried)
 ```
 
 ## 3. Error Conversions
@@ -76,10 +76,10 @@ retry/should_retry_check → 115.91 ns/iter  (Check if error should be retried)
 **Note**: Performance of converting between different error types (std, serde, domain errors).
 
 ```text
-conversions/map_core         → 161.34 ns/iter  (Map between ErrorRail types)
-conversions/std_io_to_domain → 412.28 ns/iter  (Convert std::io::Error to domain error)
-conversions/serde_to_domain  → 529.56 ns/iter  (Convert serde error to domain error)
-conversions/conversion_chain → 417.72 ns/iter  (Chain multiple error conversions)
+conversions/map_core         → 160.67 ns/iter  (Map between ErrorRail types)
+conversions/std_io_to_domain → 414.01 ns/iter  (Convert std::io::Error to domain error)
+conversions/serde_to_domain  → 563.32 ns/iter  (Convert serde error to domain error)
+conversions/conversion_chain → 423.40 ns/iter  (Chain multiple error conversions)
 ```
 
 ## 4. Context Evaluation: Lazy vs Eager
@@ -88,37 +88,37 @@ conversions/conversion_chain → 417.72 ns/iter  (Chain multiple error conversio
 
 ```text
 Success Path:
-  context_lazy_success     → 587 ns/iter    (ErrorRail lazy evaluation)
-  context_eager_success    → 1,297 ns/iter  (ErrorRail eager evaluation)
-  context_baseline_success → 582 ns/iter    (Plain Result, no ErrorRail)
+  context_lazy_success     → 610 ns/iter    (ErrorRail lazy evaluation)
+  context_eager_success    → 1,320 ns/iter  (ErrorRail eager evaluation)
+  context_baseline_success → 597 ns/iter    (Plain Result, no ErrorRail)
 
 Error Path:
-  context_lazy_error       → 833 ns/iter    (ErrorRail lazy evaluation)
-  context_eager_error      → 764 ns/iter    (ErrorRail eager evaluation)
-  context_baseline_error   → 70 ns/iter     (Plain Result, no ErrorRail)
+  context_lazy_error       → 835 ns/iter    (ErrorRail lazy evaluation)
+  context_eager_error      → 757 ns/iter    (ErrorRail eager evaluation)
+  context_baseline_error   → 66 ns/iter     (Plain Result, no ErrorRail)
 ```
 
-**Key Insight**: ErrorRail's lazy evaluation adds only 1% overhead vs plain Result on success paths (587ns vs 582ns). The baseline error path is faster because it performs minimal error handling without context creation.
+**Key Insight**: ErrorRail's lazy evaluation adds only 2% overhead vs plain Result on success paths (610ns vs 597ns). The baseline error path is faster because it performs minimal error handling without context creation.
 
 ## 5. Scaling Tests
 
 ### Context Depth
 
 ```text
-scaling/context_depth/1   → 537.28 ns/iter
-scaling/context_depth/5   → 5.54 µs/iter
-scaling/context_depth/10  → 6.85 µs/iter
-scaling/context_depth/20  → 8.65 µs/iter
-scaling/context_depth/50  → 18.94 µs/iter
+scaling/context_depth/1   → 540.67 ns/iter
+scaling/context_depth/5   → 1.71 µs/iter
+scaling/context_depth/10  → 2.98 µs/iter
+scaling/context_depth/20  → 5.56 µs/iter
+scaling/context_depth/50  → 19.05 µs/iter
 ```
 
 ### Validation Batch
 
 ```text
-scaling/validation_batch/10    → 1.86 µs/iter  (5.39 M elements/sec)
-scaling/validation_batch/100   → 24.17 µs/iter  (4.14 M elements/sec)
-scaling/validation_batch/1000  → 194.20 µs/iter  (5.15 M elements/sec)
-scaling/validation_batch/5000  → 914.39 µs/iter  (5.47 M elements/sec)
+scaling/validation_batch/10    → 1.92 µs/iter  (5.19 M elements/sec)
+scaling/validation_batch/100   → 31.31 µs/iter  (3.19 M elements/sec)
+scaling/validation_batch/1000  → 239.56 µs/iter  (4.17 M elements/sec)
+scaling/validation_batch/5000  → 961.13 µs/iter  (5.20 M elements/sec)
 ```
 
 ## 6. Pipeline vs Raw Result
@@ -127,14 +127,14 @@ scaling/validation_batch/5000  → 914.39 µs/iter  (5.47 M elements/sec)
 
 ```text
 Success Path:
-  pipeline_success              → 724.66 ns/iter  (ErrorRail pipeline)
-  result_with_context_success   → 694.22 ns/iter  (ErrorRail Result wrapper)
-  result_baseline_success       → 693.21 ns/iter  (Plain Result)
+  pipeline_success              → 737.46 ns/iter  (ErrorRail pipeline)
+  result_with_context_success   → 705.69 ns/iter  (ErrorRail Result wrapper)
+  result_baseline_success       → 710.00 ns/iter  (Plain Result)
 
 Error Path:
-  pipeline_error                → 521.20 ns/iter  (ErrorRail pipeline)
-  result_with_context_error     → 59.69 ns/iter   (ErrorRail Result wrapper)
-  result_baseline_error         → 57.29 ns/iter   (Plain Result)
+  pipeline_error                → 533.02 ns/iter  (ErrorRail pipeline)
+  result_with_context_error     → 62.03 ns/iter   (ErrorRail Result wrapper)
+  result_baseline_error         → 58.60 ns/iter   (Plain Result)
 ```
 
 ## 7. Validation Performance
@@ -142,25 +142,25 @@ Error Path:
 **Note**: "collect" uses ErrorRail's validation abstraction, "manual_collect" uses traditional error collection patterns.
 
 ```text
-validation/collect_realistic_mixed  → 968 ns/iter   (ErrorRail validation)
-validation/manual_collect_realistic → 900 ns/iter   (Manual error collection)
-validation/collect_heterogeneous    → 1.72 µs/iter  (ErrorRail with mixed error types)
+validation/collect_realistic_mixed  → 975 ns/iter   (ErrorRail validation)
+validation/manual_collect_realistic → 922 ns/iter   (Manual error collection)
+validation/collect_heterogeneous    → 1.73 µs/iter  (ErrorRail with mixed error types)
 ```
 
-**Analysis**: ErrorRail's validation abstraction adds only ~7% overhead compared to manual collection while providing better ergonomics.
+**Analysis**: ErrorRail's validation abstraction adds only ~6% overhead compared to manual collection while providing better ergonomics.
 
 ## 8. Real-World Scenarios
 
 **Note**: Simulated production workloads - HTTP requests, database transactions, and microservice error propagation.
 
 ```text
-http_request_simulation          → 1.058 µs/iter  (HTTP request with error handling)
-database_transaction_rollback    → 1.005 µs/iter  (DB transaction with rollback on error)
-microservice_error_propagation   → 745 ns/iter   (Error propagation across service boundaries)
+http_request_simulation          → 1.066 µs/iter  (HTTP request with error handling)
+database_transaction_rollback    → 1.012 µs/iter  (DB transaction with rollback on error)
+microservice_error_propagation   → 752 ns/iter   (Error propagation across service boundaries)
 
 Mixed Ratios (100 operations):
-  95percent_success → 105.19 µs/iter  (951 K ops/sec - mostly success path)
-  50percent_success → 92.78 µs/iter  (1.08 M ops/sec - mixed success/error)
+  95percent_success → 115.92 µs/iter  (862 K ops/sec - mostly success path)
+  50percent_success → 129.17 µs/iter  (774 K ops/sec - mixed success/error)
 ```
 
 ## 9. Memory & Allocation
@@ -168,9 +168,9 @@ Mixed Ratios (100 operations):
 **Note**: Memory allocation patterns - static strings vs heap allocation, large metadata overhead.
 
 ```text
-memory/large_metadata_contexts  → 5.41 µs/iter  (Create error with large metadata payload)
-memory/string_allocation        → 61.76 ns/iter (String allocation for error message)
-memory/static_str_no_allocation → 4.35 ns/iter  (Static str - 14x faster, no allocation)
+memory/large_metadata_contexts  → 2.45 µs/iter  (Create error with large metadata payload)
+memory/string_allocation        → 62.27 ns/iter (String allocation for error message)
+memory/static_str_no_allocation → 4.34 ns/iter  (Static str - 14x faster, no allocation)
 ```
 
 ## 10. Feature-Specific Benchmarks
@@ -180,8 +180,8 @@ memory/static_str_no_allocation → 4.35 ns/iter  (Static str - 14x faster, no a
 **Note**: These benchmarks include backtrace capture overhead when the std feature is enabled.
 
 ```text
-std/backtrace_lazy_success → 698.49 ns/iter  (Success path with backtrace)
-std/backtrace_lazy_error   → 158.56 ns/iter  (Error path with backtrace)
+std/backtrace_lazy_success → 723.06 ns/iter  (Success path with backtrace)
+std/backtrace_lazy_error   → 164.47 ns/iter  (Error path with backtrace)
 ```
 
 ### Serialization (serde feature)
@@ -189,7 +189,7 @@ std/backtrace_lazy_error   → 158.56 ns/iter  (Error path with backtrace)
 **Note**: JSON serialization of error contexts with metadata.
 
 ```text
-serde/error_serialization → 807.21 ns/iter  (JSON serialize error with context)
+serde/error_serialization → 731 ns/iter  (JSON serialize error with context)
 ```
 
 ## 11. Async Benchmarks
@@ -197,12 +197,12 @@ serde/error_serialization → 807.21 ns/iter  (JSON serialize error with context
 **Note**: Async operations performance with Tokio runtime.
 
 ```text
-async/pipeline/success_path         → 819.91 ns/iter  (Async pipeline success)
-async/pipeline/error_path           → 159.42 ns/iter  (Async pipeline error)
-async/context_evaluation/lazy       → 795.05 ns/iter  (Lazy context in async)
-async/context_evaluation/eager      → 865.98 ns/iter  (Eager context in async)
-async/retry/transient_retry_1       → 916.52 ns/iter  (Retry with 1 transient error)
-async/validation/sequential_3       → 244.74 ns/iter  (Sequential validation of 3 items)
+async/pipeline/success_path         → 819.78 ns/iter  (Async pipeline success)
+async/pipeline/error_path           → 166.60 ns/iter  (Async pipeline error)
+async/context_evaluation/lazy       → 851.75 ns/iter  (Lazy context in async)
+async/context_evaluation/eager      → 929.93 ns/iter  (Eager context in async)
+async/retry/transient_retry_1       → 926.69 ns/iter  (Retry with 1 transient error)
+async/validation/sequential_3       → 250.76 ns/iter  (Sequential validation of 3 items)
 ```
 
 ## 12. Tower Integration
@@ -210,25 +210,25 @@ async/validation/sequential_3       → 244.74 ns/iter  (Sequential validation o
 **Note**: Tower middleware layer performance overhead.
 
 ```text
-tower/layer/baseline_raw_service    → 783.46 ns/iter  (Raw Tower service)
-tower/layer/error_rail_layer_success → 799.88 ns/iter (ErrorRail layer - 2% overhead)
+tower/layer/baseline_raw_service    → 833.83 ns/iter  (Raw Tower service)
+tower/layer/error_rail_layer_success → 826.83 ns/iter (ErrorRail layer - 0.8% overhead)
 ```
 
 ## Quick Reference
 
 | Category | Key Metric | Performance | Assessment |
 |----------|------------|-------------|------------|
-| Error Creation | 482 ns | Excellent | Fast error creation |
-| Lazy Context | 587 ns vs 1.30µs | **2.2x faster** | Lazy evaluation wins |
-| Context Depth (50) | 18.9µs | Linear scaling | Practical for deep nesting |
-| Pipeline Success | 725 ns | 5% overhead | Minimal overhead |
-| Validation | 968 ns | 7% overhead | Good abstraction tradeoff |
-| Error Clone | 180 ns | Excellent | Cheap for async patterns |
-| Serialization | 807 ns | Excellent | Fast JSON serialization |
-| Retry (permanent) | 59 ns | **8x faster** | Smart error classification |
-| Static str | 4.35 ns vs 62 ns | **14x faster** | Prefer static strings |
-| Validation Batch (5000) | 5.47 M/sec | Excellent | High throughput validation |
-| Tower Layer | 800 ns | 2% overhead | Minimal middleware cost |
+| Error Creation | 476 ns | Excellent | Fast error creation |
+| Lazy Context | 610 ns vs 1.32µs | **2.2x faster** | Lazy evaluation wins |
+| Context Depth (50) | 19.1µs | Linear scaling | Practical for deep nesting |
+| Pipeline Success | 737 ns | 4% overhead | Minimal overhead |
+| Validation | 975 ns | 6% overhead | Good abstraction tradeoff |
+| Error Clone | 166 ns | Excellent | Cheap for async patterns |
+| Serialization | 3.76 µs | Good | JSON serialization overhead |
+| Retry (permanent) | 59 ns | **7.8x faster** | Smart error classification |
+| Static str | 4.34 ns vs 62 ns | **14x faster** | Prefer static strings |
+| Validation Batch (5000) | 5.20 M/sec | Excellent | High throughput validation |
+| Tower Layer | 827 ns | 0.8% overhead | Minimal middleware cost |
 | Async Pipeline | 820 ns | Excellent | Fast async error handling |
 
 ## Performance Tips
