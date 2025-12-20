@@ -278,7 +278,7 @@ impl ErrorContext {
     fn add_message_to_parts(parts: &mut ErrorVec<String>, msg: &str, has_location: bool) {
         // Only attempt to merge with location if has_location is true AND
         // there's actually a location part to merge with
-        let should_merge = has_location && parts.last().map_or(false, |p| p.starts_with("at "));
+        let should_merge = has_location && parts.last().is_some_and(|p| p.starts_with("at "));
 
         if should_merge {
             // Safe: we just verified last() exists and starts with "at "
