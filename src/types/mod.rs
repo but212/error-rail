@@ -58,8 +58,8 @@ pub type BoxedComposableError<E> = alloc_type::Box<ComposableError<E>>;
 
 /// Result alias with boxed [`ComposableError`] for reduced stack size.
 ///
-/// This is identical to [`BoxedResult`] from prelude but with a more explicit name.
-/// For new code, prefer using [`BoxedResult`] from the prelude for brevity.
+/// This is identical to [`crate::prelude::BoxedResult`] but with a more explicit name.
+/// For new code, prefer using [`crate::prelude::BoxedResult`] for brevity.
 ///
 /// # Type Parameters
 ///
