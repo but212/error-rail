@@ -26,7 +26,9 @@ pub trait RetryPolicy: Clone {
     fn next_delay(&mut self, attempt: u32) -> Option<Duration>;
 
     /// Resets the policy to its initial state.
-    fn reset(&mut self);
+    ///
+    /// Default implementation does nothing, suitable for stateless policies.
+    fn reset(&mut self) {}
 }
 
 /// Exponential backoff retry policy.
@@ -118,10 +120,7 @@ impl RetryPolicy for ExponentialBackoff {
         );
         Some(delay.min(self.max_delay))
     }
-
-    fn reset(&mut self) {
-        // ExponentialBackoff is stateless, nothing to reset
-    }
+    // Uses default reset() - ExponentialBackoff is stateless
 }
 
 /// Fixed delay retry policy.
@@ -163,8 +162,7 @@ impl RetryPolicy for FixedDelay {
             Some(self.delay)
         }
     }
-
-    fn reset(&mut self) {}
+    // Uses default reset() - FixedDelay is stateless
 }
 
 /// Retries an async operation according to a policy when transient errors occur.
@@ -222,9 +220,9 @@ where
                     attempt += 1;
                     continue;
                 }
-                // Exhausted retry attempts
+                // Exhausted all attempts
                 return Err(ComposableError::new(e)
-                    .with_context(crate::context!("exhausted {} retry attempts", attempt + 1)));
+                    .with_context(crate::context!("exhausted after {} attempts", attempt + 1)));
             },
             Err(e) => {
                 // Permanent error, no retry
@@ -352,7 +350,7 @@ where
                     continue;
                 }
                 break Err(ComposableError::new(e)
-                    .with_context(crate::context!("exhausted {} retry attempts", attempt + 1)));
+                    .with_context(crate::context!("exhausted after {} attempts", attempt + 1)));
             },
             Err(e) => {
                 break Err(ComposableError::new(e)

@@ -66,7 +66,8 @@ pub use validation::{validate_all_async, validate_seq_async};
 
 #[cfg(feature = "tokio")]
 pub use tokio_ext::{
-    retry_transient, retry_transient_n, try_with_timeout, TimeoutError, TimeoutResult,
+    retry_transient, retry_transient_n, retry_transient_unboxed, try_with_timeout, TimeoutError,
+    TimeoutResult,
 };
 
 #[cfg(feature = "tracing")]
