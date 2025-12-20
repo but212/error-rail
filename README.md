@@ -158,15 +158,14 @@ async fn fetch_user(id: u64) -> BoxedResult<User, DbError> {
 
 ```rust
 // ❌ DON'T: Chain .ctx() multiple times
-fn bad() -> BoxedResult<T, E> {
-    foo().ctx("a").ctx("b").ctx("c")  // Noise, not value
+fn bad() -> BoxedResult<(), &'static str> {
+    Err("original error").ctx("a").ctx("b").ctx("c")  // Noise, not value
 }
 
 // ✅ DO: One .ctx() per I/O boundary
-fn good() -> BoxedResult<T, E> {
-    let data = read_file().ctx("reading input")?;
-    let parsed = parse(data).ctx("parsing input")?;
-    Ok(parsed)
+fn good() -> BoxedResult<String, std::io::Error> {
+    let data = std::fs::read_to_string("file.txt").ctx("reading input")?;
+    Ok(data)
 }
 ```
 

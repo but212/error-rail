@@ -10,26 +10,42 @@ fn test_group_macro_basic() {
         metadata("host", "localhost:5432")
     ));
 
-    // The message should combine all fields into one cohesive unit
+    // Verify exact formatting of the context message
+    let contexts = err.context();
+    assert_eq!(contexts.len(), 1);
+    let msg = contexts[0].message();
+    assert!(msg.contains("retry attempt 3:"), "message should contain formatted retry attempt");
+    assert!(msg.contains("[database]"), "message should contain tag");
+    assert!(msg.contains("(host=localhost:5432)"), "message should contain metadata");
+
+    // Also verify using assert_err_eq for substring matching
     let res: Result<(), ComposableError<&str>> = Err(err);
     assert_err_eq!(res, "database");
     assert_err_eq!(res, "localhost:5432");
-    assert_err_eq!(res, format!("retry attempt {}", attempts));
 }
 
 #[test]
 fn test_group_macro_no_message() {
-    let res: Result<(), ComposableError<&str>> = Err(ComposableError::<&str>::new("error")
-        .with_context(group!(tag("network"), metadata("timeout", "30s"))));
+    let err = ComposableError::<&str>::new("error")
+        .with_context(group!(tag("network"), metadata("timeout", "30s")));
 
+    // Verify exact formatting: no message field means no colon prefix
+    assert_eq!(err.context().len(), 1);
+    assert_eq!(err.context()[0].message(), "[network] (timeout=30s)");
+
+    let res: Result<(), ComposableError<&str>> = Err(err);
     assert_err_eq!(res, "network");
     assert_err_eq!(res, "30s");
 }
 
 #[test]
 fn test_group_macro_empty() {
-    let res: Result<(), ComposableError<&str>> =
-        Err(ComposableError::<&str>::new("error").with_context(group! {}));
+    let err = ComposableError::<&str>::new("error").with_context(group! {});
 
+    // Empty group should render as empty string
+    assert_eq!(err.context().len(), 1);
+    assert_eq!(err.context()[0].message(), "");
+
+    let res: Result<(), ComposableError<&str>> = Err(err);
     assert_err_eq!(res, "error");
 }

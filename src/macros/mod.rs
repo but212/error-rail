@@ -539,7 +539,7 @@ macro_rules! assert_err_eq {
                                 }
                             }
                             ErrorContext::Group(g) => {
-                                if g.message.as_ref().map(|m| m.as_ref() == expected).unwrap_or(false) {
+                                if g.message.as_deref().is_some_and(|m| m == expected) {
                                     found = true;
                                     break;
                                 }
