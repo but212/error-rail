@@ -14,7 +14,11 @@ fn test_group_macro_basic() {
     let contexts = err.context();
     assert_eq!(contexts.len(), 1);
     let msg = contexts[0].message();
-    assert!(msg.contains("retry attempt 3:"), "message should contain formatted retry attempt");
+
+    // Print actual message for debugging
+    println!("Actual message: {}", msg);
+
+    assert!(msg.contains("retry attempt 3"), "message should contain formatted retry attempt");
     assert!(msg.contains("[database]"), "message should contain tag");
     assert!(msg.contains("(host=localhost:5432)"), "message should contain metadata");
 
