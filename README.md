@@ -72,17 +72,24 @@ fn process() -> BoxedResult<String, std::io::Error> {
 }
 ```
 
-## API Levels
+## API Levels (You do NOT need to learn all of these)
 
-| Module | Audience | What's Included |
-|--------|----------|----------------|
-| `simple` | Beginners | `BoxedResult`, `rail!`, `.ctx()`, `.error_chain()` |
-| `prelude` | General use | + `context!`, `group!`, `ErrorPipeline` |
-| `intermediate` | Services | + `TransientError`, `Fingerprint`, formatting |
-| `advanced` | Library authors | + internal builders, `ErrorVec` |
+Start here → `simple`  
+When you need more → `prelude`  
+Only if you are building services → `intermediate`  
+Almost never → `advanced`
+
+| Module | When to Use | What's Included |
+|--------|------------|----------------|
+| `simple` | First time using error-rail | `BoxedResult`, `rail!`, `.ctx()`, `.error_chain()` |
+| `prelude` | When you need structured context | + `context!`, `group!`, `ErrorPipeline` |
+| `intermediate` | Building services | + `TransientError`, `Fingerprint`, formatting |
+| `advanced` | Writing libraries | + internal builders, `ErrorVec` |
 | `prelude_async` | Async code | + `AsyncErrorPipeline`, retry, timeout |
 
-## Core Concepts
+## Core Concepts (Advanced — skip on first read)
+
+> **If you are using `simple`, you can skip this entire section.**
 
 ### Context Methods
 
@@ -102,8 +109,10 @@ result.ctx(group!(
 
 ### Validation (Collect All Errors)
 
+> **Note: This is available in `error_rail::validation`, not in `simple`.**
+
 ```rust
-use error_rail::Validation;
+use error_rail::validation::Validation;
 
 let results: Validation<&str, Vec<_>> = vec![
     validate_age(-5),
@@ -168,6 +177,29 @@ fn good() -> BoxedResult<T, E> {
     Ok(parsed)
 }
 ```
+
+### Avoid Glob Imports in Large Projects
+
+For better IDE support and compile times in large codebases:
+
+```rust
+// ❌ Glob import (okay for small projects)
+use error_rail::prelude::*;
+
+// ✅ Explicit imports (recommended for large projects)
+use error_rail::prelude::{BoxedResult, ResultExt, rail};
+```
+
+## When should I move from `simple` to `prelude`?
+
+Move to `prelude` when you need:
+
+- **Structured context** - tags and metadata for better error categorization
+- **Lazy formatted messages** - format strings only when errors occur
+- **ErrorPipeline** - for building libraries or complex error chains
+- **Writing a library** - not just an application
+
+> You can stay with `simple` for a long time! It's designed to be sufficient for most applications.
 
 ## When NOT to Use error-rail
 

@@ -85,8 +85,8 @@ pub use crate::rail;
 // Core type for method access (error_chain, etc.)
 pub use crate::types::ComposableError;
 
-// Essential trait for .ctx() method
-pub use crate::traits::ResultExt;
+// Essential traits for .ctx() and .ctx_boxed() methods
+pub use crate::traits::{BoxedResultExt, ResultExt};
 
 // The recommended return type
 pub use crate::prelude::BoxedResult;

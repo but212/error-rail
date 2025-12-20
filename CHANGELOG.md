@@ -39,9 +39,22 @@
 - **Changed `ErrorContext::Group` variant to use `Box<GroupContext>`**
   - The `Group` variant now contains `Box<GroupContext>` instead of `GroupContext` directly to optimize memory usage
   - **Migration**:
-    - Direct construction: Use `ErrorContext::Group(Box::new(GroupContext { ... }))` or use the provided constructor methods (`location()`, `tag()`, `metadata()`, `builder()`)
-    - Pattern matching: Update patterns from `ErrorContext::Group(ctx)` to `ErrorContext::Group(box ctx)` or handle the boxed type
-  - Note: Most code using the constructor methods (`ErrorContext::location()`, `ErrorContext::tag()`, etc.) requires no changes
+
+    ```rust
+    // Before (0.8.x)
+    ErrorContext::Group(GroupContext { message: Some("msg".into()), .. })
+    
+    // After (0.9.0) - Option 1: Use Box::new
+    ErrorContext::Group(Box::new(GroupContext { message: Some("msg".into()), .. }))
+    
+    // After (0.9.0) - Option 2: Use constructor methods (recommended)
+    ErrorContext::location(file!(), line!())
+    ErrorContext::tag("my_tag")
+    ErrorContext::metadata("key", "value")
+    group!(message("msg"), tag("tag"))  // macro handles boxing automatically
+    ```
+
+  - Note: Most code using the constructor methods or `group!` macro requires no changes
 
 - **Changed `ComposableError` alternate display (`{:#}`) output**
   - Removed the explicit `Error:` and `Context:` headings in favor of a clean, cascaded indentation format.
