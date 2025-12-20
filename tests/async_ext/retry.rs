@@ -131,7 +131,7 @@ async fn test_retry_with_metadata_exhausted() {
         .result
         .unwrap_err()
         .error_chain()
-        .contains("exhausted 2 retry attempts"));
+        .contains("exhausted after 2 attempts"));
 }
 
 #[tokio::test]

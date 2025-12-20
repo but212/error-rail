@@ -11,6 +11,3 @@ pub use crate::types::error_formatter::ErrorFormatter;
 
 // Fingerprinting
 pub use crate::types::composable_error::FingerprintConfig;
-
-// Retry Policy (to be implemented)
-// pub use crate::types::retry::RetryPolicy;

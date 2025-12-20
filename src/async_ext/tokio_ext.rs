@@ -20,10 +20,48 @@ use crate::types::{BoxedComposableError, BoxedComposableResult, ComposableError}
 
 use super::retry::{retry_with_policy, RetryPolicy};
 
-/// Retries an async operation using Tokio's sleep.
+/// Retries an async operation using Tokio's sleep, returning an unboxed error.
 ///
 /// This is a convenience wrapper around [`retry_with_policy`] that uses
 /// `tokio::time::sleep` for delays, eliminating the need to pass a sleep function.
+///
+/// For a boxed version, use [`retry_transient`].
+///
+/// # Arguments
+///
+/// * `operation` - A closure that returns the future to retry
+/// * `policy` - The retry policy to use
+///
+/// # Example
+///
+/// ```rust,ignore
+/// use error_rail::async_ext::{retry_transient_unboxed, ExponentialBackoff};
+///
+/// #[tokio::main]
+/// async fn main() {
+///     let result = retry_transient_unboxed(
+///         || fetch_data(),
+///         ExponentialBackoff::default(),
+///     ).await;
+/// }
+/// ```
+pub async fn retry_transient_unboxed<F, Fut, T, E, P>(
+    operation: F,
+    policy: P,
+) -> Result<T, ComposableError<E>>
+where
+    F: FnMut() -> Fut,
+    Fut: Future<Output = Result<T, E>>,
+    E: TransientError,
+    P: RetryPolicy,
+{
+    retry_with_policy(operation, policy, tokio::time::sleep).await
+}
+
+/// Retries an async operation using Tokio's sleep, returning a boxed error.
+///
+/// This is a convenience wrapper around [`retry_transient_unboxed`] that boxes
+/// the error for reduced stack size.
 ///
 /// # Arguments
 ///
@@ -53,7 +91,7 @@ where
     E: TransientError,
     P: RetryPolicy,
 {
-    retry_with_policy(operation, policy, tokio::time::sleep)
+    retry_transient_unboxed(operation, policy)
         .await
         .map_err(Box::new)
 }

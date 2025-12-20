@@ -8,7 +8,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  RUSTFLAGS: "-D warnings --allow deprecated"
+  RUSTFLAGS: "-D warnings -A deprecated"
   CARGO_INCREMENTAL: 0
 
 permissions:
@@ -21,13 +21,10 @@ jobs:
     strategy:
       matrix:
         include:
-          # MSRV and stable: all OS
+          # MSRV: Linux only (full test coverage)
           - rust: 1.81.0
             os: ubuntu-latest
-          - rust: 1.81.0
-            os: windows-latest
-          - rust: 1.81.0
-            os: macos-latest
+          # Stable: all OS
           - rust: stable
             os: ubuntu-latest
           - rust: stable

@@ -7,6 +7,8 @@ use core::future::Future;
 use core::pin::Pin;
 use core::task::{Context, Poll};
 
+use futures_core::future::FusedFuture;
+
 use pin_project_lite::pin_project;
 
 use crate::traits::IntoErrorContext;
@@ -67,9 +69,20 @@ where
                 let context_fn = this
                     .context_fn
                     .take()
-                    .expect("ContextFuture polled after completion");
+                    .expect("ContextFuture polled after completion; this is a bug");
                 ComposableError::new(err).with_context(context_fn())
             })
         })
+    }
+}
+
+impl<Fut, F, C, T, E> FusedFuture for ContextFuture<Fut, F>
+where
+    Fut: FusedFuture<Output = Result<T, E>>,
+    F: FnOnce() -> C,
+    C: IntoErrorContext,
+{
+    fn is_terminated(&self) -> bool {
+        self.future.is_terminated()
     }
 }

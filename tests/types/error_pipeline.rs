@@ -317,3 +317,29 @@ fn test_error_pipeline_retry_context() {
     let ok_p = ErrorPipeline::<i32, &str>::new(Ok(1)).with_retry_context(2);
     assert!(ok_p.finish_boxed().is_ok());
 }
+#[test]
+fn test_pipeline_mark_transient_if() {
+    let pipeline = ErrorPipeline::<i32, &str>::new(Err("temporary error"))
+        .mark_transient_if(|e| e.contains("temporary"));
+
+    assert!(pipeline.is_transient());
+
+    let permanent = ErrorPipeline::<i32, &str>::new(Err("fatal error"))
+        .mark_transient_if(|e| e.contains("temporary"));
+
+    assert!(!permanent.is_transient());
+}
+
+#[test]
+fn test_pipeline_mark_transient_if_with_retry() {
+    let pipeline = ErrorPipeline::<i32, &str>::new(Err("temporary error"))
+        .mark_transient_if(|e| e.contains("temporary"))
+        .retry()
+        .max_retries(3)
+        .to_error_pipeline();
+
+    assert!(pipeline.is_transient());
+    let err = pipeline.finish_boxed().unwrap_err();
+    assert!(err.error_chain().contains("max_retries_hint=3"));
+    assert_eq!(err.core_error().inner(), &"temporary error");
+}

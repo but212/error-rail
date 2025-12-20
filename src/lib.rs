@@ -64,6 +64,8 @@ pub mod convert;
 pub mod macros;
 /// Convenience re-exports for quick starts
 pub mod prelude;
+/// Minimal API for beginners - start here
+pub mod simple;
 /// Core traits for error handling and composition
 pub mod traits;
 /// ComposableError and error context structures
@@ -92,10 +94,10 @@ pub mod tower;
 // but encourage using prelude/intermediate/advanced modules.
 pub use context::*;
 pub use convert::*;
+pub use prelude::BoxedResult;
 pub use traits::*;
 pub use types::{
-    error_formatter::ErrorFormatConfig, BoxedComposableResult, BoxedResult, ComposableError,
-    ComposableResult, ErrorContext, ErrorPipeline, ErrorVec, GroupContext, LazyContext,
-    LazyGroupContext,
+    error_formatter::ErrorFormatConfig, BoxedComposableResult, ComposableError, ComposableResult,
+    ErrorContext, ErrorPipeline, ErrorVec, GroupContext, LazyContext, LazyGroupContext,
 };
 pub use validation::*;

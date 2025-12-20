@@ -89,3 +89,34 @@ async fn pipeline_map_err() {
     assert_eq!(err.core_error(), &"transformed");
     assert!(err.error_chain().contains("context"));
 }
+#[tokio::test]
+async fn pipeline_mark_transient_if() {
+    use error_rail::traits::TransientError;
+
+    let pipeline = AsyncErrorPipeline::new(async { Err::<(), _>("temporary failure") })
+        .mark_transient_if(|e| e.contains("temporary"));
+
+    let result = pipeline.finish().await;
+    assert!(result.is_err());
+    let err = result.unwrap_err();
+    assert!(err.is_transient());
+    assert_eq!(err.inner(), &"temporary failure");
+}
+
+#[tokio::test]
+async fn pipeline_mark_transient_if_with_context() {
+    use error_rail::traits::TransientError;
+
+    let result = AsyncErrorPipeline::new(async { Err::<(), _>("temporary") })
+        .mark_transient_if(|e| e.contains("temporary"))
+        .with_context("wrapper")
+        .finish()
+        .await;
+
+    assert!(result.is_err());
+    let err = result.unwrap_err();
+    // err is ComposableError<MarkedError<&str, ...>>
+    assert!(err.core_error().is_transient());
+    assert!(err.error_chain().contains("wrapper"));
+    assert_eq!(err.core_error().inner(), &"temporary");
+}

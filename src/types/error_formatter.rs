@@ -5,21 +5,19 @@ use crate::types::ComposableError;
 use core::fmt::Display;
 
 #[cfg(not(feature = "std"))]
-use alloc::string::{String, ToString};
-#[cfg(feature = "std")]
-use std::string::{String, ToString};
+use alloc::string::ToString;
 
-#[cfg(not(feature = "std"))]
-use alloc::vec::Vec;
-#[cfg(feature = "std")]
-use std::vec::Vec;
+use crate::types::alloc_type::String;
+use crate::types::alloc_type::Vec;
 
 /// Trait for customizing error chain formatting.
 pub trait ErrorFormatter {
+    #[inline]
     fn format_item(&self, item: &dyn Display) -> String {
         item.to_string()
     }
 
+    #[inline]
     fn separator(&self) -> &str {
         " -> "
     }
@@ -35,14 +33,15 @@ pub trait ErrorFormatter {
 /// Configuration-based error formatter.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ErrorFormatConfig {
-    pub separator: alloc_type::String,
-    pub context_prefix: Option<alloc_type::String>,
-    pub context_suffix: Option<alloc_type::String>,
-    pub root_prefix: Option<alloc_type::String>,
-    pub root_suffix: Option<alloc_type::String>,
+    pub separator: String,
+    pub context_prefix: Option<String>,
+    pub context_suffix: Option<String>,
+    pub root_prefix: Option<String>,
+    pub root_suffix: Option<String>,
     pub multiline: bool,
-    pub indent: alloc_type::String,
+    pub indent: String,
     pub show_code: bool,
+    pub cascade: bool,
 }
 
 impl Default for ErrorFormatConfig {
@@ -56,11 +55,14 @@ impl Default for ErrorFormatConfig {
             multiline: false,
             indent: "  ".into(),
             show_code: true,
+            cascade: false,
         }
     }
 }
 
 impl ErrorFormatConfig {
+    /// Tree-style formatting with box-drawing characters.
+    /// Uses `multiline` + `context_prefix` branch (not cascade).
     #[inline]
     pub fn pretty() -> Self {
         Self {
@@ -70,6 +72,13 @@ impl ErrorFormatConfig {
             multiline: true,
             ..Default::default()
         }
+    }
+
+    /// Indented cascade formatting.
+    /// Each level adds `indent` spacing (uses cascade branch).
+    #[inline]
+    pub fn cascaded() -> Self {
+        Self { separator: "\n".into(), multiline: true, cascade: true, ..Default::default() }
     }
 
     #[inline]
@@ -96,6 +105,7 @@ impl ErrorFormatter for ErrorFormatConfig {
         result
     }
 
+    #[inline]
     fn separator(&self) -> &str {
         &self.separator
     }
@@ -128,6 +138,16 @@ impl ErrorFormatter for ErrorFormatConfig {
                     result.push_str(p);
                 }
                 result.push_str(&items[item_count - 1].to_string());
+            }
+        } else if self.cascade {
+            for (i, item) in items.iter().enumerate() {
+                if i > 0 {
+                    result.push_str(&self.separator);
+                    for _ in 0..i {
+                        result.push_str(&self.indent);
+                    }
+                }
+                result.push_str(&item.to_string());
             }
         } else {
             let last_idx = item_count - 1;
@@ -196,6 +216,22 @@ impl<'a, E> ErrorFormatBuilder<'a, E> {
 
     pub fn compact(mut self) -> Self {
         self.config = ErrorFormatConfig::compact();
+        self
+    }
+
+    pub fn cascade(mut self, enabled: bool) -> Self {
+        self.config.cascade = enabled;
+        if enabled {
+            self.config.multiline = true;
+            if self.config.separator == " -> " {
+                self.config.separator = "\n".into();
+            }
+        }
+        self
+    }
+
+    pub fn cascaded(mut self) -> Self {
+        self.config = ErrorFormatConfig::cascaded();
         self
     }
 }

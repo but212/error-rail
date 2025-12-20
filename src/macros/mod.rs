@@ -246,7 +246,7 @@ macro_rules! group {
     // Empty group
     () => {
         $crate::types::LazyGroupContext::new(move || {
-            $crate::types::ErrorContext::Group($crate::types::GroupContext::default())
+            $crate::types::ErrorContext::Group($crate::types::alloc_type::Box::new($crate::types::GroupContext::default()))
         })
     };
 
@@ -497,5 +497,72 @@ macro_rules! ctx_async {
     };
     ($fut:expr, $fmt:literal, $($arg:tt)* $(,)?) => {
         $crate::async_ext::FutureResultExt::with_ctx($fut, || format!($fmt, $($arg)*))
+    };
+}
+
+/// Asserts that a result is an error and contains a specific tag or message.
+///
+/// This macro iterates through the error's core message and all attached contexts
+/// (both simple and grouped) to find a match with the expected string.
+///
+/// # Arguments
+///
+/// * `$result` - A `Result` or `ComposableResult` to check.
+/// * `$expected` - The string to search for in tags, messages, or the core error.
+///
+/// # Panics
+///
+/// Panics if the result is `Ok` or if the error does not contain the expected string.
+#[macro_export]
+macro_rules! assert_err_eq {
+    ($result:expr, $expected:expr) => {
+        match &$result {
+            Ok(v) => panic!("Expected Err, but got Ok({:?})", v),
+            Err(e) => {
+                use $crate::types::ErrorContext;
+                let expected = $expected;
+                let mut found = false;
+
+                // Check core error message
+                if e.core_error().to_string() == expected {
+                    found = true;
+                }
+
+                // Check contexts
+                if !found {
+                    for ctx in e.context_iter() {
+                        match ctx {
+                            ErrorContext::Simple(s) => {
+                                if s.as_ref() == expected {
+                                    found = true;
+                                    break;
+                                }
+                            }
+                            ErrorContext::Group(g) => {
+                                if g.message.as_deref().is_some_and(|m| m == expected) {
+                                    found = true;
+                                    break;
+                                }
+                                if g.tags.iter().any(|t| t.as_ref() == expected) {
+                                    found = true;
+                                    break;
+                                }
+                                if g.metadata.iter().any(|(_, v)| v.as_ref() == expected) {
+                                    found = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if !found {
+                    panic!(
+                        "Assertion failed: error does not contain tag or message '{}'.\nActual error: {}",
+                        expected, e
+                    );
+                }
+            }
+        }
     };
 }

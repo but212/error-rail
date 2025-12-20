@@ -13,6 +13,7 @@
 //! error-rail = { version = "0.8", features = ["tracing"] }
 //! ```
 
+use crate::types::alloc_type::Vec;
 use core::future::Future;
 use core::pin::Pin;
 use core::task::{Context, Poll};
@@ -123,7 +124,7 @@ fn span_to_context(span: &Span) -> ErrorContext {
     builder = builder.metadata("level", meta.level().as_str());
 
     // Add field names (values not accessible without subscriber integration)
-    let field_names: alloc::vec::Vec<&str> = meta.fields().iter().map(|f| f.name()).collect();
+    let field_names: Vec<&str> = meta.fields().iter().map(|f| f.name()).collect();
     if !field_names.is_empty() {
         builder = builder.metadata("fields", field_names.join(", "));
     }
@@ -184,6 +185,3 @@ pub fn instrument_error<E>(error: E) -> ComposableError<E> {
     let span = Span::current();
     ComposableError::new(error).with_context(span_to_context(&span))
 }
-
-// Required for alloc::format!
-extern crate alloc;

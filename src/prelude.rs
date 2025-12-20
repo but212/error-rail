@@ -47,10 +47,23 @@
 //! assert!(result.is_err());
 //! ```
 
+// =============================================================================
+// Re-export List (for explicit imports in large projects)
+// =============================================================================
+// use error_rail::prelude::{
+//     // Macros
+//     context, group, rail, rail_unboxed,
+//     // Types
+//     BoxedResult, ComposableError, ErrorContext, ErrorPipeline,
+//     // Traits
+//     BoxedResultExt, IntoErrorContext, ResultExt,
+// };
+// =============================================================================
+
 // Macros
 pub use crate::{context, group, rail, rail_unboxed};
 
-// Core types (Beginner friendly)
+// Core types
 pub use crate::types::{ComposableError, ErrorContext, ErrorPipeline};
 
 // Traits (Essential for method syntax)

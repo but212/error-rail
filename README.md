@@ -7,8 +7,10 @@
 
 **Composable, lazy-evaluated error handling for Rust.**
 
+> **std::error defines error types. error-rail defines how errors flow.**
+
 ```rust
-use error_rail::prelude::*;
+use error_rail::simple::*;
 
 fn load_config() -> BoxedResult<String, std::io::Error> {
     std::fs::read_to_string("config.toml")
@@ -32,27 +34,54 @@ fn load_config() -> BoxedResult<String, std::io::Error> {
 cargo add error-rail
 ```
 
+**For beginners** — Start with `simple`:
+
 ```rust
-use error_rail::prelude::*;
+use error_rail::simple::*;
 
 fn read_config() -> BoxedResult<String, std::io::Error> {
     std::fs::read_to_string("config.toml")
         .ctx("loading configuration")
 }
 
-fn process() -> BoxedResult<String, std::io::Error> {
-    read_config().ctx("processing configuration")
-}
-
 fn main() {
-    if let Err(e) = process() {
+    if let Err(e) = read_config() {
         eprintln!("{}", e.error_chain());
-        // processing configuration -> loading configuration -> No such file or directory
+        // loading configuration -> No such file or directory
     }
 }
 ```
 
-## Core Concepts
+**For general use** — Use `prelude`:
+
+```rust
+use error_rail::prelude::*;
+
+fn process() -> BoxedResult<String, std::io::Error> {
+    let config = std::fs::read_to_string("config.toml")
+        .ctx("loading configuration")?;
+    Ok(config)
+}
+```
+
+## API Levels (You do NOT need to learn all of these)
+
+Start here → `simple`  
+When you need more → `prelude`  
+Only if you are building services → `intermediate`  
+Almost never → `advanced`
+
+| Module | When to Use | What's Included |
+|--------|------------|----------------|
+| `simple` | First time using error-rail | `BoxedResult`, `rail!`, `.ctx()`, `.error_chain()` |
+| `prelude` | When you need structured context | + `context!`, `group!`, `ErrorPipeline` |
+| `intermediate` | Building services | + `TransientError`, `Fingerprint`, formatting |
+| `advanced` | Writing libraries | + internal builders, `ErrorVec` |
+| `prelude_async` | Async code | + `AsyncErrorPipeline`, retry, timeout |
+
+## Core Concepts (Advanced — skip on first read)
+
+> **If you are using `simple`, you can skip this entire section.**
 
 ### Context Methods
 
@@ -72,8 +101,10 @@ result.ctx(group!(
 
 ### Validation (Collect All Errors)
 
+> **Note: This is available in `error_rail::validation`, not in `simple`.**
+
 ```rust
-use error_rail::Validation;
+use error_rail::validation::Validation;
 
 let results: Validation<&str, Vec<_>> = vec![
     validate_age(-5),
@@ -81,6 +112,33 @@ let results: Validation<&str, Vec<_>> = vec![
 ].into_iter().collect();
 
 // Both errors collected, not just the first
+```
+
+### Macros
+
+```rust
+use error_rail::prelude::*;
+
+// rail! - Wrap any Result in ErrorPipeline and box it
+let result = rail!(std::fs::read_to_string("config.toml"));
+
+// context! - Lazy formatted context (only evaluated on error)
+result.ctx(context!("loading config for user {}", user_id))
+
+// group! - Structured context with tags & metadata
+result.ctx(group!(tag("config"), metadata("path", "config.toml")))
+```
+
+```rust
+use error_rail::prelude_async::*;
+
+// rail_async! - Async version of rail!
+async fn load() -> BoxedResult<String, IoError> {
+    rail_async!(tokio::fs::read_to_string("config.toml"))
+        .with_context("loading config")
+        .finish_boxed()
+        .await
+}
 ```
 
 ### Async Support
@@ -96,17 +154,61 @@ async fn fetch_user(id: u64) -> BoxedResult<User, DbError> {
 }
 ```
 
+## Anti-Patterns
+
+```rust
+// ❌ DON'T: Chain .ctx() multiple times
+fn bad() -> BoxedResult<(), &'static str> {
+    Err("original error").ctx("a").ctx("b").ctx("c")  // Noise, not value
+}
+
+// ✅ DO: One .ctx() per I/O boundary
+fn good() -> BoxedResult<String, std::io::Error> {
+    let data = std::fs::read_to_string("file.txt").ctx("reading input")?;
+    Ok(data)
+}
+```
+
+### Avoid Glob Imports in Large Projects
+
+For better IDE support and compile times in large codebases:
+
+```rust
+// ❌ Glob import (okay for small projects)
+use error_rail::prelude::*;
+
+// ✅ Explicit imports (recommended for large projects)
+use error_rail::prelude::{BoxedResult, ResultExt, rail};
+```
+
+## When should I move from `simple` to `prelude`?
+
+Move to `prelude` when you need:
+
+- **Structured context** - tags and metadata for better error categorization
+- **Lazy formatted messages** - format strings only when errors occur
+- **ErrorPipeline** - for building libraries or complex error chains
+- **Writing a library** - not just an application
+
+> You can stay with `simple` for a long time! It's designed to be sufficient for most applications.
+
+## When NOT to Use error-rail
+
+- Simple scripts that just print errors and exit
+- Teams with little Rust experience
+- When `anyhow` or `eyre` already meets your needs
+
 ## Feature Flags
 
 ```toml
 [dependencies]
-error-rail = "0.8"                                    # Core (no_std)
-error-rail = { version = "0.8", features = ["std"] }  # + backtraces
-error-rail = { version = "0.8", features = ["serde"] } # + serde support
-error-rail = { version = "0.8", features = ["async"] } # + async support
-error-rail = { version = "0.8", features = ["tokio"] } # + retry, timeout
-error-rail = { version = "0.8", features = ["tower"] } # + Tower middleware
-error-rail = { version = "0.8", features = ["full"] }  # Everything
+error-rail = "0.9"                                    # Core (no_std)
+error-rail = { version = "0.9", features = ["std"] }  # + backtraces
+error-rail = { version = "0.9", features = ["serde"] } # + serde support
+error-rail = { version = "0.9", features = ["async"] } # + async support
+error-rail = { version = "0.9", features = ["tokio"] } # + retry, timeout
+error-rail = { version = "0.9", features = ["tower"] } # + Tower middleware
+error-rail = { version = "0.9", features = ["full"] }  # Everything
 ```
 
 ## Documentation

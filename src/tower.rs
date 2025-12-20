@@ -27,6 +27,7 @@ use core::future::Future;
 use core::pin::Pin;
 use core::task::{Context, Poll};
 
+use futures_core::future::FusedFuture;
 use pin_project_lite::pin_project;
 use tower::{Layer, Service};
 
@@ -140,7 +141,9 @@ where
 
     #[inline]
     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        self.inner.poll_ready(cx).map_err(ComposableError::new)
+        self.inner
+            .poll_ready(cx)
+            .map_err(|e| ComposableError::new(e).with_context(self.context.clone()))
     }
 
     #[inline]
@@ -179,6 +182,16 @@ where
             },
             Poll::Pending => Poll::Pending,
         }
+    }
+}
+
+impl<F, T, E, C> FusedFuture for ErrorRailFuture<F, C>
+where
+    F: FusedFuture<Output = Result<T, E>>,
+    C: IntoErrorContext,
+{
+    fn is_terminated(&self) -> bool {
+        self.context.is_none() || self.inner.is_terminated()
     }
 }
 

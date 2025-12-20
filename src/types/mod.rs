@@ -24,6 +24,7 @@ pub mod error_context;
 pub mod error_formatter;
 pub mod error_pipeline;
 pub mod lazy_context;
+pub mod marked_error;
 pub mod retry;
 
 pub use alloc_type::*;
@@ -31,6 +32,8 @@ pub use composable_error::{ComposableError, FingerprintConfig};
 pub use error_context::*;
 pub use error_pipeline::*;
 pub use lazy_context::*;
+pub use marked_error::MarkedError;
+pub use retry::RetryOps;
 
 /// SmallVec-backed collection used for accumulating contexts/errors.
 ///
@@ -55,8 +58,8 @@ pub type BoxedComposableError<E> = alloc_type::Box<ComposableError<E>>;
 
 /// Result alias with boxed [`ComposableError`] for reduced stack size.
 ///
-/// This is identical to [`BoxedResult`] but with a more explicit name.
-/// For new code, prefer using [`BoxedResult`] from the prelude for brevity.
+/// This is identical to [`crate::prelude::BoxedResult`] but with a more explicit name.
+/// For new code, prefer using [`crate::prelude::BoxedResult`] for brevity.
 ///
 /// # Type Parameters
 ///
@@ -67,25 +70,3 @@ pub type BoxedComposableError<E> = alloc_type::Box<ComposableError<E>>;
 ///
 /// * [`crate::prelude::BoxedResult`] - Shorter alias (recommended)
 pub type BoxedComposableResult<T, E> = Result<T, BoxedComposableError<E>>;
-
-/// Shorter alias for [`BoxedComposableResult`].
-///
-/// This is the recommended type alias for function return types.
-/// It has minimal stack footprint (8 bytes) while providing full error context.
-///
-/// # Type Parameters
-///
-/// * `T` - The success value type
-/// * `E` - The core error type
-///
-/// # Examples
-///
-/// ```
-/// use error_rail::BoxedResult;
-///
-/// fn read_file(path: &str) -> BoxedResult<String, std::io::Error> {
-///     // ...
-///     # Ok(String::new())
-/// }
-/// ```
-pub type BoxedResult<T, E> = BoxedComposableResult<T, E>;

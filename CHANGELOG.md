@@ -1,5 +1,89 @@
 # CHANGELOG
 
+## [0.9.0]
+
+### Added - 0.9.0
+
+- **Cascaded error chain display**
+  - Added `cascade` and `cascaded` options to `ErrorFormatConfig` for hierarchical indentation
+  - `ComposableError` alternate display (`{:#}`) now uses cascaded indentation by default
+  - New `ErrorFormatBuilder::cascade(bool)` and `.cascaded()` methods for ergonomic configuration
+  - Improved readability of long error chains by visually representing context levels
+
+- **Test utility macro `assert_err_eq!`**
+  - Added a simple macro for integration tests to verify internal error tags or messages in one line.
+
+- **Dynamic transient error classification**
+  - Added `.mark_transient_if(|e| ...)` to `ErrorPipeline` and `AsyncErrorPipeline`
+  - Introduced `MarkedError` utility type for wrapping errors with a classification closure
+  - Enables flexible retry control without implementing the `TransientError` trait.
+
+- **Validation module improvements**
+  - Added `Validation::try_invalid_many()` - returns `Option<Self>` instead of panicking on empty iterator
+  - Added `DoubleEndedIterator` impl for `ErrorsIter` and `ErrorsIterMut`
+  - Expanded `validation::prelude` exports with iterator types
+  - Documented error ordering in `zip()` method
+
+- **New `simple` module for beginners**
+  - Added `error_rail::simple` - minimal API surface area for getting started
+  - Includes only `BoxedResult`, `rail!`, `.ctx()`, and `.error_chain()`
+  - Provides "Golden Path" with clear rules for error handling
+  - Intentionally excludes advanced features (Validation, Retry, Fingerprint, AsyncErrorPipeline)
+
+### Breaking Changes - 0.9.0
+
+- **Modified `ErrorFormatConfig` struct fields**
+  - Added `cascade: bool` field to `ErrorFormatConfig`. Any code using struct literal syntax to instantiate this type will need to be updated.
+  - **Migration**: Use `ErrorFormatConfig::default()` or the provided factory methods (`pretty()`, `compact()`, `cascaded()`) and change fields as needed.
+
+- **Changed `ErrorContext::Group` variant to use `Box<GroupContext>`**
+  - The `Group` variant now contains `Box<GroupContext>` instead of `GroupContext` directly to optimize memory usage
+  - **Migration**:
+
+    ```rust
+    // Before (0.8.x)
+    ErrorContext::Group(GroupContext { message: Some("msg".into()), .. })
+    
+    // After (0.9.0) - Option 1: Use Box::new
+    ErrorContext::Group(Box::new(GroupContext { message: Some("msg".into()), .. }))
+    
+    // After (0.9.0) - Option 2: Use constructor methods (recommended)
+    ErrorContext::location(file!(), line!())
+    ErrorContext::tag("my_tag")
+    ErrorContext::metadata("key", "value")
+    group!(message("msg"), tag("tag"))  // macro handles boxing automatically
+    ```
+
+  - Note: Most code using the constructor methods or `group!` macro requires no changes
+
+- **Changed `ComposableError` alternate display (`{:#}`) output**
+  - Removed the explicit `Error:` and `Context:` headings in favor of a clean, cascaded indentation format.
+  - This may break code that relies on parsing the specific string output of `{:#}`.
+
+- **`Validation::invalid_many()` now panics on empty iterator**
+  - Previously allowed creating `Invalid` with no errors, which could cause panics elsewhere
+  - **Migration**: Use `Validation::try_invalid_many()` for fallible construction, or ensure at least one error
+
+### Changed - 0.9.0
+
+- **Consolidated `BoxedResult` type alias**
+  - Removed duplicate `BoxedResult` definition from `types/mod.rs`
+  - `BoxedResult` is now defined only in `prelude.rs` and re-exported from the crate root
+  - No API changes - existing code continues to work unchanged
+
+- **Deprecated `ErrorFormatter` struct in favor of `ErrorFormatBuilder`**
+  - Renamed the legacy `ErrorFormatter` struct to `LegacyErrorFormatter` with `#[deprecated]` attribute
+  - The struct is now hidden from documentation (`#[doc(hidden)]`)
+  - `ComposableError::fmt()` already returns `ErrorFormatBuilder`, so no code changes are required
+  - **Migration**: Continue using `err.fmt().with_separator(" | ").to_string()` which uses `ErrorFormatBuilder`
+
+- **Internal type safety and performance improvements**
+  - **Accumulator type safety**: `IntoIterator` now uses `<ErrorVec<T> as IntoIterator>::IntoIter` instead of hardcoded type
+  - **LazyContext cleanup**: Removed unnecessary `#[repr(transparent)]` attributes
+  - **RetryOps documentation**: Clarified that `RetryOps` only attaches metadata hints, doesn't perform actual retries
+  - **ErrorContext formatting**: Made `add_message_to_parts` more defensive with proper location checking
+  - **Module exports**: Added `RetryOps` to public exports from `types` module
+
 ## [0.8.0]
 
 ### Added - 0.8.0

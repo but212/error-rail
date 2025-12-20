@@ -2,6 +2,7 @@ use crate::traits::TransientError;
 use crate::types::accumulator::Accumulator;
 use crate::types::alloc_type::Box;
 use crate::types::composable_error::ComposableError;
+use crate::types::marked_error::MarkedError;
 use crate::{ComposableResult, ErrorContext, IntoErrorContext};
 
 #[cfg(not(feature = "std"))]
@@ -113,8 +114,8 @@ impl<T, E> ErrorPipeline<T, E> {
 
     /// Creates a retry operations builder for this pipeline.
     ///
-    /// Returns a `RetryOps` wrapper that provides fluent methods for configuring
-    /// retry behavior and checking transient error states.
+    /// Returns a `RetryHints` wrapper that provides fluent methods for attaching
+    /// retry metadata hints and checking transient error states.
     ///
     /// # Examples
     ///
@@ -137,6 +138,40 @@ impl<T, E> ErrorPipeline<T, E> {
     #[inline]
     pub fn retry(self) -> crate::types::retry::RetryOps<T, E> {
         crate::types::retry::RetryOps { pipeline: self }
+    }
+
+    /// Marks the error as transient or permanent based on a closure.
+    ///
+    /// This allows for flexible retry control without implementing the [`crate::traits::TransientError`]
+    /// trait for the error type.
+    ///
+    /// # Arguments
+    ///
+    /// * `classifier` - A closure that returns `true` if the error should be treated as transient
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use error_rail::ErrorPipeline;
+    ///
+    /// let result = ErrorPipeline::<(), &str>::new(Err("temporary failure"))
+    ///     .mark_transient_if(|e| e.contains("temporary"))
+    ///     .retry()
+    ///     .max_retries(3)
+    ///     .to_error_pipeline()
+    ///     .finish();
+    /// ```
+    #[inline]
+    pub fn mark_transient_if<F>(self, classifier: F) -> ErrorPipeline<T, MarkedError<E, F>>
+    where
+        F: Fn(&E) -> bool,
+    {
+        ErrorPipeline {
+            result: self
+                .result
+                .map_err(|e| MarkedError { inner: e, classifier }),
+            pending_contexts: self.pending_contexts,
+        }
     }
 
     /// Transforms the pipeline using a function.
@@ -371,7 +406,7 @@ impl<T, E> ErrorPipeline<T, E> {
 
     /// Checks if the current error (if any) is transient and may be retried.
     ///
-    /// This method integrates with the [`TransientError`] trait to help determine
+    /// This method integrates with the [`crate::traits::TransientError`] trait to help determine
     /// whether a retry operation might succeed.
     ///
     /// # Returns
