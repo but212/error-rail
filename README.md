@@ -154,7 +154,7 @@ async fn fetch_user(id: u64) -> BoxedResult<User, DbError> {
 }
 ```
 
-## ❌ Anti-Patterns
+## Anti-Patterns
 
 ```rust
 // ❌ DON'T: Chain .ctx() multiple times
