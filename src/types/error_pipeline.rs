@@ -2,6 +2,7 @@ use crate::traits::TransientError;
 use crate::types::accumulator::Accumulator;
 use crate::types::alloc_type::Box;
 use crate::types::composable_error::ComposableError;
+use crate::types::lazy_context::LazyGroupContext;
 use crate::types::marked_error::MarkedError;
 use crate::{ComposableResult, ErrorContext, IntoErrorContext};
 
@@ -608,7 +609,9 @@ impl<T, E> ErrorPipeline<T, E> {
     #[inline]
     pub fn with_retry_context(self, attempt: u32) -> Self {
         if self.result.is_err() {
-            self.with_context(ErrorContext::metadata("retry_attempt", format!("{}", attempt)))
+            self.with_context(LazyGroupContext::new(move || {
+                ErrorContext::metadata("retry_attempt", format!("{}", attempt))
+            }))
         } else {
             self
         }

@@ -16,7 +16,7 @@ use super::context_future::ContextFuture;
 ///
 /// # Design Principles
 ///
-/// - **Lazy evaluation**: Context is only evaluated when an error occurs
+/// - **Lazy attachment**: Context is only attached when an error occurs
 /// - **Zero-cost success path**: No allocation or context computation on success
 /// - **Familiar syntax**: Same method names as sync counterparts
 ///
@@ -71,7 +71,10 @@ pub trait FutureResultExt<T, E>: Future<Output = Result<T, E>> + Sized {
     /// Attaches a static context to the future's error.
     ///
     /// The context is converted to an error context only when the future
-    /// resolves to an error, maintaining lazy evaluation.
+    /// resolves to an error.
+    ///
+    /// Note: if you pass an already-formatted `String` (e.g. `format!(...)`),
+    /// that formatting still happens eagerly before calling `.ctx()`.
     ///
     /// # Arguments
     ///
@@ -100,6 +103,8 @@ pub trait FutureResultExt<T, E>: Future<Output = Result<T, E>> + Sized {
     ///
     /// The closure is only called when the future resolves to an error,
     /// avoiding any computation on the success path.
+    ///
+    /// Use this (or `context!`) when you want lazy string formatting.
     ///
     /// # Arguments
     ///

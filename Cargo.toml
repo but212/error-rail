@@ -1,6 +1,6 @@
 [package]
 name = "error-rail"
-version = "0.9.1"
+version = "0.9.2"
 authors = ["jeong-il suk <wjddlf211@naver.com>"]
 edition = "2021"
 license = "Apache-2.0"

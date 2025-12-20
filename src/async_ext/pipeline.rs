@@ -116,7 +116,10 @@ where
 {
     /// Adds a context that will be attached to any error.
     ///
-    /// The context is only evaluated when an error occurs (lazy evaluation).
+    /// The context is only attached when an error occurs.
+    ///
+    /// Note: if you pass an already-formatted `String` (e.g. `format!(...)`),
+    /// that formatting still happens eagerly before calling `.with_context(...)`.
     ///
     /// # Arguments
     ///

@@ -451,7 +451,7 @@ macro_rules! rail_async {
 /// # Syntax
 ///
 /// - `ctx_async!(future, "literal message")` - Static message
-/// - `ctx_async!(future, "format {}", arg)` - Formatted message (lazy)
+/// - `ctx_async!(future, "format {}", arg)` - Formatted message (formatting is deferred until error)
 ///
 /// # Examples
 ///
@@ -481,7 +481,7 @@ macro_rules! rail_async {
 ///         .await
 ///         .map_err(Box::new)?;
 ///
-///     // With formatting (lazy evaluation)
+///     // With formatting (formatting is deferred until error)
 ///     let _profile = ctx_async!(fetch_profile(id), "fetching profile for user {}", id)
 ///         .await
 ///         .map_err(Box::new)?;

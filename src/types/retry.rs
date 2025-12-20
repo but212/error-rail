@@ -1,6 +1,7 @@
 use crate::traits::TransientError;
 use crate::types::ErrorContext;
 use crate::types::ErrorPipeline;
+use crate::types::LazyGroupContext;
 use core::time::Duration;
 
 #[cfg(not(feature = "std"))]
@@ -94,9 +95,9 @@ impl<T, E> RetryOps<T, E> {
     /// let retry_ops = pipeline.retry().max_retries(5);
     /// ```
     pub fn max_retries(mut self, count: u32) -> Self {
-        self.pipeline = self
-            .pipeline
-            .with_context(ErrorContext::metadata("max_retries_hint", format!("{}", count)));
+        self.pipeline = self.pipeline.with_context(LazyGroupContext::new(move || {
+            ErrorContext::metadata("max_retries_hint", format!("{}", count))
+        }));
         self
     }
 
@@ -126,9 +127,9 @@ impl<T, E> RetryOps<T, E> {
     /// let retry_ops = pipeline.retry().after_hint(Duration::from_secs(60));
     /// ```
     pub fn after_hint(mut self, duration: Duration) -> Self {
-        self.pipeline = self
-            .pipeline
-            .with_context(ErrorContext::metadata("retry_after_hint", format!("{:?}", duration)));
+        self.pipeline = self.pipeline.with_context(LazyGroupContext::new(move || {
+            ErrorContext::metadata("retry_after_hint", format!("{:?}", duration))
+        }));
         self
     }
 

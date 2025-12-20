@@ -1,7 +1,10 @@
 //! Async extensions for error-rail.
 //!
 //! This module provides async-aware error handling utilities that maintain
-//! the same lazy evaluation philosophy as the sync counterparts.
+//! the same lazy attachment philosophy as the sync counterparts.
+//!
+//! Note: lazy *string formatting* is provided by `context!` / `.with_ctx(...)`.
+//! Passing an already-formatted `String` (e.g. `format!(...)`) is eager.
 //!
 //! # Feature Flag
 //!
