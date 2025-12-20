@@ -18,6 +18,12 @@
   - Introduced `MarkedError` utility type for wrapping errors with a classification closure
   - Enables flexible retry control without implementing the `TransientError` trait.
 
+- **Validation module improvements**
+  - Added `Validation::try_invalid_many()` - returns `Option<Self>` instead of panicking on empty iterator
+  - Added `DoubleEndedIterator` impl for `ErrorsIter` and `ErrorsIterMut`
+  - Expanded `validation::prelude` exports with iterator types
+  - Documented error ordering in `zip()` method
+
 ### Breaking Changes - 0.9.0
 
 - **Modified `ErrorFormatConfig` struct fields**
@@ -34,6 +40,10 @@
 - **Changed `ComposableError` alternate display (`{:#}`) output**
   - Removed the explicit `Error:` and `Context:` headings in favor of a clean, cascaded indentation format.
   - This may break code that relies on parsing the specific string output of `{:#}`.
+
+- **`Validation::invalid_many()` now panics on empty iterator**
+  - Previously allowed creating `Invalid` with no errors, which could cause panics elsewhere
+  - **Migration**: Use `Validation::try_invalid_many()` for fallible construction, or ensure at least one error
 
 ### Changed - 0.9.0
 
