@@ -14,5 +14,5 @@ pub use crate::types::error_context::{ErrorContextBuilder, GroupContext, Locatio
 pub use crate::types::lazy_context::{LazyContext, LazyGroupContext};
 
 // Low-level Pipeline Operations
-// (ErrorPipeline is exported in prelude, but advanced usage might need specific traits or internals)
+// ErrorPipeline provides direct access to pending contexts and error transformation methods
 pub use crate::types::error_pipeline::ErrorPipeline;
