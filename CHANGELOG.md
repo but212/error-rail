@@ -1,8 +1,8 @@
 # CHANGELOG
 
-## [Unreleased]
+## [0.9.1]
 
-### Changed - Unreleased
+### Changed - 0.9.1
 
 - **Internal code quality improvements**
   - Fixed incomplete docstrings in `ComposableError::context_iter()` and `ErrorPipeline::map_error()`
