@@ -40,11 +40,13 @@ async fn fetch_user(id: u64) -> BoxedResult<User, DbError> {
 
 ### Lazy Context Evaluation
 
-Just like sync code, context is only evaluated when an error occurs:
+Just like sync code, context is only attached when an error occurs.
+For lazy *string formatting*, use `context!`, `.with_ctx(|| format!(...))`, or the formatting arm of
+`ctx_async!`.
 
 ```rust
 async fn process_order(order_id: u64) -> BoxedResult<Order, OrderError> {
-    // The context! is only called if the future returns Err
+    // The formatting inside context! is only evaluated if the future returns Err
     load_order(order_id)
         .with_ctx(|| context!("processing order {}", order_id))
         .await
@@ -140,11 +142,14 @@ at application layer -> in complex operation -> fetching data -> [original error
 1. **Use lazy context for expensive formatting**
 
    ```rust
-   // Good: context! only called on error
-   .with_ctx(|| context!("data: {:?}", large_data))
-   
-   // Avoid: context! always called
+   // Good: lazy formatting (only formats on error)
    .ctx(context!("data: {:?}", large_data))
+
+   // Also good: lazy formatting via closure
+   .with_ctx(|| format!("data: {:?}", large_data))
+
+   // Avoid: eager formatting (format! runs before ctx)
+   .ctx(format!("data: {:?}", large_data))
    ```
 
 2. **Prefer `finish_boxed()` for public APIs**

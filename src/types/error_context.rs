@@ -30,21 +30,15 @@
 //! assert_eq!(msg.message(), "database connection failed");
 //! assert!(ctx.message().contains("[db]"));
 //! ```
-use crate::types::alloc_type::{Box, Cow, String, Vec};
+use crate::types::alloc_type::{Box, Cow, String};
 use crate::ErrorVec;
-use core::fmt::Display;
+use core::fmt::{Display, Write};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 #[cfg(not(feature = "std"))]
-use alloc::format;
-#[cfg(not(feature = "std"))]
 use alloc::string::ToString;
 use smallvec::SmallVec;
-#[cfg(feature = "std")]
-use std::format;
-#[cfg(feature = "std")]
-use std::string::ToString;
 
 /// Structured metadata attached to a [`ComposableError`](crate::types::ComposableError).
 ///
@@ -235,13 +229,26 @@ impl ErrorContext {
                 let mut parts = ErrorVec::new();
 
                 // Add tags if present
-                if !g.tags.is_empty() {
-                    parts.push(format!("[{}]", g.tags.join(", ")));
+                if let Some((first, rest)) = g.tags.split_first() {
+                    let mut tags_str = String::new();
+                    tags_str.push('[');
+                    tags_str.push_str(first.as_ref());
+                    for tag in rest {
+                        tags_str.push_str(", ");
+                        tags_str.push_str(tag.as_ref());
+                    }
+                    tags_str.push(']');
+                    parts.push(tags_str);
                 }
 
                 // Add location if present
                 if let Some(loc) = &g.location {
-                    parts.push(format!("at {}:{}", loc.file, loc.line));
+                    let mut loc_str = String::new();
+                    loc_str.push_str("at ");
+                    loc_str.push_str(loc.file.as_ref());
+                    loc_str.push(':');
+                    let _ = write!(&mut loc_str, "{}", loc.line);
+                    parts.push(loc_str);
                 }
 
                 // Add message if present
@@ -250,14 +257,15 @@ impl ErrorContext {
                 }
 
                 // Add metadata if present
-                if !g.metadata.is_empty() {
-                    let meta_str = g
-                        .metadata
-                        .iter()
-                        .map(|(k, v)| format!("{}={}", k, v))
-                        .collect::<Vec<_>>()
-                        .join(", ");
-                    parts.push(format!("({})", meta_str));
+                if let Some((first, rest)) = g.metadata.split_first() {
+                    let mut meta_str = String::new();
+                    // Writing to a String never fails, so we can ignore the result.
+                    let _ = write!(&mut meta_str, "({}={}", first.0, first.1);
+                    for (k, v) in rest {
+                        let _ = write!(&mut meta_str, ", {}={}", k, v);
+                    }
+                    meta_str.push(')');
+                    parts.push(meta_str);
                 }
 
                 if parts.is_empty() {
@@ -280,7 +288,8 @@ impl ErrorContext {
         if should_merge {
             // Safe: we just verified last() exists and starts with "at "
             if let Some(last_part) = parts.last_mut() {
-                *last_part = format!("{}: {}", last_part, msg);
+                last_part.push_str(": ");
+                last_part.push_str(msg);
             }
         } else {
             parts.push(msg.to_string());

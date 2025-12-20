@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## [0.9.2]
+
+### Changed - 0.9.2
+
+- **Documentation clarifications**
+  - Clarified that lazy *string formatting* is provided by `context!` / `.ctx_with(...)` / async `.with_ctx(...)`, and that `ctx(format!(...))` is eager
+  - Updated README and guides to remove ambiguity around “lazy context” vs “lazy attachment”
+  - Refined async rustdoc (`FutureResultExt`, `AsyncErrorPipeline`, `ctx_async!`) to make the same distinction explicit
+
+- **Performance Improvements**
+  - Deferred retry hint metadata formatting to error paths (`RetryOps::max_retries`, `RetryOps::after_hint`, `ErrorPipeline::with_retry_context`) to avoid eager `format!` on success paths
+  - Reduced allocations in `ErrorContext::message()` by building tag/location/metadata strings directly (removes intermediate `join`/`Vec` allocations)
+
 ## [0.9.1]
 
 ### Changed - 0.9.1
