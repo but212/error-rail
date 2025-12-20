@@ -7,8 +7,18 @@
 
 **Composable, lazy-evaluated error handling for Rust.**
 
+> **std::error defines error types. error-rail defines how errors flow.**
+
+## Golden Path (3 Rules)
+
+```text
+1. Return BoxedResult at function boundaries
+2. Add .ctx() only after I/O or external calls
+3. Use Validation when multiple errors can occur
+```
+
 ```rust
-use error_rail::prelude::*;
+use error_rail::simple::*;
 
 fn load_config() -> BoxedResult<String, std::io::Error> {
     std::fs::read_to_string("config.toml")
@@ -32,25 +42,45 @@ fn load_config() -> BoxedResult<String, std::io::Error> {
 cargo add error-rail
 ```
 
+**For beginners** — Start with `simple`:
+
 ```rust
-use error_rail::prelude::*;
+use error_rail::simple::*;
 
 fn read_config() -> BoxedResult<String, std::io::Error> {
     std::fs::read_to_string("config.toml")
         .ctx("loading configuration")
 }
 
-fn process() -> BoxedResult<String, std::io::Error> {
-    read_config().ctx("processing configuration")
-}
-
 fn main() {
-    if let Err(e) = process() {
+    if let Err(e) = read_config() {
         eprintln!("{}", e.error_chain());
-        // processing configuration -> loading configuration -> No such file or directory
+        // loading configuration -> No such file or directory
     }
 }
 ```
+
+**For general use** — Use `prelude`:
+
+```rust
+use error_rail::prelude::*;
+
+fn process() -> BoxedResult<String, std::io::Error> {
+    let config = std::fs::read_to_string("config.toml")
+        .ctx("loading configuration")?;
+    Ok(config)
+}
+```
+
+## API Levels
+
+| Module | Audience | What's Included |
+|--------|----------|----------------|
+| `simple` | Beginners | `BoxedResult`, `rail!`, `.ctx()`, `.error_chain()` |
+| `prelude` | General use | + `context!`, `group!`, `ErrorPipeline` |
+| `intermediate` | Services | + `TransientError`, `Fingerprint`, formatting |
+| `advanced` | Library authors | + internal builders, `ErrorVec` |
+| `prelude_async` | Async code | + `AsyncErrorPipeline`, retry, timeout |
 
 ## Core Concepts
 
@@ -123,17 +153,39 @@ async fn fetch_user(id: u64) -> BoxedResult<User, DbError> {
 }
 ```
 
+## ❌ Anti-Patterns
+
+```rust
+// ❌ DON'T: Chain .ctx() multiple times
+fn bad() -> BoxedResult<T, E> {
+    foo().ctx("a").ctx("b").ctx("c")  // Noise, not value
+}
+
+// ✅ DO: One .ctx() per I/O boundary
+fn good() -> BoxedResult<T, E> {
+    let data = read_file().ctx("reading input")?;
+    let parsed = parse(data).ctx("parsing input")?;
+    Ok(parsed)
+}
+```
+
+## When NOT to Use error-rail
+
+- Simple scripts that just print errors and exit
+- Teams with little Rust experience
+- When `anyhow` or `eyre` already meets your needs
+
 ## Feature Flags
 
 ```toml
 [dependencies]
-error-rail = "0.8"                                    # Core (no_std)
-error-rail = { version = "0.8", features = ["std"] }  # + backtraces
-error-rail = { version = "0.8", features = ["serde"] } # + serde support
-error-rail = { version = "0.8", features = ["async"] } # + async support
-error-rail = { version = "0.8", features = ["tokio"] } # + retry, timeout
-error-rail = { version = "0.8", features = ["tower"] } # + Tower middleware
-error-rail = { version = "0.8", features = ["full"] }  # Everything
+error-rail = "0.9"                                    # Core (no_std)
+error-rail = { version = "0.9", features = ["std"] }  # + backtraces
+error-rail = { version = "0.9", features = ["serde"] } # + serde support
+error-rail = { version = "0.9", features = ["async"] } # + async support
+error-rail = { version = "0.9", features = ["tokio"] } # + retry, timeout
+error-rail = { version = "0.9", features = ["tower"] } # + Tower middleware
+error-rail = { version = "0.9", features = ["full"] }  # Everything
 ```
 
 ## Documentation

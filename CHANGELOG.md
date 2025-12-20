@@ -24,6 +24,12 @@
   - Expanded `validation::prelude` exports with iterator types
   - Documented error ordering in `zip()` method
 
+- **New `simple` module for beginners**
+  - Added `error_rail::simple` - minimal API surface area for getting started
+  - Includes only `BoxedResult`, `rail!`, `.ctx()`, and `.error_chain()`
+  - Provides "Golden Path" with clear rules for error handling
+  - Intentionally excludes advanced features (Validation, Retry, Fingerprint, AsyncErrorPipeline)
+
 ### Breaking Changes - 0.9.0
 
 - **Modified `ErrorFormatConfig` struct fields**

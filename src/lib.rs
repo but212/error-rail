@@ -64,6 +64,8 @@ pub mod convert;
 pub mod macros;
 /// Convenience re-exports for quick starts
 pub mod prelude;
+/// Minimal API for beginners - start here
+pub mod simple;
 /// Core traits for error handling and composition
 pub mod traits;
 /// ComposableError and error context structures
