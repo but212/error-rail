@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## [Unreleased]
+
+### Changed - Unreleased
+
+- **Internal code quality improvements**
+  - Fixed incomplete docstrings in `ComposableError::context_iter()` and `ErrorPipeline::map_error()`
+  - Removed duplicate `Box` import in `error_context.rs`
+  - Improved `ContextFuture::is_terminated()` to check `context_fn.is_none()` for proper `FusedFuture` behavior
+
 ## [0.9.0]
 
 ### Added - 0.9.0

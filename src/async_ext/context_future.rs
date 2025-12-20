@@ -83,6 +83,7 @@ where
     C: IntoErrorContext,
 {
     fn is_terminated(&self) -> bool {
-        self.future.is_terminated()
+        // Also check context_fn since it's taken on error completion
+        self.context_fn.is_none() || self.future.is_terminated()
     }
 }
