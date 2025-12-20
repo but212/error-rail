@@ -15,12 +15,14 @@ fn test_group_macro_basic() {
     assert_eq!(contexts.len(), 1);
     let msg = contexts[0].message();
 
-    // Print actual message for debugging
-    println!("Actual message: {}", msg);
-
-    assert!(msg.contains("retry attempt 3"), "message should contain formatted retry attempt");
+    // The format should be: [database] at file:line: retry attempt 3 (host=localhost:5432)
     assert!(msg.contains("[database]"), "message should contain tag");
+    assert!(msg.contains("retry attempt 3"), "message should contain formatted retry attempt");
     assert!(msg.contains("(host=localhost:5432)"), "message should contain metadata");
+
+    // Verify the structure: [tag] at file:line: message (metadata)
+    // Should have exactly 2 colons: one after line number, one in metadata
+    assert_eq!(msg.matches(':').count(), 2, "should have exactly 2 colons");
 
     // Also verify using assert_err_eq for substring matching
     let res: Result<(), ComposableError<&str>> = Err(err);
