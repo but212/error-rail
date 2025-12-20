@@ -189,7 +189,7 @@ std/backtrace_lazy_error   → 164.47 ns/iter  (Error path with backtrace)
 **Note**: JSON serialization of error contexts with metadata.
 
 ```text
-serde/error_serialization → 3.76 µs/iter  (JSON serialize error with context)
+serde/error_serialization → 731 ns/iter  (JSON serialize error with context)
 ```
 
 ## 11. Async Benchmarks
