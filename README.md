@@ -21,7 +21,6 @@ fn load_config() -> BoxedResult<String, std::io::Error> {
 ## Features
 
 - **Lazy formatting** — Use `context!` / `.ctx_with(...)` to format strings only when errors occur
-- **Chainable context** — Build rich error traces with `.ctx()`
 - **Validation accumulation** — Collect all errors, not just the first
 - **Transient error classification** — Built-in retry support
 - **Error fingerprinting** — Deduplicate errors in monitoring systems
@@ -101,6 +100,23 @@ result.ctx(group!(
 ))
 ```
 
+### Chaining Context (Sync)
+
+Use `.ctx()` for the first context, then `.ctx_boxed()` for additional layers:
+
+```rust
+use error_rail::prelude::*;
+
+fn inner() -> BoxedResult<i32, &'static str> {
+    Err("db error").ctx("querying database")
+}
+
+fn outer() -> BoxedResult<i32, &'static str> {
+    inner().ctx_boxed("in user service")
+}
+// Error chain: in user service -> querying database -> db error
+```
+
 ### Validation (Collect All Errors)
 
 > **Note: This is available in `error_rail::validation`, not in `simple`.**
@@ -145,24 +161,34 @@ async fn load() -> BoxedResult<String, IoError> {
 
 ### Async Support
 
-```rust
+In async code, `.ctx()` can be chained directly on futures:
+
+```rust,ignore
 use error_rail::prelude_async::*;
 
 async fn fetch_user(id: u64) -> BoxedResult<User, DbError> {
     database.get_user(id)
-        .ctx("fetching user")
+        .ctx("fetching user")           // FutureResultExt::ctx()
+        .ctx("in user service")         // Chainable!
         .await
         .map_err(Box::new)
 }
+// Error chain: in user service -> fetching user -> [original error]
 ```
 
 ## Anti-Patterns
 
 ```rust
-// ❌ DON'T: Chain .ctx() multiple times
-fn bad() -> BoxedResult<(), &'static str> {
-    Err("original error").ctx("a").ctx("b").ctx("c")  // Noise, not value
+// ❌ DON'T: Add excessive context at every step
+fn bad() -> BoxedResult<(), MyError> {
+    let a = step_a().ctx("step a")?;
+    let b = step_b(a).ctx("step b")?;  // Noise, not value
+    step_c(b).ctx("step c")
 }
+```
+
+```rust
+use error_rail::simple::*;
 
 // ✅ DO: One .ctx() per I/O boundary
 fn good() -> BoxedResult<String, std::io::Error> {
