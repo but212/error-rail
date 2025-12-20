@@ -70,7 +70,6 @@ use std::string::ToString;
 ///     .metadata("retry_count", "3")
 ///     .build();
 /// ```
-
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ErrorContext {
