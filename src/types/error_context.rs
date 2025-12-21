@@ -35,8 +35,6 @@ use core::fmt::{Display, Write};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-#[cfg(not(feature = "std"))]
-use alloc::string::ToString;
 use smallvec::SmallVec;
 
 /// Structured metadata attached to a [`ComposableError`](crate::types::ComposableError).
