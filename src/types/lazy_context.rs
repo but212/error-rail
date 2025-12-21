@@ -43,9 +43,8 @@ use crate::{
 /// let lazy = LazyContext::new(|| format!("user_id: {}", 123));
 /// // The closure is not called until `into_error_context` is invoked
 /// ```
-pub struct LazyContext<F> {
-    generator: F,
-}
+#[repr(transparent)]
+pub struct LazyContext<F>(F);
 
 impl<F> LazyContext<F> {
     /// Creates a new `LazyContext` from a closure.
@@ -64,9 +63,9 @@ impl<F> LazyContext<F> {
     ///
     /// let ctx = LazyContext::new(|| "deferred message".to_string());
     /// ```
-    #[inline]
-    pub fn new(generator: F) -> Self {
-        Self { generator }
+    #[inline(always)]
+    pub const fn new(generator: F) -> Self {
+        Self(generator)
     }
 }
 
@@ -93,9 +92,8 @@ impl<F> LazyContext<F> {
 /// });
 /// // The closure is not called until `into_error_context` is invoked
 /// ```
-pub struct LazyGroupContext<F> {
-    generator: F,
-}
+#[repr(transparent)]
+pub struct LazyGroupContext<F>(F);
 
 impl<F> LazyGroupContext<F> {
     /// Creates a new `LazyGroupContext` from a closure.
@@ -114,9 +112,9 @@ impl<F> LazyGroupContext<F> {
     ///
     /// let ctx = LazyGroupContext::new(|| ErrorContext::tag("lazy"));
     /// ```
-    #[inline]
-    pub fn new(generator: F) -> Self {
-        Self { generator }
+    #[inline(always)]
+    pub const fn new(generator: F) -> Self {
+        Self(generator)
     }
 }
 
@@ -136,9 +134,9 @@ where
     /// let lazy = LazyGroupContext::new(|| ErrorContext::tag("computed"));
     /// let ctx = lazy.into_error_context();
     /// ```
-    #[inline]
+    #[inline(always)]
     fn into_error_context(self) -> ErrorContext {
-        (self.generator)()
+        (self.0)()
     }
 }
 
@@ -159,8 +157,8 @@ where
     /// let ctx = lazy.into_error_context();
     /// assert_eq!(ctx.message(), "computed");
     /// ```
-    #[inline]
+    #[inline(always)]
     fn into_error_context(self) -> ErrorContext {
-        ErrorContext::new((self.generator)())
+        ErrorContext::new((self.0)())
     }
 }

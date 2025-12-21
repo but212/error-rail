@@ -68,13 +68,13 @@ impl<C> ErrorRailLayer<C> {
     ///
     /// The context will be attached to all errors from the wrapped service.
     #[inline]
-    pub fn new(context: C) -> Self {
+    pub const fn new(context: C) -> Self {
         Self { context }
     }
 
     /// Returns a reference to the context.
     #[inline]
-    pub fn context(&self) -> &C {
+    pub const fn context(&self) -> &C {
         &self.context
     }
 }
@@ -82,6 +82,7 @@ impl<C> ErrorRailLayer<C> {
 impl<S, C: Clone> Layer<S> for ErrorRailLayer<C> {
     type Service = ErrorRailService<S, C>;
 
+    #[inline]
     fn layer(&self, inner: S) -> Self::Service {
         ErrorRailService { inner, context: self.context.clone() }
     }
@@ -100,13 +101,13 @@ pub struct ErrorRailService<S, C> {
 impl<S, C> ErrorRailService<S, C> {
     /// Creates a new `ErrorRailService` wrapping the given service.
     #[inline]
-    pub fn new(inner: S, context: C) -> Self {
+    pub const fn new(inner: S, context: C) -> Self {
         Self { inner, context }
     }
 
     /// Returns a reference to the inner service.
     #[inline]
-    pub fn inner(&self) -> &S {
+    pub const fn inner(&self) -> &S {
         &self.inner
     }
 
@@ -124,7 +125,7 @@ impl<S, C> ErrorRailService<S, C> {
 
     /// Returns a reference to the context.
     #[inline]
-    pub fn context(&self) -> &C {
+    pub const fn context(&self) -> &C {
         &self.context
     }
 }
@@ -148,7 +149,7 @@ where
 
     #[inline]
     fn call(&mut self, request: Request) -> Self::Future {
-        ErrorRailFuture { inner: self.inner.call(request), context: Some(self.context.clone()) }
+        ErrorRailFuture::new(self.inner.call(request), self.context.clone())
     }
 }
 
@@ -156,10 +157,19 @@ pin_project! {
     /// Future returned by [`ErrorRailService`].
     ///
     /// Wraps the inner service's future and adds context on error.
+    #[must_use = "futures do nothing unless polled"]
     pub struct ErrorRailFuture<F, C> {
         #[pin]
         inner: F,
         context: Option<C>,
+    }
+}
+
+impl<F, C> ErrorRailFuture<F, C> {
+    /// Creates a new `ErrorRailFuture` with the given inner future and context.
+    #[inline]
+    fn new(inner: F, context: C) -> Self {
+        Self { inner, context: Some(context) }
     }
 }
 
@@ -170,15 +180,16 @@ where
 {
     type Output = Result<T, ComposableError<E>>;
 
+    #[inline]
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = self.project();
 
         match this.inner.poll(cx) {
             Poll::Ready(Ok(response)) => Poll::Ready(Ok(response)),
             Poll::Ready(Err(error)) => {
+                // SAFETY: context is always Some until first Ready result
                 let context = this.context.take().expect("polled after completion");
-                let composable = ComposableError::new(error).with_context(context);
-                Poll::Ready(Err(composable))
+                Poll::Ready(Err(ComposableError::new(error).with_context(context)))
             },
             Poll::Pending => Poll::Pending,
         }
@@ -190,6 +201,7 @@ where
     F: FusedFuture<Output = Result<T, E>>,
     C: IntoErrorContext,
 {
+    #[inline]
     fn is_terminated(&self) -> bool {
         self.context.is_none() || self.inner.is_terminated()
     }

@@ -58,12 +58,14 @@ use core::iter::FusedIterator;
 pub fn validation_to_result<T, E>(validation: Validation<E, T>) -> Result<T, E> {
     match validation {
         Validation::Valid(value) => Ok(value),
-        Validation::Invalid(errors) => {
-            let error = errors
-                .into_iter()
-                .next()
-                .expect("Validation::Invalid must contain at least one error");
-            Err(error)
+        Validation::Invalid(mut errors) => {
+            debug_assert!(
+                !errors.is_empty(),
+                "Validation::Invalid must contain at least one error"
+            );
+            Err(errors
+                .pop()
+                .expect("Validation::Invalid must contain at least one error"))
         },
     }
 }
@@ -147,7 +149,7 @@ pub fn composable_to_core<E>(composable: ComposableError<E>) -> E {
 /// ```
 #[inline]
 pub fn core_to_composable<E>(error: E) -> ComposableError<E> {
-    error.into()
+    ComposableError::new(error)
 }
 
 /// Flattens a `Result<T, ComposableError<E>>` into `Result<T, E>`.
@@ -174,7 +176,10 @@ pub fn core_to_composable<E>(error: E) -> ComposableError<E> {
 /// ```
 #[inline]
 pub fn flatten_composable_result<T, E>(result: Result<T, ComposableError<E>>) -> Result<T, E> {
-    result.map_err(composable_to_core)
+    match result {
+        Ok(v) => Ok(v),
+        Err(e) => Err(e.into_core()),
+    }
 }
 
 /// Wraps a plain `Result<T, E>` into `Result<T, ComposableError<E>>`.
@@ -201,7 +206,10 @@ pub fn flatten_composable_result<T, E>(result: Result<T, ComposableError<E>>) ->
 #[inline]
 #[allow(clippy::result_large_err)]
 pub fn wrap_in_composable_result<T, E>(result: Result<T, E>) -> Result<T, ComposableError<E>> {
-    result.map_err(core_to_composable)
+    match result {
+        Ok(v) => Ok(v),
+        Err(e) => Err(ComposableError::new(e)),
+    }
 }
 
 /// Wraps a plain `Result<T, E>` into a boxed `ComposableError`.
@@ -227,7 +235,10 @@ pub fn wrap_in_composable_result<T, E>(result: Result<T, E>) -> Result<T, Compos
 /// ```
 #[inline]
 pub fn wrap_in_composable_result_boxed<T, E>(result: Result<T, E>) -> BoxedComposableResult<T, E> {
-    result.map_err(|e| Box::new(core_to_composable(e)))
+    match result {
+        Ok(v) => Ok(v),
+        Err(e) => Err(Box::new(ComposableError::new(e))),
+    }
 }
 
 /// Collects multiple errors into a single `Validation`.
@@ -277,6 +288,7 @@ pub enum SplitValidationIter<T, E> {
 impl<T, E> Iterator for SplitValidationIter<T, E> {
     type Item = Result<T, E>;
 
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         match self {
             Self::Valid(opt) => opt.take().map(Ok),
@@ -284,18 +296,26 @@ impl<T, E> Iterator for SplitValidationIter<T, E> {
         }
     }
 
+    #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
+        let len = match self {
+            Self::Valid(opt) => usize::from(opt.is_some()),
+            Self::Invalid(iter) => iter.len(),
+        };
+        (len, Some(len))
+    }
+}
+
+impl<T, E> ExactSizeIterator for SplitValidationIter<T, E> {
+    #[inline]
+    fn len(&self) -> usize {
         match self {
-            Self::Valid(opt) => {
-                let len = if opt.is_some() { 1 } else { 0 };
-                (len, Some(len))
-            },
-            Self::Invalid(iter) => iter.size_hint(),
+            Self::Valid(opt) => usize::from(opt.is_some()),
+            Self::Invalid(iter) => iter.len(),
         }
     }
 }
 
-impl<T, E> ExactSizeIterator for SplitValidationIter<T, E> {}
 impl<T, E> FusedIterator for SplitValidationIter<T, E> {}
 
 /// Splits a `Validation` into individual `Result` values.
@@ -324,6 +344,7 @@ impl<T, E> FusedIterator for SplitValidationIter<T, E> {}
 /// let results: Vec<_> = split_validation_errors(invalid).collect();
 /// assert_eq!(results, vec![Err("err1"), Err("err2")]);
 /// ```
+#[inline]
 pub fn split_validation_errors<T, E>(validation: Validation<E, T>) -> SplitValidationIter<T, E> {
     match validation {
         Validation::Valid(value) => SplitValidationIter::Valid(Some(value)),

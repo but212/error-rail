@@ -92,11 +92,12 @@ pub trait FutureResultExt<T, E>: Future<Output = Result<T, E>> + Sized {
     ///     assert!(result.is_err());
     /// }
     /// ```
+    #[inline]
     fn ctx<C>(self, context: C) -> ContextFuture<Self, impl FnOnce() -> C>
     where
         C: IntoErrorContext,
     {
-        self.with_ctx(move || context)
+        ContextFuture::new(self, move || context)
     }
 
     /// Attaches a lazily-evaluated context to the future's error.
@@ -132,16 +133,6 @@ pub trait FutureResultExt<T, E>: Future<Output = Result<T, E>> + Sized {
     ///         .map_err(Box::new)
     /// }
     /// ```
-    fn with_ctx<F, C>(self, f: F) -> ContextFuture<Self, F>
-    where
-        F: FnOnce() -> C,
-        C: IntoErrorContext;
-}
-
-impl<Fut, T, E> FutureResultExt<T, E> for Fut
-where
-    Fut: Future<Output = Result<T, E>>,
-{
     #[inline]
     fn with_ctx<F, C>(self, f: F) -> ContextFuture<Self, F>
     where
@@ -151,3 +142,5 @@ where
         ContextFuture::new(self, f)
     }
 }
+
+impl<Fut, T, E> FutureResultExt<T, E> for Fut where Fut: Future<Output = Result<T, E>> {}

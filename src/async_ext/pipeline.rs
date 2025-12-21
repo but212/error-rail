@@ -84,7 +84,7 @@ impl<Fut> AsyncErrorPipeline<Fut> {
     /// let pipeline = AsyncErrorPipeline::new(async { Ok::<_, &str>(42) });
     /// ```
     #[inline]
-    pub fn new(future: Fut) -> Self {
+    pub const fn new(future: Fut) -> Self {
         Self { future }
     }
 
@@ -172,16 +172,11 @@ where
         classifier: F,
     ) -> AsyncErrorPipeline<impl Future<Output = Result<T, MarkedError<E, F>>>>
     where
-        F: Fn(&E) -> bool + Send + 'static,
-        E: Send + 'static,
-        T: Send + 'static,
+        F: Fn(&E) -> bool,
     {
+        let fut = self.future;
         AsyncErrorPipeline {
-            future: async move {
-                self.future
-                    .await
-                    .map_err(|e| MarkedError { inner: e, classifier })
-            },
+            future: async move { fut.await.map_err(|e| MarkedError { inner: e, classifier }) },
         }
     }
 
@@ -229,12 +224,10 @@ where
     #[inline]
     pub fn map<U, F>(self, f: F) -> AsyncErrorPipeline<impl Future<Output = Result<U, E>>>
     where
-        F: FnOnce(T) -> U + Send + 'static,
-        T: Send + 'static,
-        U: Send + 'static,
-        E: Send + 'static,
+        F: FnOnce(T) -> U,
     {
-        AsyncErrorPipeline { future: async move { self.future.await.map(f) } }
+        let fut = self.future;
+        AsyncErrorPipeline { future: async move { fut.await.map(f) } }
     }
 
     /// Transforms the pipeline using a fallible function.
@@ -243,40 +236,29 @@ where
     #[inline]
     pub fn step<U, F>(self, f: F) -> AsyncErrorPipeline<impl Future<Output = Result<U, E>>>
     where
-        F: FnOnce(T) -> Result<U, E> + Send + 'static,
-        T: Send + 'static,
-        U: Send + 'static,
-        E: Send + 'static,
+        F: FnOnce(T) -> Result<U, E>,
     {
-        AsyncErrorPipeline {
-            future: async move {
-                let res = self.future.await;
-                res.and_then(f)
-            },
-        }
+        let fut = self.future;
+        AsyncErrorPipeline { future: async move { fut.await.and_then(f) } }
     }
 
     /// Attempts to recover from an error using a fallback value.
     #[inline]
-    pub fn fallback(self, value: T) -> AsyncErrorPipeline<impl Future<Output = Result<T, E>>>
-    where
-        T: Send + 'static,
-        E: Send + 'static,
-    {
-        AsyncErrorPipeline { future: async move { self.future.await.or(Ok(value)) } }
+    pub fn fallback(self, value: T) -> AsyncErrorPipeline<impl Future<Output = Result<T, E>>> {
+        let fut = self.future;
+        AsyncErrorPipeline { future: async move { fut.await.or(Ok(value)) } }
     }
 
     /// Attempts to recover from an error using a safe recovery function.
     #[inline]
     pub fn recover_safe<F>(self, f: F) -> AsyncErrorPipeline<impl Future<Output = Result<T, E>>>
     where
-        F: FnOnce(E) -> T + Send + 'static,
-        T: Send + 'static,
-        E: Send + 'static,
+        F: FnOnce(E) -> T,
     {
+        let fut = self.future;
         AsyncErrorPipeline {
             future: async move {
-                match self.future.await {
+                match fut.await {
                     Ok(v) => Ok(v),
                     Err(e) => Ok(f(e)),
                 }
@@ -350,6 +332,7 @@ where
     where
         F: FnOnce(ComposableError<E>) -> ComposableError<E2>,
     {
-        AsyncErrorPipeline { future: async move { self.future.await.map_err(f) } }
+        let fut = self.future;
+        AsyncErrorPipeline { future: async move { fut.await.map_err(f) } }
     }
 }

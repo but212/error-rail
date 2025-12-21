@@ -62,6 +62,7 @@ impl<T, E> RetryOps<T, E> {
     /// let pipeline: ErrorPipeline<(), TimeoutError> = ErrorPipeline::new(Err(TimeoutError));
     /// assert!(pipeline.retry().is_transient());
     /// ```
+    #[inline]
     pub fn is_transient(&self) -> bool
     where
         E: TransientError,
@@ -93,13 +94,12 @@ impl<T, E> RetryOps<T, E> {
     /// let pipeline: ErrorPipeline<(), Error> = ErrorPipeline::new(Err(Error));
     /// let retry_ops = pipeline.retry().max_retries(5);
     /// ```
-    pub fn max_retries(mut self, count: u32) -> Self {
-        self.pipeline = self.pipeline.with_context(LazyGroupContext::new(move || {
-            // Use lookup table for small numbers to avoid heap allocation
-            let count_str = u32_to_cow(count);
-            ErrorContext::metadata("max_retries_hint", count_str)
+    #[inline]
+    pub fn max_retries(self, count: u32) -> Self {
+        let pipeline = self.pipeline.with_context(LazyGroupContext::new(move || {
+            ErrorContext::metadata("max_retries_hint", u32_to_cow(count))
         }));
-        self
+        Self { pipeline }
     }
 
     /// Attaches a retry delay hint to the error context.
@@ -127,11 +127,12 @@ impl<T, E> RetryOps<T, E> {
     /// let pipeline: ErrorPipeline<(), RateLimitError> = ErrorPipeline::new(Err(RateLimitError));
     /// let retry_ops = pipeline.retry().after_hint(Duration::from_secs(60));
     /// ```
-    pub fn after_hint(mut self, duration: Duration) -> Self {
-        self.pipeline = self.pipeline.with_context(LazyGroupContext::new(move || {
+    #[inline]
+    pub fn after_hint(self, duration: Duration) -> Self {
+        let pipeline = self.pipeline.with_context(LazyGroupContext::new(move || {
             ErrorContext::metadata("retry_after_hint", format!("{:?}", duration))
         }));
-        self
+        Self { pipeline }
     }
 
     /// Converts the retry operations back to an error pipeline.
@@ -156,6 +157,7 @@ impl<T, E> RetryOps<T, E> {
     /// let retry_ops = pipeline.retry().max_retries(3);
     /// let pipeline_again = retry_ops.to_error_pipeline();
     /// ```
+    #[inline]
     pub fn to_error_pipeline(self) -> ErrorPipeline<T, E> {
         self.pipeline
     }

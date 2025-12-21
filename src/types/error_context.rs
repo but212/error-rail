@@ -31,7 +31,6 @@
 //! assert!(ctx.message().contains("[db]"));
 //! ```
 use crate::types::alloc_type::{Box, Cow, String};
-use crate::ErrorVec;
 use core::fmt::{Display, Write};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -226,80 +225,156 @@ impl ErrorContext {
         match self {
             Self::Simple(s) => Cow::Borrowed(s.as_ref()),
             Self::Group(g) => {
-                let mut parts = ErrorVec::new();
+                // Estimate capacity to avoid reallocations
+                let mut capacity = 0;
+
+                // Estimate tags capacity
+                if !g.tags.is_empty() {
+                    capacity += 2; // brackets
+                    capacity += g.tags.iter().map(|t| t.len()).sum::<usize>();
+                    capacity += (g.tags.len() - 1) * 2; // ", " separators
+                }
+
+                // Estimate location capacity
+                if let Some(loc) = &g.location {
+                    capacity += 3; // "at "
+                    capacity += loc.file.len();
+                    capacity += (loc.line.checked_ilog10().unwrap_or(0) + 1) as usize; // digits in line number
+                    capacity += 1; // ":"
+                }
+
+                // Estimate message capacity
+                if let Some(msg) = &g.message {
+                    capacity += msg.len();
+                    if g.location.is_some() {
+                        capacity += 2; // ": "
+                    }
+                }
+
+                // Estimate metadata capacity
+                if !g.metadata.is_empty() {
+                    capacity += 2; // parentheses
+                    for (k, v) in &g.metadata {
+                        capacity += k.len() + v.len() + 1; // "="
+                    }
+                    capacity += (g.metadata.len() - 1) * 2; // ", " separators
+                }
+
+                // Add space between sections
+                let non_empty_sections = [
+                    !g.tags.is_empty(),
+                    g.location.is_some(),
+                    g.message.is_some(),
+                    !g.metadata.is_empty(),
+                ]
+                .iter()
+                .filter(|&&x| x)
+                .count();
+                capacity += non_empty_sections.saturating_sub(1);
+
+                let mut result = String::with_capacity(capacity);
 
                 // Add tags if present
                 if let Some((first, rest)) = g.tags.split_first() {
-                    let mut tags_str = String::new();
-                    tags_str.push('[');
-                    tags_str.push_str(first.as_ref());
+                    result.push('[');
+                    result.push_str(first.as_ref());
                     for tag in rest {
-                        tags_str.push_str(", ");
-                        tags_str.push_str(tag.as_ref());
+                        result.push_str(", ");
+                        result.push_str(tag.as_ref());
                     }
-                    tags_str.push(']');
-                    parts.push(tags_str);
+                    result.push(']');
                 }
 
                 // Add location if present
                 if let Some(loc) = &g.location {
-                    let mut loc_str = String::new();
-                    loc_str.push_str("at ");
-                    loc_str.push_str(loc.file.as_ref());
-                    loc_str.push(':');
-                    let _ = write!(&mut loc_str, "{}", loc.line);
-                    parts.push(loc_str);
+                    if !g.tags.is_empty() {
+                        result.push(' ');
+                    }
+                    result.push_str("at ");
+                    result.push_str(loc.file.as_ref());
+                    result.push(':');
+                    let _ = write!(&mut result, "{}", loc.line);
                 }
 
                 // Add message if present
                 if let Some(msg) = &g.message {
-                    Self::add_message_to_parts(&mut parts, msg.as_ref(), g.location.is_some());
+                    if !g.tags.is_empty() || g.location.is_some() {
+                        if g.location.is_some() {
+                            result.push_str(": ");
+                        } else {
+                            result.push(' ');
+                        }
+                    }
+                    result.push_str(msg.as_ref());
                 }
 
                 // Add metadata if present
                 if let Some((first, rest)) = g.metadata.split_first() {
-                    let mut meta_str = String::new();
-                    // Writing to a String never fails, so we can ignore the result.
-                    let _ = write!(&mut meta_str, "({}={}", first.0, first.1);
-                    for (k, v) in rest {
-                        let _ = write!(&mut meta_str, ", {}={}", k, v);
+                    if !g.tags.is_empty() || g.location.is_some() || g.message.is_some() {
+                        result.push(' ');
                     }
-                    meta_str.push(')');
-                    parts.push(meta_str);
+                    let _ = write!(&mut result, "({}={}", first.0, first.1);
+                    for (k, v) in rest {
+                        let _ = write!(&mut result, ", {}={}", k, v);
+                    }
+                    result.push(')');
                 }
 
-                if parts.is_empty() {
-                    Cow::Borrowed("")
-                } else {
-                    Cow::Owned(parts.join(" "))
-                }
+                Cow::Owned(result)
             },
-        }
-    }
-
-    /// Helper function to add message to parts with proper location formatting.
-    /// If has_location is true and the last part is a location string (starts with "at "),
-    /// appends the message to that location. Otherwise, adds as a new part.
-    fn add_message_to_parts(parts: &mut ErrorVec<String>, msg: &str, has_location: bool) {
-        // Only attempt to merge with location if has_location is true AND
-        // there's actually a location part to merge with
-        let should_merge = has_location && parts.last().is_some_and(|p| p.starts_with("at "));
-
-        if should_merge {
-            // Safe: we just verified last() exists and starts with "at "
-            if let Some(last_part) = parts.last_mut() {
-                last_part.push_str(": ");
-                last_part.push_str(msg);
-            }
-        } else {
-            parts.push(msg.to_string());
         }
     }
 }
 
 impl Display for ErrorContext {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "{}", self.message())
+        match self {
+            Self::Simple(s) => write!(f, "{}", s.as_ref()),
+            Self::Group(g) => {
+                // Write tags if present
+                if let Some((first, rest)) = g.tags.split_first() {
+                    write!(f, "[{}", first.as_ref())?;
+                    for tag in rest {
+                        write!(f, ", {}", tag.as_ref())?;
+                    }
+                    write!(f, "]")?;
+                }
+
+                // Write location if present
+                if let Some(loc) = &g.location {
+                    if !g.tags.is_empty() {
+                        write!(f, " ")?;
+                    }
+                    write!(f, "at {}:{}", loc.file.as_ref(), loc.line)?;
+                }
+
+                // Write message if present
+                if let Some(msg) = &g.message {
+                    if !g.tags.is_empty() || g.location.is_some() {
+                        if g.location.is_some() {
+                            write!(f, ": ")?;
+                        } else {
+                            write!(f, " ")?;
+                        }
+                    }
+                    write!(f, "{}", msg.as_ref())?;
+                }
+
+                // Write metadata if present
+                if let Some((first, rest)) = g.metadata.split_first() {
+                    if !g.tags.is_empty() || g.location.is_some() || g.message.is_some() {
+                        write!(f, " ")?;
+                    }
+                    write!(f, "({}={}", first.0, first.1)?;
+                    for (k, v) in rest {
+                        write!(f, ", {}={}", k, v)?;
+                    }
+                    write!(f, ")")?;
+                }
+
+                Ok(())
+            },
+        }
     }
 }
 
