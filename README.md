@@ -10,7 +10,7 @@
 > **std::error defines error types. error-rail defines how errors flow.**
 
 ```rust
-use error_rail::simple::*;
+use error_rail::prelude::*;
 
 fn load_config() -> BoxedResult<String, std::io::Error> {
     std::fs::read_to_string("config.toml")
@@ -21,6 +21,7 @@ fn load_config() -> BoxedResult<String, std::io::Error> {
 ## Features
 
 - **Lazy formatting** — Use `context!` / `.ctx_with(...)` to format strings only when errors occur
+- **Chainable context** — Stack multiple contexts with `ErrorPipeline::with_context()`
 - **Validation accumulation** — Collect all errors, not just the first
 - **Transient error classification** — Built-in retry support
 - **Error fingerprinting** — Deduplicate errors in monitoring systems
@@ -33,7 +34,7 @@ fn load_config() -> BoxedResult<String, std::io::Error> {
 cargo add error-rail
 ```
 
-**For beginners** — Start with `simple`:
+### For Beginners — `simple`
 
 ```rust
 use error_rail::simple::*;
@@ -46,12 +47,12 @@ fn read_config() -> BoxedResult<String, std::io::Error> {
 fn main() {
     if let Err(e) = read_config() {
         eprintln!("{}", e.error_chain());
-        // loading configuration -> No such file or directory
+        // loading configuration -> No such file or directory (os error 2)
     }
 }
 ```
 
-**For general use** — Use `prelude`:
+### For General Use — `prelude`
 
 ```rust
 use error_rail::prelude::*;
@@ -63,168 +64,190 @@ fn process() -> BoxedResult<String, std::io::Error> {
 }
 ```
 
-## API Levels (You do NOT need to learn all of these)
+## API Levels
 
-Start here → `simple`  
-When you need more → `prelude`  
-Only if you are building services → `intermediate`  
-Almost never → `advanced`
+Most projects only need `simple` or `prelude`.
 
 | Module | When to Use | What's Included |
-|--------|------------|----------------|
-| `simple` | First time using error-rail | `BoxedResult`, `rail!`, `.ctx()`, `.error_chain()` |
-| `prelude` | When you need structured context | + `context!`, `group!`, `ErrorPipeline` |
-| `intermediate` | Building services | + `TransientError`, `Fingerprint`, formatting |
-| `advanced` | Writing libraries | + internal builders, `ErrorVec` |
+|--------|------------|-----------------|
+| `simple` | Getting started | `BoxedResult`, `rail!`, `.ctx()`, `.error_chain()` |
+| `prelude` | When structured context is needed | + `context!`, `group!`, `ErrorPipeline` |
+| `intermediate` | Service development | + `TransientError`, `Fingerprint` |
+| `advanced` | Library development | + internal builders, `ErrorVec` |
 | `prelude_async` | Async code | + `AsyncErrorPipeline`, retry, timeout |
 
-## Core Concepts (Advanced — skip on first read)
+---
 
-> **If you are using `simple`, you can skip this entire section.**
+## Context Chaining (Core Concepts)
 
-### Context Methods
-
-```rust
-// Static context (zero allocation)
-result.ctx("database connection failed")
-
-// Lazy formatted context (evaluated only on error)
-result.ctx(context!("user {} not found", user_id))
-
-// NOTE: `result.ctx(format!(...))` is eager because `format!` runs before `.ctx()`.
-
-// Structured context with tags & metadata
-result.ctx(group!(
-    tag("database"),
-    metadata("query_time_ms", "150")
-))
-```
-
-### Chaining Context (Sync)
-
-Use `.ctx()` for the first context, then `.ctx_boxed()` for additional layers:
+### 1. ErrorPipeline — Recommended for multiple contexts
 
 ```rust
 use error_rail::prelude::*;
 
+fn fetch_user(id: u64) -> BoxedResult<String, &'static str> {
+    ErrorPipeline::new(Err("db error"))
+        .with_context("querying users table")
+        .with_context(group!(tag("db"), metadata("user_id", "42")))
+        .with_context(context!("fetching user {}", id))
+        .finish_boxed()
+}
+// Error chain: fetching user 42 -> [db] (user_id=42) -> querying users table -> db error
+```
+
+### 2. ResultExt — Single context
+
+```rust
+use error_rail::prelude::*;
+
+// .ctx() returns BoxedResult<T, E>
 fn inner() -> BoxedResult<i32, &'static str> {
     Err("db error").ctx("querying database")
 }
 
+// Chain with .ctx_boxed() on BoxedResult
 fn outer() -> BoxedResult<i32, &'static str> {
     inner().ctx_boxed("in user service")
 }
 // Error chain: in user service -> querying database -> db error
 ```
 
-### Validation (Collect All Errors)
+### 3. Async — Direct chaining
 
-> **Note: This is available in `error_rail::validation`, not in `simple`.**
+```rust
+use error_rail::prelude_async::*;
+
+async fn fetch_user(id: u64) -> BoxedResult<String, ApiError> {
+    database.get_user(id)
+        .ctx("fetching user")           // FutureResultExt::ctx()
+        .ctx("in user service")         // Direct chaining possible!
+        .await
+        .map_err(Box::new)
+}
+```
+
+---
+
+## Lazy Context (Performance Optimization)
+
+```rust
+use error_rail::prelude::*;
+
+let user_id = 42;
+
+// ✅ context! — lazy evaluation (only on error)
+result.ctx(context!("user {} not found", user_id))
+
+// ✅ .ctx_with() — closure for complex logic
+result.ctx_with(|| format!("user {} not found", user_id))
+
+// ❌ format!() — always evaluated (even on success)
+result.ctx(format!("user {} not found", user_id))
+```
+
+## Structured Context
+
+```rust
+use error_rail::prelude::*;
+
+// Tags & metadata
+result.ctx(group!(
+    tag("database"),
+    metadata("query_time_ms", "150"),
+    location(file!(), line!())
+))
+```
+
+## Validation (Error Collection)
+
+> Use the `error_rail::validation` module
 
 ```rust
 use error_rail::validation::Validation;
+
+fn validate_age(age: i32) -> Validation<&'static str, i32> {
+    if age >= 0 && age <= 150 {
+        Validation::Valid(age)
+    } else {
+        Validation::invalid("age must be between 0 and 150")
+    }
+}
 
 let results: Validation<&str, Vec<_>> = vec![
     validate_age(-5),
     validate_name(""),
 ].into_iter().collect();
 
-// Both errors collected, not just the first
+// All errors are collected (not just the first one)
 ```
 
-### Macros
+## Transient Errors & Retry
+
+```rust
+use error_rail::traits::TransientError;
+use std::time::Duration;
+
+#[derive(Debug)]
+enum ApiError {
+    Timeout,
+    RateLimited(u64),
+    NotFound,
+}
+
+impl TransientError for ApiError {
+    fn is_transient(&self) -> bool {
+        matches!(self, ApiError::Timeout | ApiError::RateLimited(_))
+    }
+
+    fn retry_after_hint(&self) -> Option<Duration> {
+        match self {
+            ApiError::RateLimited(secs) => Some(Duration::from_secs(*secs)),
+            _ => None,
+        }
+    }
+}
+```
+
+## Error Fingerprinting
 
 ```rust
 use error_rail::prelude::*;
 
-// rail! - Wrap any Result in ErrorPipeline and box it
-let result = rail!(std::fs::read_to_string("config.toml"));
+let err = ComposableError::new("database timeout")
+    .with_context(ErrorContext::tag("db"))
+    .set_code(504);
 
-// context! - Lazy formatted context (only evaluated on error)
-result.ctx(context!("loading config for user {}", user_id))
-
-// group! - Structured context with tags & metadata
-result.ctx(group!(tag("config"), metadata("path", "config.toml")))
+// For Sentry grouping, log deduplication
+println!("Fingerprint: {}", err.fingerprint_hex());
 ```
 
-```rust
-use error_rail::prelude_async::*;
-
-// rail_async! - Async version of rail!
-async fn load() -> BoxedResult<String, IoError> {
-    rail_async!(tokio::fs::read_to_string("config.toml"))
-        .with_context("loading config")
-        .finish_boxed()
-        .await
-}
-```
-
-### Async Support
-
-In async code, `.ctx()` can be chained directly on futures:
-
-```rust,ignore
-use error_rail::prelude_async::*;
-
-async fn fetch_user(id: u64) -> BoxedResult<User, DbError> {
-    database.get_user(id)
-        .ctx("fetching user")           // FutureResultExt::ctx()
-        .ctx("in user service")         // Chainable!
-        .await
-        .map_err(Box::new)
-}
-// Error chain: in user service -> fetching user -> [original error]
-```
+---
 
 ## Anti-Patterns
 
 ```rust
-// ❌ DON'T: Add excessive context at every step
-fn bad() -> BoxedResult<(), MyError> {
+use error_rail::simple::*;
+
+// ❌ DON'T: Excessive context at every step
+fn bad() -> BoxedResult<(), &'static str> {
     let a = step_a().ctx("step a")?;
     let b = step_b(a).ctx("step b")?;  // Noise, not value
     step_c(b).ctx("step c")
 }
-```
-
-```rust
-use error_rail::simple::*;
 
 // ✅ DO: One .ctx() per I/O boundary
 fn good() -> BoxedResult<String, std::io::Error> {
-    let data = std::fs::read_to_string("file.txt").ctx("reading input")?;
-    Ok(data)
+    std::fs::read_to_string("file.txt").ctx("reading input")
 }
 ```
-
-### Avoid Glob Imports in Large Projects
-
-For better IDE support and compile times in large codebases:
-
-```rust
-// ❌ Glob import (okay for small projects)
-use error_rail::prelude::*;
-
-// ✅ Explicit imports (recommended for large projects)
-use error_rail::prelude::{BoxedResult, ResultExt, rail};
-```
-
-## When should I move from `simple` to `prelude`?
-
-Move to `prelude` when you need:
-
-- **Structured context** - tags and metadata for better error categorization
-- **Lazy formatted messages** - use `context!` / `.ctx_with(...)` so formatting only happens on error
-- **ErrorPipeline** - for building libraries or complex error chains
-- **Writing a library** - not just an application
-
-> You can stay with `simple` for a long time! It's designed to be sufficient for most applications.
 
 ## When NOT to Use error-rail
 
 - Simple scripts that just print errors and exit
-- Teams with little Rust experience
 - When `anyhow` or `eyre` already meets your needs
+- Teams with little Rust experience
+
+---
 
 ## Feature Flags
 
@@ -252,10 +275,41 @@ error-rail = { version = "0.9", features = ["full"] }  # Everything
 ## Examples
 
 ```sh
+cargo run --example readme_features           # Validate README examples
 cargo run --example quick_start
 cargo run --example async_api_patterns --features tokio
 cargo run --example async_tower_integration --features tower
 ```
+
+---
+
+## Contributing
+
+Issues and PRs are welcome!
+
+### Development
+
+```bash
+# Run tests
+cargo test
+
+# Validate README examples
+cargo run --example readme_features
+
+# Lint check
+cargo clippy --all-features
+
+# Doc tests
+cargo test --doc
+```
+
+### Guidelines
+
+- **Bug reports**: Submit to GitHub Issues with a reproducible example
+- **Feature requests**: Discuss via issues first, then PR
+- **Pull Requests**: Tests required, must pass `cargo clippy`
+
+---
 
 ## License
 
