@@ -2,7 +2,10 @@ use super::ComposableError;
 use core::fmt::Display;
 
 /// Legacy formatter for customizing error display output.
-#[deprecated(since = "0.9.0", note = "Use ErrorFormatBuilder via ComposableError::fmt() instead")]
+#[deprecated(
+    since = "0.9.0",
+    note = "Use ErrorFormatBuilder via ComposableError::fmt() instead. This will be removed in 0.11.0."
+)]
 #[doc(hidden)]
 pub struct LegacyErrorFormatter<'a, E> {
     pub(crate) error: &'a ComposableError<E>,

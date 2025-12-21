@@ -10,6 +10,8 @@ pub struct FingerprintConfig<'a, E> {
     pub(crate) include_code: bool,
     pub(crate) include_message: bool,
     pub(crate) include_metadata: bool,
+    pub(crate) include_keys: Option<&'a [&'a str]>,
+    pub(crate) exclude_keys: Option<&'a [&'a str]>,
 }
 
 impl<'a, E> FingerprintConfig<'a, E> {
@@ -20,6 +22,8 @@ impl<'a, E> FingerprintConfig<'a, E> {
             include_code: true,
             include_message: true,
             include_metadata: false,
+            include_keys: None,
+            exclude_keys: None,
         }
     }
 
@@ -48,6 +52,22 @@ impl<'a, E> FingerprintConfig<'a, E> {
     #[must_use]
     pub fn include_metadata(mut self, include: bool) -> Self {
         self.include_metadata = include;
+        self
+    }
+
+    /// Explicitly include only these metadata keys in the fingerprint.
+    #[must_use]
+    pub fn include_metadata_keys(mut self, keys: &'a [&'a str]) -> Self {
+        self.include_metadata = true;
+        self.include_keys = Some(keys);
+        self
+    }
+
+    /// Exclude these metadata keys from the fingerprint.
+    #[must_use]
+    pub fn exclude_metadata_keys(mut self, keys: &'a [&'a str]) -> Self {
+        self.include_metadata = true;
+        self.exclude_keys = Some(keys);
         self
     }
 
@@ -112,7 +132,24 @@ impl<'a, E> FingerprintConfig<'a, E> {
             let mut metadata = crate::types::alloc_type::Vec::with_capacity(meta_count);
             for ctx in &self.error.context {
                 if let ErrorContext::Group(g) = ctx {
-                    metadata.extend_from_slice(&g.metadata);
+                    for (k, v) in &g.metadata {
+                        // Filter metadata based on include/exclude keys
+                        let mut should_include = true;
+                        if let Some(inc) = self.include_keys {
+                            should_include = inc.iter().any(|&ik| ik == k.as_ref());
+                        }
+                        if should_include {
+                            if let Some(exc) = self.exclude_keys {
+                                if exc.iter().any(|&ek| ek == k.as_ref()) {
+                                    should_include = false;
+                                }
+                            }
+                        }
+
+                        if should_include {
+                            metadata.push((k, v));
+                        }
+                    }
                 }
             }
             metadata.sort_unstable_by(|a, b| a.0.cmp(&b.0));

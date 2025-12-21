@@ -78,5 +78,6 @@ pub mod error_context_builder;
 pub mod error_context_builder_example;
 pub mod error_formatter;
 pub mod error_pipeline;
+pub mod fingerprint;
 pub mod pipeline_ops;
 pub mod retry;

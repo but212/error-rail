@@ -253,13 +253,13 @@ fn good() -> BoxedResult<String, std::io::Error> {
 
 ```toml
 [dependencies]
-error-rail = "0.9"                                    # Core (no_std)
-error-rail = { version = "0.9", features = ["std"] }  # + backtraces
-error-rail = { version = "0.9", features = ["serde"] } # + serde support
-error-rail = { version = "0.9", features = ["async"] } # + async support
-error-rail = { version = "0.9", features = ["tokio"] } # + retry, timeout
-error-rail = { version = "0.9", features = ["tower"] } # + Tower middleware
-error-rail = { version = "0.9", features = ["full"] }  # Everything
+error-rail = "0.10"                                    # Core (no_std)
+error-rail = { version = "0.10", features = ["std"] }  # + backtraces
+error-rail = { version = "0.10", features = ["serde"] } # + serde support
+error-rail = { version = "0.10", features = ["async"] } # + async support
+error-rail = { version = "0.10", features = ["tokio"] } # + retry, timeout
+error-rail = { version = "0.10", features = ["tower"] } # + Tower middleware
+error-rail = { version = "0.10", features = ["full"] }  # Everything
 ```
 
 ## Documentation
