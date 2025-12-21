@@ -5,6 +5,9 @@ use crate::types::ErrorPipeline;
 use crate::types::LazyGroupContext;
 use core::time::Duration;
 
+#[cfg(not(feature = "std"))]
+use alloc::format;
+
 /// Retry metadata hints builder.
 ///
 /// **Note**: This type does NOT perform actual retries. It only attaches

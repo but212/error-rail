@@ -8,6 +8,8 @@
 use crate::traits::IntoErrorContext;
 use crate::types::alloc_type::String;
 use crate::types::{ErrorContext, ErrorVec};
+#[cfg(not(feature = "std"))]
+use alloc::string::ToString;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
