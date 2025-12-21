@@ -147,7 +147,7 @@ impl<'a, E> FingerprintConfig<'a, E> {
                     .map_or(true, |keys| keys.contains(&key_str));
                 let excluded = self
                     .exclude_keys
-                    .map_or(false, |keys| keys.contains(&key_str));
+                    .is_some_and(|keys| keys.contains(&key_str));
 
                 if included && !excluded {
                     metadata.push((k, v));
