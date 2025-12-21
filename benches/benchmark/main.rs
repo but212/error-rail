@@ -5,11 +5,15 @@ mod context;
 mod conversions;
 mod core;
 mod features;
+mod fingerprint;
+mod formatting;
+mod lazy_context;
 mod memory;
 mod pipeline;
 mod retry;
 mod scaling;
 mod scenarios;
+mod traits;
 mod validation;
 
 mod async_ops;
@@ -31,6 +35,11 @@ criterion_main!(
     features::serde_benches,
     async_ops::async_ops_benches,
     tower::tower_benches,
+    // New benchmark groups
+    traits::traits_benches,
+    formatting::formatting_benches,
+    fingerprint::fingerprint_benches,
+    lazy_context::lazy_context_benches,
 );
 
 #[cfg(all(feature = "std", not(feature = "serde")))]
@@ -47,6 +56,11 @@ criterion_main!(
     features::std_benches,
     async_ops::async_ops_benches,
     tower::tower_benches,
+    // New benchmark groups
+    traits::traits_benches,
+    formatting::formatting_benches,
+    fingerprint::fingerprint_benches,
+    lazy_context::lazy_context_benches,
 );
 
 #[cfg(all(feature = "serde", not(feature = "std")))]
@@ -63,6 +77,11 @@ criterion_main!(
     features::serde_benches,
     async_ops::async_ops_benches,
     tower::tower_benches,
+    // New benchmark groups
+    traits::traits_benches,
+    formatting::formatting_benches,
+    fingerprint::fingerprint_benches,
+    lazy_context::lazy_context_benches,
 );
 
 #[cfg(not(any(feature = "std", feature = "serde")))]
@@ -78,4 +97,9 @@ criterion_main!(
     memory::memory_benches,
     async_ops::async_ops_benches,
     tower::tower_benches,
+    // New benchmark groups
+    traits::traits_benches,
+    formatting::formatting_benches,
+    fingerprint::fingerprint_benches,
+    lazy_context::lazy_context_benches,
 );
