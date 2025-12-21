@@ -90,12 +90,9 @@ impl<T, E> ErrorPipeline<T, E> {
     where
         C: IntoErrorContext,
     {
-        if self.result.is_ok() {
-            return self;
+        if self.result.is_err() {
+            self.pending_contexts.push(context.into_error_context());
         }
-
-        let ctx = context.into_error_context();
-        self.pending_contexts.push(ctx);
         self
     }
 
@@ -210,36 +207,17 @@ impl<T, E> ErrorPipeline<T, E> {
     }
 
     /// Attempts to recover from an error using a fallback function.
-    ///
-    /// If the current result is `Err`, calls the recovery function. If recovery
-    /// succeeds, all pending contexts are discarded since the error is resolved.
-    /// If recovery fails, pending contexts are preserved.
-    ///
-    /// **Note:** Successful recovery discards all accumulated contexts from the
-    /// error path, as the error has been handled and resolved.
-    ///
-    /// # Arguments
-    ///
-    /// * `recovery` - Function that attempts to recover from the error
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use error_rail::ErrorPipeline;
-    ///
-    /// let pipeline = ErrorPipeline::new(Err("error"))
-    ///     .recover(|_| Ok(42));
-    /// ```
     #[inline]
-    pub fn recover<F>(self, recovery: F) -> ErrorPipeline<T, E>
+    pub fn recover<F>(self, recovery: F) -> Self
     where
         F: FnOnce(E) -> Result<T, E>,
     {
-        match self.result {
-            Ok(v) => ErrorPipeline { result: Ok(v), pending_contexts: self.pending_contexts },
+        let Self { result, pending_contexts } = self;
+        match result {
+            Ok(v) => Self { result: Ok(v), pending_contexts },
             Err(e) => match recovery(e) {
-                Ok(v) => ErrorPipeline { result: Ok(v), pending_contexts: Accumulator::new() },
-                Err(e) => ErrorPipeline { result: Err(e), pending_contexts: self.pending_contexts },
+                Ok(v) => Self { result: Ok(v), pending_contexts: Accumulator::new() },
+                Err(e) => Self { result: Err(e), pending_contexts },
             },
         }
     }
@@ -265,10 +243,11 @@ impl<T, E> ErrorPipeline<T, E> {
     ///     .fallback(42);
     /// ```
     #[inline]
-    pub fn fallback(self, value: T) -> ErrorPipeline<T, E> {
-        match self.result {
-            Ok(v) => ErrorPipeline { result: Ok(v), pending_contexts: self.pending_contexts },
-            Err(_) => ErrorPipeline { result: Ok(value), pending_contexts: Accumulator::new() },
+    pub fn fallback(self, value: T) -> Self {
+        let Self { result, pending_contexts } = self;
+        match result {
+            Ok(v) => Self { result: Ok(v), pending_contexts },
+            Err(_) => Self { result: Ok(value), pending_contexts: Accumulator::new() },
         }
     }
 
@@ -290,13 +269,14 @@ impl<T, E> ErrorPipeline<T, E> {
     ///     .recover_safe(|_| 42);
     /// ```
     #[inline]
-    pub fn recover_safe<F>(self, f: F) -> ErrorPipeline<T, E>
+    pub fn recover_safe<F>(self, f: F) -> Self
     where
         F: FnOnce(E) -> T,
     {
-        match self.result {
-            Ok(v) => ErrorPipeline { result: Ok(v), pending_contexts: self.pending_contexts },
-            Err(e) => ErrorPipeline { result: Ok(f(e)), pending_contexts: Accumulator::new() },
+        let Self { result, pending_contexts } = self;
+        match result {
+            Ok(v) => Self { result: Ok(v), pending_contexts },
+            Err(e) => Self { result: Ok(f(e)), pending_contexts: Accumulator::new() },
         }
     }
 
@@ -372,10 +352,7 @@ impl<T, E> ErrorPipeline<T, E> {
     pub fn finish_boxed(self) -> crate::types::BoxedComposableResult<T, E> {
         match self.result {
             Ok(v) => Ok(v),
-            Err(e) => {
-                let composable = ComposableError::new(e).with_contexts(self.pending_contexts);
-                Err(Box::new(composable))
-            },
+            Err(e) => Err(Box::new(ComposableError::new(e).with_contexts(self.pending_contexts))),
         }
     }
 
@@ -401,10 +378,7 @@ impl<T, E> ErrorPipeline<T, E> {
     pub fn finish(self) -> ComposableResult<T, E> {
         match self.result {
             Ok(v) => Ok(v),
-            Err(e) => {
-                let composable = ComposableError::new(e).with_contexts(self.pending_contexts);
-                Err(composable)
-            },
+            Err(e) => Err(ComposableError::new(e).with_contexts(self.pending_contexts)),
         }
     }
 
@@ -441,10 +415,9 @@ impl<T, E> ErrorPipeline<T, E> {
     where
         E: TransientError,
     {
-        match &self.result {
-            Ok(_) => false,
-            Err(e) => e.is_transient(),
-        }
+        self.result
+            .as_ref()
+            .is_err_and(TransientError::is_transient)
     }
 
     /// Attempts recovery only if the error is transient.
@@ -486,18 +459,19 @@ impl<T, E> ErrorPipeline<T, E> {
     /// assert_eq!(retry_count.get(), 1);
     /// ```
     #[inline]
-    pub fn recover_transient<F>(self, recovery: F) -> ErrorPipeline<T, E>
+    pub fn recover_transient<F>(self, recovery: F) -> Self
     where
         E: TransientError,
         F: FnOnce(E) -> Result<T, E>,
     {
-        match self.result {
-            Ok(v) => ErrorPipeline { result: Ok(v), pending_contexts: self.pending_contexts },
+        let Self { result, pending_contexts } = self;
+        match result {
+            Ok(v) => Self { result: Ok(v), pending_contexts },
             Err(e) if e.is_transient() => match recovery(e) {
-                Ok(v) => ErrorPipeline { result: Ok(v), pending_contexts: Accumulator::new() },
-                Err(e) => ErrorPipeline { result: Err(e), pending_contexts: self.pending_contexts },
+                Ok(v) => Self { result: Ok(v), pending_contexts: Accumulator::new() },
+                Err(e) => Self { result: Err(e), pending_contexts },
             },
-            Err(e) => ErrorPipeline { result: Err(e), pending_contexts: self.pending_contexts },
+            Err(e) => Self { result: Err(e), pending_contexts },
         }
     }
 
@@ -539,9 +513,8 @@ impl<T, E> ErrorPipeline<T, E> {
         E: TransientError,
     {
         match &self.result {
-            Ok(_) => None,
             Err(e) if e.is_transient() => Some(self),
-            Err(_) => None,
+            _ => None,
         }
     }
 
@@ -574,10 +547,10 @@ impl<T, E> ErrorPipeline<T, E> {
     where
         E: TransientError,
     {
-        match &self.result {
-            Ok(_) => None,
-            Err(e) => e.retry_after_hint(),
-        }
+        self.result
+            .as_ref()
+            .err()
+            .and_then(TransientError::retry_after_hint)
     }
 
     /// Adds a tag indicating this error was retried.

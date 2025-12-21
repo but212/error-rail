@@ -60,7 +60,7 @@ impl<E, A> Validation<E, A> {
     /// assert_eq!(v.into_value(), Some(42));
     /// ```
     #[inline]
-    pub fn valid(value: A) -> Self {
+    pub const fn valid(value: A) -> Self {
         Self::Valid(value)
     }
 
@@ -80,9 +80,7 @@ impl<E, A> Validation<E, A> {
     /// ```
     #[inline]
     pub fn invalid(error: E) -> Self {
-        let mut acc = Accumulator::new();
-        acc.push(error);
-        Self::Invalid(acc)
+        Self::Invalid(Accumulator::single(error))
     }
 
     /// Creates an invalid value from an iterator of errors.
@@ -109,8 +107,7 @@ impl<E, A> Validation<E, A> {
     where
         I: IntoIterator<Item = E>,
     {
-        let mut acc = Accumulator::new();
-        acc.extend(errors);
+        let acc = Accumulator::from_iter(errors);
         assert!(!acc.is_empty(), "invalid_many requires at least one error");
         Self::Invalid(acc)
     }
@@ -142,8 +139,7 @@ impl<E, A> Validation<E, A> {
     where
         I: IntoIterator<Item = E>,
     {
-        let mut acc = Accumulator::new();
-        acc.extend(errors);
+        let acc = Accumulator::from_iter(errors);
         if acc.is_empty() {
             None
         } else {
@@ -163,7 +159,7 @@ impl<E, A> Validation<E, A> {
     /// ```
     #[must_use]
     #[inline]
-    pub fn is_valid(&self) -> bool {
+    pub const fn is_valid(&self) -> bool {
         matches!(self, Self::Valid(_))
     }
 
@@ -179,8 +175,8 @@ impl<E, A> Validation<E, A> {
     /// ```
     #[must_use]
     #[inline]
-    pub fn is_invalid(&self) -> bool {
-        !self.is_valid()
+    pub const fn is_invalid(&self) -> bool {
+        matches!(self, Self::Invalid(_))
     }
 
     /// Maps the valid value using the provided function.
@@ -268,12 +264,12 @@ impl<E, A> Validation<E, A> {
     /// assert_eq!(res.into_value(), Some(42));
     /// ```
     #[inline]
-    pub fn or_else<F>(self, op: F) -> Validation<E, A>
+    pub fn or_else<F>(self, op: F) -> Self
     where
-        F: FnOnce(ErrorVec<E>) -> Validation<E, A>,
+        F: FnOnce(ErrorVec<E>) -> Self,
     {
         match self {
-            Self::Valid(value) => Validation::Valid(value),
+            Self::Valid(value) => Self::Valid(value),
             Self::Invalid(errors) => op(errors.into_inner()),
         }
     }
@@ -310,11 +306,12 @@ impl<E, A> Validation<E, A> {
     #[inline]
     pub fn zip<B>(self, other: Validation<E, B>) -> Validation<E, (A, B)> {
         match (self, other) {
-            (Validation::Valid(a), Validation::Valid(b)) => Validation::Valid((a, b)),
-            (Validation::Invalid(e), Validation::Valid(_)) => Validation::Invalid(e),
-            (Validation::Valid(_), Validation::Invalid(e)) => Validation::Invalid(e),
-            (Validation::Invalid(mut e1), Validation::Invalid(e2)) => {
-                e1.extend(e2.into_inner());
+            (Self::Valid(a), Validation::Valid(b)) => Validation::Valid((a, b)),
+            (Self::Invalid(e), Validation::Valid(_)) | (Self::Valid(_), Validation::Invalid(e)) => {
+                Validation::Invalid(e)
+            },
+            (Self::Invalid(mut e1), Validation::Invalid(e2)) => {
+                e1.merge(e2);
                 Validation::Invalid(e1)
             },
         }
@@ -341,15 +338,11 @@ impl<E, A> Validation<E, A> {
     #[inline]
     pub fn map_err<F, G>(self, f: F) -> Validation<G, A>
     where
-        F: Fn(E) -> G,
+        F: FnMut(E) -> G,
     {
         match self {
             Self::Valid(value) => Validation::Valid(value),
-            Self::Invalid(errors) => {
-                let mut acc = Accumulator::new();
-                acc.extend(errors.into_inner().into_iter().map(f));
-                Validation::Invalid(acc)
-            },
+            Self::Invalid(errors) => Validation::Invalid(errors.map(f)),
         }
     }
 

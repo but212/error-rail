@@ -1,5 +1,27 @@
 # CHANGELOG
 
+## [Unreleased]
+
+### Added
+
+- **API Constification**: Many core methods are now `const`, including `ExponentialBackoff::new`, `AsyncErrorPipeline::new`, `Validation::valid`, `RetryResult` methods (`is_ok`, `is_err`, `had_retries`), and `LazyContext::new`.
+- **Copy Implementations**: `ExponentialBackoff`, `FixedDelay`, and `TimeoutError` now implement `Copy` for easier movement across boundaries.
+- **Enhanced Accumulator**: Added `single`, `merge`, and `map` methods to `Accumulator` for more flexible collection management.
+- **Improved Trait Bounds**: Relaxed `Send + 'static` and `T: Send + 'static` constraints on `AsyncErrorPipeline` methods (`mark_transient_if`, `map`, `step`, `fallback`, `recover_safe`), making it compatible with more future types.
+- **Safety Documentation**: Added `#[must_use]` to `ErrorRailFuture` to prevent accidental ignorance of future execution.
+
+### Changed
+
+- **Performance Optimizations**:
+  - **ErrorContext Efficiency**: Refactored `ErrorContext::message()` and its `Display` implementation to write directly to strings/formatters, eliminating intermediate `ErrorVec` allocations and `join` calls.
+  - **In-place Context Attachment**: Added `with_context_inplace` to `ComposableError` and updated `BoxedResultExt` to use it, preventing unnecessary reallocations when adding context to boxed errors.
+  - **Async Validation Optimization**: `validate_all_async` and `Validation::from_iter` now leverage `size_hint` for pre-allocation and avoid redundant intermediate collections.
+  - **Fingerprint Computation**: Refactored `FingerprintConfig` to use a dedicated `FnvHasher` and specialized hashing routines for tags, code, message, and metadata, significantly reducing overhead.
+  - **Widespread Inlining**: Added `#[inline]` and `#[inline(always)]` to frequently called methods across core traits (`ResultExt`, `WithError`, `ErrorPipeline`) and conversion utilities.
+- **Code Quality & Documentation**:
+  - Improved docstring examples for `Accumulator`, `MarkedError`, and other internal types.
+  - Consistent use of `Self` and simplified logic in conversion functions (`validation_to_result`, `flatten_composable_result`, etc.).
+
 ## [0.10.0]
 
 ### Added - 0.10.0

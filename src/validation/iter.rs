@@ -479,8 +479,13 @@ impl<E, A, C> FromIterator<Validation<E, A>> for Validation<E, C>
 where
     C: FromIterator<A>,
 {
+    #[inline]
     fn from_iter<T: IntoIterator<Item = Validation<E, A>>>(iter: T) -> Self {
-        let mut values: ErrorVec<A> = ErrorVec::new();
+        let iter = iter.into_iter();
+        let (lower, _) = iter.size_hint();
+
+        // Pre-allocate values with optimistic capacity (all items valid)
+        let mut values = ErrorVec::with_capacity(lower);
         let mut errors = ErrorVec::new();
 
         for item in iter {

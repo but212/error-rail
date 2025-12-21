@@ -13,7 +13,6 @@
 //! error-rail = { version = "0.8", features = ["tracing"] }
 //! ```
 
-use crate::types::alloc_type::Vec;
 use core::future::Future;
 use core::pin::Pin;
 use core::task::{Context, Poll};
@@ -51,6 +50,7 @@ pub trait FutureSpanExt<T, E>: Future<Output = Result<T, E>> + Sized {
     ///
     /// When the future resolves to an error, the current span's name and
     /// metadata are attached as context to the error.
+    #[inline]
     fn with_span_context(self) -> SpanContextFuture<Self> {
         SpanContextFuture { inner: self, span: Span::current() }
     }
@@ -59,6 +59,7 @@ pub trait FutureSpanExt<T, E>: Future<Output = Result<T, E>> + Sized {
     ///
     /// Unlike `with_span_context()`, this method uses the provided span
     /// instead of the current span.
+    #[inline]
     fn with_span(self, span: Span) -> SpanContextFuture<Self> {
         SpanContextFuture { inner: self, span }
     }
@@ -84,15 +85,15 @@ where
 {
     type Output = BoxedComposableResult<T, E>;
 
+    #[inline]
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = self.project();
 
         match this.inner.poll(cx) {
             Poll::Ready(Ok(value)) => Poll::Ready(Ok(value)),
-            Poll::Ready(Err(error)) => {
-                let context = span_to_context(this.span);
-                Poll::Ready(Err(Box::new(ComposableError::new(error).with_context(context))))
-            },
+            Poll::Ready(Err(error)) => Poll::Ready(Err(Box::new(
+                ComposableError::new(error).with_context(span_to_context(this.span)),
+            ))),
             Poll::Pending => Poll::Pending,
         }
     }
@@ -110,23 +111,28 @@ where
 /// - **Metadata `target`**: The module path where the span was created
 /// - **Metadata `level`**: The span's log level (TRACE, DEBUG, INFO, WARN, ERROR)
 /// - **Metadata `fields`**: Names of fields defined on the span (values require subscriber)
+#[inline]
 fn span_to_context(span: &Span) -> ErrorContext {
     let Some(meta) = span.metadata() else {
         return ErrorContext::new("in unknown span");
     };
 
-    let mut builder = ErrorContext::builder().tag(meta.name());
+    let mut builder = ErrorContext::builder()
+        .tag(meta.name())
+        .metadata("target", meta.target())
+        .metadata("level", meta.level().as_str());
 
-    // Add target module path
-    builder = builder.metadata("target", meta.target());
+    let mut fields_iter = meta.fields().iter();
+    if let Some(first) = fields_iter.next() {
+        use crate::types::alloc_type::String;
+        use core::fmt::Write;
 
-    // Add log level
-    builder = builder.metadata("level", meta.level().as_str());
-
-    // Add field names (values not accessible without subscriber integration)
-    let field_names: Vec<&str> = meta.fields().iter().map(|f| f.name()).collect();
-    if !field_names.is_empty() {
-        builder = builder.metadata("fields", field_names.join(", "));
+        let mut fields_str = String::from(first.name());
+        for field in fields_iter {
+            fields_str.push_str(", ");
+            let _ = write!(fields_str, "{}", field.name());
+        }
+        builder = builder.metadata("fields", fields_str);
     }
 
     builder.build()
@@ -152,17 +158,16 @@ pub trait ResultSpanExt<T, E> {
 }
 
 impl<T, E> ResultSpanExt<T, E> for Result<T, E> {
+    #[inline]
     fn with_current_span(self) -> BoxedComposableResult<T, E> {
         self.with_span(&Span::current())
     }
 
+    #[inline]
     fn with_span(self, span: &Span) -> BoxedComposableResult<T, E> {
         match self {
             Ok(v) => Ok(v),
-            Err(e) => {
-                let context = span_to_context(span);
-                Err(Box::new(ComposableError::new(e).with_context(context)))
-            },
+            Err(e) => Err(Box::new(ComposableError::new(e).with_context(span_to_context(span)))),
         }
     }
 }
@@ -181,7 +186,7 @@ impl<T, E> ResultSpanExt<T, E> for Result<T, E> {
 /// let instrumented = instrument_error(error);
 /// // Error now contains context from all active spans
 /// ```
+#[inline]
 pub fn instrument_error<E>(error: E) -> ComposableError<E> {
-    let span = Span::current();
-    ComposableError::new(error).with_context(span_to_context(&span))
+    ComposableError::new(error).with_context(span_to_context(&Span::current()))
 }

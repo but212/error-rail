@@ -58,16 +58,12 @@ impl<T, E> WithError<E> for Validation<E, T> {
     type Success = T;
     type ErrorOutput<G> = Validation<G, T>;
 
+    #[inline]
     fn fmap_error<F, G>(self, f: F) -> Self::ErrorOutput<G>
     where
         F: Fn(E) -> G,
     {
-        match self {
-            Validation::Valid(t) => Validation::Valid(t),
-            Validation::Invalid(e) => {
-                Validation::Invalid(e.into_inner().into_iter().map(f).collect())
-            },
-        }
+        self.map_err(f)
     }
 
     /// Converts the validation to a result, taking only the first error if invalid.
@@ -92,6 +88,7 @@ impl<T, E> WithError<E> for Validation<E, T> {
     /// let invalid = Validation::<&str, i32>::invalid_many(vec!["error1", "error2"]);
     /// assert_eq!(invalid.to_result_first(), Err("error1"));
     /// ```
+    #[inline]
     fn to_result_first(self) -> Result<Self::Success, E> {
         match self {
             Validation::Valid(t) => Ok(t),
@@ -124,10 +121,8 @@ impl<T, E> WithError<E> for Validation<E, T> {
     /// let invalid = Validation::<&str, i32>::invalid_many(vec!["error1", "error2"]);
     /// assert_eq!(invalid.to_result_all(), Err(vec!["error1", "error2"].into()));
     /// ```
+    #[inline]
     fn to_result_all(self) -> Result<Self::Success, ErrorVec<E>> {
-        match self {
-            Validation::Valid(t) => Ok(t),
-            Validation::Invalid(e) => Err(e.into_inner()),
-        }
+        self.to_result()
     }
 }

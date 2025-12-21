@@ -77,93 +77,117 @@ impl<'a, E> FingerprintConfig<'a, E> {
     where
         E: Display,
     {
-        const FNV_OFFSET: u64 = 0xcbf29ce484222325;
-        let mut hash = FNV_OFFSET;
+        let mut hasher = FnvHasher::new();
 
         if self.include_tags {
-            let tag_count: usize = self
-                .error
-                .context
-                .iter()
-                .filter_map(|ctx| match ctx {
-                    ErrorContext::Group(g) => Some(g.tags.len()),
-                    _ => None,
-                })
-                .sum();
-
-            let mut tags = crate::types::alloc_type::Vec::with_capacity(tag_count);
-            for ctx in &self.error.context {
-                if let ErrorContext::Group(g) = ctx {
-                    tags.extend_from_slice(&g.tags);
-                }
-            }
-            tags.sort_unstable();
-
-            for tag in tags {
-                hash_bytes(&mut hash, b"tag:");
-                hash_bytes(&mut hash, tag.as_bytes());
-            }
+            self.hash_tags(&mut hasher);
         }
 
         if self.include_code {
-            if let Some(code) = self.error.error_code {
-                hash_bytes(&mut hash, b"code:");
-                hash_bytes(&mut hash, &code.to_le_bytes());
-            }
+            self.hash_code(&mut hasher);
         }
 
         if self.include_message {
-            hash_bytes(&mut hash, b"msg:");
-            let mut hasher = DisplayHasher::new(&mut hash);
-            let _ = write!(hasher, "{}", self.error.core_error);
+            self.hash_message(&mut hasher);
         }
 
         if self.include_metadata {
-            let meta_count: usize = self
-                .error
-                .context
-                .iter()
-                .filter_map(|ctx| match ctx {
-                    ErrorContext::Group(g) => Some(g.metadata.len()),
-                    _ => None,
-                })
-                .sum();
+            self.hash_metadata(&mut hasher);
+        }
 
-            let mut metadata = crate::types::alloc_type::Vec::with_capacity(meta_count);
-            let all_metadata = self
-                .error
-                .context
-                .iter()
-                .filter_map(|ctx| match ctx {
-                    ErrorContext::Group(g) => Some(g.metadata.iter()),
-                    _ => None,
-                })
-                .flatten();
+        hasher.finish()
+    }
 
-            for (k, v) in all_metadata {
-                let key_str: &str = k.as_ref();
-                let included = self
-                    .include_keys
-                    .map_or(true, |keys| keys.contains(&key_str));
-                let excluded = self
-                    .exclude_keys
-                    .is_some_and(|keys| keys.contains(&key_str));
+    #[inline]
+    fn hash_tags(&self, hasher: &mut FnvHasher) {
+        let tag_count: usize = self
+            .error
+            .context
+            .iter()
+            .filter_map(|ctx| match ctx {
+                ErrorContext::Group(g) => Some(g.tags.len()),
+                _ => None,
+            })
+            .sum();
 
-                if included && !excluded {
-                    metadata.push((k, v));
-                }
+        if tag_count == 0 {
+            return;
+        }
+
+        let mut tags = crate::types::alloc_type::Vec::with_capacity(tag_count);
+        for ctx in &self.error.context {
+            if let ErrorContext::Group(g) = ctx {
+                tags.extend_from_slice(&g.tags);
             }
-            metadata.sort_unstable_by(|a, b| a.0.cmp(b.0));
+        }
+        tags.sort_unstable();
 
-            for (key, value) in metadata {
-                hash_bytes(&mut hash, b"meta:");
-                hash_bytes(&mut hash, key.as_bytes());
-                hash_bytes(&mut hash, b"=");
-                hash_bytes(&mut hash, value.as_bytes());
+        for tag in tags {
+            hasher.write(b"tag:");
+            hasher.write(tag.as_bytes());
+        }
+    }
+
+    #[inline]
+    fn hash_code(&self, hasher: &mut FnvHasher) {
+        if let Some(code) = self.error.error_code {
+            hasher.write(b"code:");
+            hasher.write(&code.to_le_bytes());
+        }
+    }
+
+    #[inline]
+    fn hash_message(&self, hasher: &mut FnvHasher)
+    where
+        E: Display,
+    {
+        hasher.write(b"msg:");
+        let _ = write!(hasher, "{}", self.error.core_error);
+    }
+
+    #[inline]
+    fn hash_metadata(&self, hasher: &mut FnvHasher) {
+        let meta_count: usize = self
+            .error
+            .context
+            .iter()
+            .filter_map(|ctx| match ctx {
+                ErrorContext::Group(g) => Some(g.metadata.len()),
+                _ => None,
+            })
+            .sum();
+
+        if meta_count == 0 {
+            return;
+        }
+
+        let mut metadata = crate::types::alloc_type::Vec::with_capacity(meta_count);
+
+        for ctx in &self.error.context {
+            if let ErrorContext::Group(g) = ctx {
+                for (k, v) in &g.metadata {
+                    if self.should_include_key(k.as_ref()) {
+                        metadata.push((k, v));
+                    }
+                }
             }
         }
 
-        hash
+        metadata.sort_unstable_by(|a, b| a.0.cmp(b.0));
+
+        for (key, value) in metadata {
+            hasher.write(b"meta:");
+            hasher.write(key.as_bytes());
+            hasher.write(b"=");
+            hasher.write(value.as_bytes());
+        }
+    }
+
+    #[inline]
+    fn should_include_key(&self, key: &str) -> bool {
+        let included = self.include_keys.map_or(true, |keys| keys.contains(&key));
+        let excluded = self.exclude_keys.is_some_and(|keys| keys.contains(&key));
+        included && !excluded
     }
 
     /// Computes the fingerprint and returns it as a hex string.
@@ -174,37 +198,43 @@ impl<'a, E> FingerprintConfig<'a, E> {
     {
         let mut result = String::with_capacity(16);
         let fp = self.compute();
-        let _ = write!(result, "{:016x}", fp);
+        let _ = write!(result, "{fp:016x}");
         result
     }
 }
 
-/// FNV-1a prime constant for 64-bit hash.
-const FNV_PRIME: u64 = 0x100000001b3;
+/// FNV-1a hasher for 64-bit hash computation.
+struct FnvHasher {
+    hash: u64,
+}
 
-#[inline(always)]
-fn hash_bytes(hash: &mut u64, bytes: &[u8]) {
-    for &byte in bytes {
-        *hash ^= byte as u64;
-        *hash = hash.wrapping_mul(FNV_PRIME);
+impl FnvHasher {
+    const OFFSET: u64 = 0xcbf29ce484222325;
+    const PRIME: u64 = 0x100000001b3;
+
+    #[inline]
+    const fn new() -> Self {
+        Self { hash: Self::OFFSET }
+    }
+
+    #[inline]
+    fn write(&mut self, bytes: &[u8]) {
+        for &byte in bytes {
+            self.hash ^= u64::from(byte);
+            self.hash = self.hash.wrapping_mul(Self::PRIME);
+        }
+    }
+
+    #[inline]
+    const fn finish(self) -> u64 {
+        self.hash
     }
 }
 
-struct DisplayHasher<'a> {
-    hash: &'a mut u64,
-}
-
-impl<'a> DisplayHasher<'a> {
-    #[inline(always)]
-    fn new(hash: &'a mut u64) -> Self {
-        Self { hash }
-    }
-}
-
-impl Write for DisplayHasher<'_> {
+impl Write for FnvHasher {
     #[inline]
     fn write_str(&mut self, s: &str) -> core::fmt::Result {
-        hash_bytes(self.hash, s.as_bytes());
+        self.write(s.as_bytes());
         Ok(())
     }
 }

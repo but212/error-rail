@@ -18,7 +18,7 @@ use core::time::Duration;
 use crate::traits::TransientError;
 use crate::types::{BoxedComposableError, BoxedComposableResult, ComposableError};
 
-use super::retry::{retry_with_policy, RetryPolicy};
+use super::retry::{retry_with_policy, ExponentialBackoff, RetryPolicy};
 
 /// Retries an async operation using Tokio's sleep, returning an unboxed error.
 ///
@@ -45,6 +45,7 @@ use super::retry::{retry_with_policy, RetryPolicy};
 ///     ).await;
 /// }
 /// ```
+#[inline]
 pub async fn retry_transient_unboxed<F, Fut, T, E, P>(
     operation: F,
     policy: P,
@@ -81,6 +82,7 @@ where
 ///     ).await;
 /// }
 /// ```
+#[inline]
 pub async fn retry_transient<F, Fut, T, E, P>(
     operation: F,
     policy: P,
@@ -91,9 +93,10 @@ where
     E: TransientError,
     P: RetryPolicy,
 {
-    retry_transient_unboxed(operation, policy)
-        .await
-        .map_err(Box::new)
+    match retry_transient_unboxed(operation, policy).await {
+        Ok(v) => Ok(v),
+        Err(e) => Err(Box::new(e)),
+    }
 }
 
 /// Retries an async operation with a simple count limit using Tokio's sleep.
@@ -112,6 +115,7 @@ where
 ///
 /// let result = retry_transient_n(|| fetch_data(), 3).await;
 /// ```
+#[inline]
 pub async fn retry_transient_n<F, Fut, T, E>(
     operation: F,
     max_attempts: u32,
@@ -121,10 +125,7 @@ where
     Fut: Future<Output = Result<T, E>>,
     E: TransientError,
 {
-    use super::retry::ExponentialBackoff;
-
-    let policy = ExponentialBackoff::new().with_max_attempts(max_attempts);
-    retry_transient(operation, policy).await
+    retry_transient(operation, ExponentialBackoff::new().with_max_attempts(max_attempts)).await
 }
 
 /// Result type for timeout operations that can fail with either
@@ -141,21 +142,25 @@ pub enum TimeoutResult<T, E> {
 
 impl<T, E> TimeoutResult<T, E> {
     /// Returns `true` if the result is `Ok`.
-    pub fn is_ok(&self) -> bool {
+    #[inline]
+    pub const fn is_ok(&self) -> bool {
         matches!(self, Self::Ok(_))
     }
 
     /// Returns `true` if the result is `Err`.
-    pub fn is_err(&self) -> bool {
+    #[inline]
+    pub const fn is_err(&self) -> bool {
         matches!(self, Self::Err(_))
     }
 
     /// Returns `true` if the operation timed out.
-    pub fn is_timeout(&self) -> bool {
+    #[inline]
+    pub const fn is_timeout(&self) -> bool {
         matches!(self, Self::Timeout(_))
     }
 
     /// Converts to a standard `Result`, treating timeout as an error message.
+    #[inline]
     pub fn into_result(self) -> BoxedComposableResult<T, E>
     where
         E: From<TimeoutError>,
@@ -169,7 +174,7 @@ impl<T, E> TimeoutResult<T, E> {
 }
 
 /// Error type representing a timeout.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct TimeoutError(pub Duration);
 
 impl core::fmt::Display for TimeoutError {
@@ -198,6 +203,7 @@ impl std::error::Error for TimeoutError {}
 ///     TimeoutResult::Timeout(d) => println!("Timed out after {:?}", d),
 /// }
 /// ```
+#[inline]
 pub async fn try_with_timeout<T, E, Fut>(duration: Duration, future: Fut) -> TimeoutResult<T, E>
 where
     Fut: Future<Output = Result<T, E>>,
@@ -205,6 +211,6 @@ where
     match tokio::time::timeout(duration, future).await {
         Ok(Ok(value)) => TimeoutResult::Ok(value),
         Ok(Err(e)) => TimeoutResult::Err(Box::new(ComposableError::new(e))),
-        Err(_elapsed) => TimeoutResult::Timeout(duration),
+        Err(_) => TimeoutResult::Timeout(duration),
     }
 }

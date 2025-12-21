@@ -135,16 +135,15 @@ pub fn error_pipeline<T, E>(result: Result<T, E>) -> ErrorPipeline<T, E> {
 /// let err = accumulate_context("unauthorized", contexts);
 /// assert_eq!(err.context().len(), 2);
 /// ```
+#[inline]
 pub fn accumulate_context<E, I, C>(error: E, contexts: I) -> ComposableError<E>
 where
     I: IntoIterator<Item = C>,
     C: IntoErrorContext,
 {
-    let mut err = ComposableError::new(error);
-    for context in contexts {
-        err = err.with_context(context);
-    }
-    err
+    contexts
+        .into_iter()
+        .fold(ComposableError::new(error), |err, ctx| err.with_context(ctx))
 }
 
 /// Creates a reusable closure that wraps errors with multiple contexts.
@@ -166,6 +165,7 @@ where
 /// let err = add_contexts("unauthorized");
 /// assert_eq!(err.context().len(), 2);
 /// ```
+#[inline]
 pub fn context_accumulator<E, I, C>(contexts: I) -> impl Fn(E) -> ComposableError<E>
 where
     I: IntoIterator<Item = C> + Clone,
@@ -192,6 +192,7 @@ where
 /// let chain = format_error_chain(&err);
 /// assert!(chain.contains("failed"));
 /// ```
+#[inline]
 pub fn format_error_chain<E>(error: &ComposableError<E>) -> String
 where
     E: Display,
@@ -217,6 +218,7 @@ where
 /// let contexts = extract_context(&err);
 /// assert_eq!(contexts.len(), 1);
 /// ```
+#[inline]
 pub fn extract_context<E>(error: &ComposableError<E>) -> ErrorVec<ErrorContext> {
     error.context()
 }

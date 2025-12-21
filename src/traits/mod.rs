@@ -19,28 +19,28 @@ pub trait IntoErrorContext {
 }
 
 impl IntoErrorContext for String {
-    #[inline]
+    #[inline(always)]
     fn into_error_context(self) -> ErrorContext {
         ErrorContext::new(self)
     }
 }
 
 impl IntoErrorContext for &'static str {
-    #[inline]
+    #[inline(always)]
     fn into_error_context(self) -> ErrorContext {
         ErrorContext::new(self)
     }
 }
 
 impl IntoErrorContext for Cow<'static, str> {
-    #[inline]
+    #[inline(always)]
     fn into_error_context(self) -> ErrorContext {
         ErrorContext::new(self)
     }
 }
 
 impl IntoErrorContext for ErrorContext {
-    #[inline]
+    #[inline(always)]
     fn into_error_context(self) -> ErrorContext {
         self
     }
@@ -52,19 +52,19 @@ pub trait TransientError {
     fn is_transient(&self) -> bool;
 
     /// Returns `true` if this error is permanent and should not be retried.
-    #[inline]
+    #[inline(always)]
     fn is_permanent(&self) -> bool {
         !self.is_transient()
     }
 
     /// Optional hint for how long to wait before retrying.
-    #[inline]
+    #[inline(always)]
     fn retry_after_hint(&self) -> Option<Duration> {
         None
     }
 
     /// Returns the maximum number of retry attempts for this error.
-    #[inline]
+    #[inline(always)]
     fn max_retries_hint(&self) -> Option<u32> {
         None
     }
@@ -72,6 +72,7 @@ pub trait TransientError {
 
 #[cfg(feature = "std")]
 impl TransientError for std::io::Error {
+    #[inline]
     fn is_transient(&self) -> bool {
         use std::io::ErrorKind;
         matches!(
@@ -93,6 +94,7 @@ pub trait TransientErrorExt<T, E: TransientError> {
 }
 
 impl<T, E: TransientError> TransientErrorExt<T, E> for Result<T, E> {
+    #[inline]
     fn retry_if_transient(self) -> Option<Result<T, E>> {
         match &self {
             Ok(_) => None,
@@ -123,29 +125,26 @@ impl<T, E> WithError<E> for Result<T, E> {
     type Success = T;
     type ErrorOutput<G> = Result<T, G>;
 
+    #[inline]
     fn fmap_error<F, G>(self, f: F) -> Self::ErrorOutput<G>
     where
         F: FnOnce(E) -> G,
     {
-        match self {
-            Ok(t) => Ok(t),
-            Err(e) => Err(f(e)),
-        }
+        self.map_err(f)
     }
 
+    #[inline(always)]
     fn to_result_first(self) -> Result<Self::Success, E> {
         self
     }
 
+    #[inline]
     fn to_result_all(self) -> Result<Self::Success, ErrorVec<E>> {
-        match self {
-            Ok(t) => Ok(t),
-            Err(e) => {
-                let mut error_vec = ErrorVec::new();
-                error_vec.push(e);
-                Err(error_vec)
-            },
-        }
+        self.map_err(|e| {
+            let mut error_vec = ErrorVec::with_capacity(1);
+            error_vec.push(e);
+            error_vec
+        })
     }
 }
 
@@ -175,10 +174,7 @@ impl<T, E> ErrorOps<E> for Result<T, E> {
     where
         F: FnOnce(E) -> Self,
     {
-        match self {
-            Ok(value) => Ok(value),
-            Err(error) => recovery(error),
-        }
+        self.or_else(recovery)
     }
 
     #[inline]
@@ -341,9 +337,9 @@ pub trait BoxedResultExt<T, E> {
 impl<T, E> BoxedResultExt<T, E> for Result<T, Box<ComposableError<E>>> {
     #[inline]
     fn ctx_boxed<C: IntoErrorContext>(self, msg: C) -> Self {
-        self.map_err(|e| {
-            let inner = *e;
-            Box::new(inner.with_context(msg))
+        self.map_err(|mut e| {
+            e.with_context_inplace(msg);
+            e
         })
     }
 
@@ -352,9 +348,9 @@ impl<T, E> BoxedResultExt<T, E> for Result<T, Box<ComposableError<E>>> {
     where
         F: FnOnce() -> String,
     {
-        self.map_err(|e| {
-            let inner = *e;
-            Box::new(inner.with_context(LazyContext::new(f)))
+        self.map_err(|mut e| {
+            e.with_context_inplace(LazyContext::new(f));
+            e
         })
     }
 }
@@ -413,12 +409,12 @@ pub trait ErrorCategory<E> {
 impl<E> ErrorCategory<E> for Result<(), E> {
     type ErrorFunctor<T> = Result<T, E>;
 
-    #[inline]
+    #[inline(always)]
     fn lift<T>(value: T) -> Result<T, E> {
         Ok(value)
     }
 
-    #[inline]
+    #[inline(always)]
     fn handle_error<T>(error: E) -> Result<T, E> {
         Err(error)
     }
