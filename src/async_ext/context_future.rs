@@ -48,7 +48,7 @@ pin_project! {
 impl<Fut, F> ContextFuture<Fut, F> {
     /// Creates a new `ContextFuture` with the given future and context generator.
     #[inline]
-    pub fn new(future: Fut, context_fn: F) -> Self {
+    pub const fn new(future: Fut, context_fn: F) -> Self {
         Self { future, context_fn: Some(context_fn) }
     }
 }
@@ -61,18 +61,22 @@ where
 {
     type Output = Result<T, ComposableError<E>>;
 
+    #[inline]
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = self.project();
 
-        this.future.poll(cx).map(|res| {
-            res.map_err(|err| {
+        match this.future.poll(cx) {
+            Poll::Pending => Poll::Pending,
+            Poll::Ready(Ok(value)) => Poll::Ready(Ok(value)),
+            Poll::Ready(Err(err)) => {
+                // SAFETY: context_fn is Some until first error completion
                 let context_fn = this
                     .context_fn
                     .take()
-                    .expect("ContextFuture polled after completion; this is a bug");
-                ComposableError::new(err).with_context(context_fn())
-            })
-        })
+                    .expect("ContextFuture polled after completion");
+                Poll::Ready(Err(ComposableError::new(err).with_context(context_fn())))
+            },
+        }
     }
 }
 
@@ -82,8 +86,8 @@ where
     F: FnOnce() -> C,
     C: IntoErrorContext,
 {
+    #[inline]
     fn is_terminated(&self) -> bool {
-        // Also check context_fn since it's taken on error completion
         self.context_fn.is_none() || self.future.is_terminated()
     }
 }

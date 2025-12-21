@@ -33,13 +33,13 @@ pub struct ComposableError<E> {
 
 impl<E> ComposableError<E> {
     /// Creates a composable error without context or code.
-    #[inline]
+    #[inline(always)]
     pub fn new(error: E) -> Self {
         Self { core_error: error, context: ErrorVec::new(), error_code: None }
     }
 
     /// Creates a composable error with a pre-set error code.
-    #[inline]
+    #[inline(always)]
     pub fn with_code(error: E, code: u32) -> Self {
         Self { core_error: error, context: ErrorVec::new(), error_code: Some(code) }
     }
@@ -65,42 +65,55 @@ impl<E> ComposableError<E> {
     }
 
     /// Returns a reference to the underlying error.
-    #[inline]
-    pub fn core_error(&self) -> &E {
+    #[inline(always)]
+    pub const fn core_error(&self) -> &E {
         &self.core_error
     }
 
     /// Returns the context stack in LIFO order (most recent first).
     #[inline]
     pub fn context(&self) -> ErrorVec<ErrorContext> {
-        let mut result = ErrorVec::with_capacity(self.context.len());
-        result.extend(self.context.iter().rev().cloned());
+        let len = self.context.len();
+        let mut result = ErrorVec::with_capacity(len);
+        for ctx in self.context.iter().rev() {
+            result.push(ctx.clone());
+        }
         result
     }
 
     /// Consumes the composable error, returning the underlying core error.
-    #[inline]
+    #[inline(always)]
     pub fn into_core(self) -> E {
         self.core_error
     }
 
     /// Returns an iterator in LIFO order (most recent first) that borrows the contexts.
-    #[inline]
+    #[inline(always)]
     pub fn context_iter(&self) -> core::iter::Rev<core::slice::Iter<'_, ErrorContext>> {
         self.context.iter().rev()
     }
 
     /// Returns the optional error code.
-    #[inline]
-    pub fn error_code(&self) -> Option<u32> {
+    #[inline(always)]
+    pub const fn error_code(&self) -> Option<u32> {
         self.error_code
     }
 
     /// Sets (or overrides) the error code.
-    #[inline]
+    #[inline(always)]
     pub fn set_code(mut self, code: u32) -> Self {
         self.error_code = Some(code);
         self
+    }
+
+    /// Adds context to the error in-place (modifying &mut self).
+    /// This is useful for modifying boxed errors without reallocating.
+    #[inline]
+    pub fn with_context_inplace<Ctx>(&mut self, ctx: Ctx)
+    where
+        Ctx: IntoErrorContext,
+    {
+        self.context.push(ctx.into_error_context());
     }
 
     /// Maps the core error type while preserving context/code.
@@ -118,13 +131,14 @@ impl<E> ComposableError<E> {
 
     /// Returns a builder for customizing the error formatting.
     #[must_use]
-    #[inline]
+    #[inline(always)]
     pub fn fmt(&self) -> crate::types::error_formatter::ErrorFormatBuilder<'_, E> {
         crate::types::error_formatter::ErrorFormatBuilder::new(self)
     }
 
     /// Formats the error using a closure to configure the builder.
     #[must_use]
+    #[inline]
     pub fn format_with<F>(&self, f: F) -> String
     where
         E: core::fmt::Display,
@@ -132,8 +146,7 @@ impl<E> ComposableError<E> {
             crate::types::error_formatter::ErrorFormatBuilder<'_, E>,
         ) -> crate::types::error_formatter::ErrorFormatBuilder<'_, E>,
     {
-        let builder = self.fmt();
-        f(builder).to_string()
+        f(self.fmt()).to_string()
     }
 
     /// Formats the error chain using a custom formatter.
@@ -146,12 +159,12 @@ impl<E> ComposableError<E> {
         use crate::types::alloc_type::Vec;
         use core::fmt::Display;
 
-        let mut items: Vec<&dyn Display> = Vec::with_capacity(self.context.len() + 1);
+        let ctx_len = self.context.len();
+        let mut items: Vec<&dyn Display> = Vec::with_capacity(ctx_len + 1);
 
         for ctx in self.context.iter().rev() {
-            items.push(ctx as &dyn Display);
+            items.push(ctx);
         }
-
         items.push(&self.core_error);
 
         formatter.format_chain(items.iter().copied())
@@ -159,6 +172,7 @@ impl<E> ComposableError<E> {
 
     /// Returns the complete error chain as a formatted string.
     #[must_use]
+    #[inline]
     pub fn error_chain(&self) -> String
     where
         E: core::fmt::Display,
@@ -168,11 +182,12 @@ impl<E> ComposableError<E> {
 
     /// Generates a unique fingerprint for this error.
     #[must_use]
+    #[inline]
     pub fn fingerprint(&self) -> u64
     where
         E: core::fmt::Display,
     {
-        self.compute_fingerprint()
+        self.fingerprint_config().compute()
     }
 
     /// Generates a hex string representation of the fingerprint.
@@ -181,24 +196,15 @@ impl<E> ComposableError<E> {
     where
         E: core::fmt::Display,
     {
-        let mut result = String::with_capacity(16);
-        let fp = self.fingerprint();
         use core::fmt::Write;
-        let _ = write!(result, "{:016x}", fp);
+        let mut result = String::with_capacity(16);
+        let _ = write!(result, "{:016x}", self.fingerprint());
         result
-    }
-
-    /// Internal fingerprint computation delegating to FingerprintConfig.
-    #[inline]
-    fn compute_fingerprint(&self) -> u64
-    where
-        E: core::fmt::Display,
-    {
-        self.fingerprint_config().compute()
     }
 
     /// Creates a fingerprint configuration for customizing fingerprint generation.
     #[must_use]
+    #[inline(always)]
     pub fn fingerprint_config(&self) -> FingerprintConfig<'_, E> {
         FingerprintConfig::new(self)
     }

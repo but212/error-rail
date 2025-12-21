@@ -28,6 +28,7 @@ pub trait RetryPolicy: Clone {
     /// Resets the policy to its initial state.
     ///
     /// Default implementation does nothing, suitable for stateless policies.
+    #[inline]
     fn reset(&mut self) {}
 }
 
@@ -51,7 +52,7 @@ pub trait RetryPolicy: Clone {
 ///
 /// // Delays: 100ms, 200ms, 400ms, 800ms, 1600ms (capped at 10s)
 /// ```
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct ExponentialBackoff {
     /// Initial delay before first retry.
     pub initial_delay: Duration,
@@ -64,6 +65,7 @@ pub struct ExponentialBackoff {
 }
 
 impl Default for ExponentialBackoff {
+    #[inline]
     fn default() -> Self {
         Self {
             initial_delay: Duration::from_millis(100),
@@ -83,15 +85,20 @@ impl ExponentialBackoff {
     /// - Maximum attempts: 5
     /// - Multiplier: 2.0
     #[inline]
-    pub fn new() -> Self {
-        Self::default()
+    pub const fn new() -> Self {
+        Self {
+            initial_delay: Duration::from_millis(100),
+            max_delay: Duration::from_secs(30),
+            max_attempts: 5,
+            multiplier: 2.0,
+        }
     }
 
     /// Sets the initial delay duration for the first retry attempt.
     ///
     /// This serves as the base value for the exponential calculation.
     #[inline]
-    pub fn with_initial_delay(mut self, delay: Duration) -> Self {
+    pub const fn with_initial_delay(mut self, delay: Duration) -> Self {
         self.initial_delay = delay;
         self
     }
@@ -101,7 +108,7 @@ impl ExponentialBackoff {
     /// The delay will never exceed this value regardless of the number of attempts
     /// or the multiplier.
     #[inline]
-    pub fn with_max_delay(mut self, delay: Duration) -> Self {
+    pub const fn with_max_delay(mut self, delay: Duration) -> Self {
         self.max_delay = delay;
         self
     }
@@ -110,7 +117,7 @@ impl ExponentialBackoff {
     ///
     /// Once this number of retries is reached, the policy will stop suggesting delays.
     #[inline]
-    pub fn with_max_attempts(mut self, attempts: u32) -> Self {
+    pub const fn with_max_attempts(mut self, attempts: u32) -> Self {
         self.max_attempts = attempts;
         self
     }
@@ -119,23 +126,32 @@ impl ExponentialBackoff {
     ///
     /// For example, a multiplier of `2.0` doubles the delay duration each time.
     #[inline]
-    pub fn with_multiplier(mut self, multiplier: f64) -> Self {
+    pub const fn with_multiplier(mut self, multiplier: f64) -> Self {
         self.multiplier = multiplier;
         self
+    }
+
+    /// Computes the delay for a given attempt number.
+    #[inline]
+    fn compute_delay(&self, attempt: u32) -> Duration {
+        let delay_secs = self.initial_delay.as_secs_f64() * self.multiplier.powi(attempt as i32);
+        let delay = Duration::from_secs_f64(delay_secs);
+        if delay > self.max_delay {
+            self.max_delay
+        } else {
+            delay
+        }
     }
 }
 
 impl RetryPolicy for ExponentialBackoff {
+    #[inline]
     fn next_delay(&mut self, attempt: u32) -> Option<Duration> {
         if attempt >= self.max_attempts {
             return None;
         }
-        let delay = Duration::from_secs_f64(
-            self.initial_delay.as_secs_f64() * self.multiplier.powi(attempt as i32),
-        );
-        Some(delay.min(self.max_delay))
+        Some(self.compute_delay(attempt))
     }
-    // Uses default reset() - ExponentialBackoff is stateless
 }
 
 /// Fixed delay retry policy.
@@ -153,7 +169,7 @@ impl RetryPolicy for ExponentialBackoff {
 ///
 /// // Delays: 500ms, 500ms, 500ms (then stops)
 /// ```
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct FixedDelay {
     /// Delay between retry attempts.
     pub delay: Duration,
@@ -164,12 +180,13 @@ pub struct FixedDelay {
 impl FixedDelay {
     /// Creates a new fixed delay policy.
     #[inline]
-    pub fn new(delay: Duration, max_attempts: u32) -> Self {
+    pub const fn new(delay: Duration, max_attempts: u32) -> Self {
         Self { delay, max_attempts }
     }
 }
 
 impl RetryPolicy for FixedDelay {
+    #[inline]
     fn next_delay(&mut self, attempt: u32) -> Option<Duration> {
         if attempt >= self.max_attempts {
             None
@@ -177,7 +194,6 @@ impl RetryPolicy for FixedDelay {
             Some(self.delay)
         }
     }
-    // Uses default reset() - FixedDelay is stateless
 }
 
 /// Retries an async operation according to a policy when transient errors occur.
@@ -229,20 +245,24 @@ where
     loop {
         match operation().await {
             Ok(value) => return Ok(value),
-            Err(e) if e.is_transient() => {
-                if let Some(delay) = policy.next_delay(attempt) {
-                    sleep_fn(delay).await;
-                    attempt += 1;
-                    continue;
-                }
-                // Exhausted all attempts
-                return Err(ComposableError::new(e)
-                    .with_context(crate::context!("exhausted after {} attempts", attempt + 1)));
-            },
             Err(e) => {
-                // Permanent error, no retry
-                return Err(ComposableError::new(e)
-                    .with_context(crate::context!("permanent error, no retry")));
+                if !e.is_transient() {
+                    return Err(ComposableError::new(e)
+                        .with_context(crate::context!("permanent error, no retry")));
+                }
+
+                match policy.next_delay(attempt) {
+                    Some(delay) => {
+                        sleep_fn(delay).await;
+                        attempt += 1;
+                    },
+                    None => {
+                        return Err(ComposableError::new(e).with_context(crate::context!(
+                            "exhausted after {} attempts",
+                            attempt + 1
+                        )));
+                    },
+                }
             },
         }
     }
@@ -298,6 +318,26 @@ pub struct RetryResult<T, E> {
     /// only the delays between retry attempts. A value of `Duration::ZERO`
     /// indicates either immediate success or immediate permanent failure.
     pub total_wait_time: Duration,
+}
+
+impl<T, E> RetryResult<T, E> {
+    /// Returns `true` if the operation succeeded.
+    #[inline]
+    pub const fn is_ok(&self) -> bool {
+        self.result.is_ok()
+    }
+
+    /// Returns `true` if the operation failed.
+    #[inline]
+    pub const fn is_err(&self) -> bool {
+        self.result.is_err()
+    }
+
+    /// Returns `true` if retries were needed (more than one attempt).
+    #[inline]
+    pub const fn had_retries(&self) -> bool {
+        self.attempts > 1
+    }
 }
 
 /// Retries an operation with detailed result metadata.
@@ -357,19 +397,25 @@ where
     let result = loop {
         match operation().await {
             Ok(value) => break Ok(value),
-            Err(e) if e.is_transient() => {
-                if let Some(delay) = policy.next_delay(attempt) {
-                    total_wait_time += delay;
-                    sleep_fn(delay).await;
-                    attempt += 1;
-                    continue;
-                }
-                break Err(ComposableError::new(e)
-                    .with_context(crate::context!("exhausted after {} attempts", attempt + 1)));
-            },
             Err(e) => {
-                break Err(ComposableError::new(e)
-                    .with_context(crate::context!("permanent error, no retry")));
+                if !e.is_transient() {
+                    break Err(ComposableError::new(e)
+                        .with_context(crate::context!("permanent error, no retry")));
+                }
+
+                match policy.next_delay(attempt) {
+                    Some(delay) => {
+                        total_wait_time += delay;
+                        sleep_fn(delay).await;
+                        attempt += 1;
+                    },
+                    None => {
+                        break Err(ComposableError::new(e).with_context(crate::context!(
+                            "exhausted after {} attempts",
+                            attempt + 1
+                        )));
+                    },
+                }
             },
         }
     };

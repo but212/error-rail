@@ -39,13 +39,29 @@ where
     I: IntoIterator<Item = Fut>,
     Fut: Future<Output = Validation<E, T>>,
 {
-    let mut results = Vec::new();
+    let iter = validations.into_iter();
+    let (lower, upper) = iter.size_hint();
+    let capacity = upper.unwrap_or(lower);
 
-    for fut in validations {
-        results.push(fut.await);
+    let mut values = Vec::with_capacity(capacity);
+    let mut errors: Vec<E> = Vec::new();
+
+    for fut in iter {
+        match fut.await {
+            Validation::Valid(v) => {
+                if errors.is_empty() {
+                    values.push(v);
+                }
+            },
+            Validation::Invalid(errs) => errors.extend(errs),
+        }
     }
 
-    collect_validation_results(results)
+    if errors.is_empty() {
+        Validation::Valid(values)
+    } else {
+        Validation::invalid_many(errors)
+    }
 }
 
 /// Runs async validations sequentially, where each validation depends on
@@ -88,42 +104,4 @@ where
     }
 
     Validation::Valid(current)
-}
-
-/// Collects validation results into a single `Validation`.
-///
-/// This helper function aggregates multiple validation results, accumulating
-/// all errors rather than short-circuiting on the first failure.
-///
-/// # Behavior
-///
-/// - If **all** results are `Valid`, returns `Valid(Vec<T>)` containing all values
-///   in their original order.
-/// - If **any** result is `Invalid`, returns `Invalid` with all accumulated errors
-///   from all invalid results combined.
-///
-/// # Arguments
-///
-/// * `results` - A vector of `Validation<E, T>` results to collect
-///
-/// # Returns
-///
-/// A single `Validation<E, Vec<T>>` that either contains all success values
-/// or all accumulated errors.
-fn collect_validation_results<T, E>(results: Vec<Validation<E, T>>) -> Validation<E, Vec<T>> {
-    let mut errors: Vec<E> = Vec::new();
-    let mut values = Vec::with_capacity(results.len());
-
-    for result in results {
-        match result {
-            Validation::Valid(v) => values.push(v),
-            Validation::Invalid(errs) => errors.extend(errs),
-        }
-    }
-
-    if errors.is_empty() {
-        Validation::Valid(values)
-    } else {
-        Validation::invalid_many(errors)
-    }
 }
