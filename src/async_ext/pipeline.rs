@@ -256,14 +256,7 @@ where
         F: FnOnce(E) -> T,
     {
         let fut = self.future;
-        AsyncErrorPipeline {
-            future: async move {
-                match fut.await {
-                    Ok(v) => Ok(v),
-                    Err(e) => Ok(f(e)),
-                }
-            },
-        }
+        AsyncErrorPipeline { future: async move { Ok(fut.await.unwrap_or_else(f)) } }
     }
 
     /// Adds a tag indicating this error was retried.

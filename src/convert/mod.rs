@@ -176,10 +176,7 @@ pub fn core_to_composable<E>(error: E) -> ComposableError<E> {
 /// ```
 #[inline]
 pub fn flatten_composable_result<T, E>(result: Result<T, ComposableError<E>>) -> Result<T, E> {
-    match result {
-        Ok(v) => Ok(v),
-        Err(e) => Err(e.into_core()),
-    }
+    result.map_err(ComposableError::into_core)
 }
 
 /// Wraps a plain `Result<T, E>` into `Result<T, ComposableError<E>>`.
@@ -204,12 +201,8 @@ pub fn flatten_composable_result<T, E>(result: Result<T, ComposableError<E>>) ->
 /// assert!(wrapped.is_err());
 /// ```
 #[inline]
-#[allow(clippy::result_large_err)]
 pub fn wrap_in_composable_result<T, E>(result: Result<T, E>) -> Result<T, ComposableError<E>> {
-    match result {
-        Ok(v) => Ok(v),
-        Err(e) => Err(ComposableError::new(e)),
-    }
+    result.map_err(ComposableError::new)
 }
 
 /// Wraps a plain `Result<T, E>` into a boxed `ComposableError`.
@@ -235,10 +228,7 @@ pub fn wrap_in_composable_result<T, E>(result: Result<T, E>) -> Result<T, Compos
 /// ```
 #[inline]
 pub fn wrap_in_composable_result_boxed<T, E>(result: Result<T, E>) -> BoxedComposableResult<T, E> {
-    match result {
-        Ok(v) => Ok(v),
-        Err(e) => Err(Box::new(ComposableError::new(e))),
-    }
+    result.map_err(|e| Box::new(ComposableError::new(e)))
 }
 
 /// Collects multiple errors into a single `Validation`.
