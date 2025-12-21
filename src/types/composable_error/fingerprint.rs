@@ -141,13 +141,13 @@ impl<'a, E> FingerprintConfig<'a, E> {
                 .flatten();
 
             for (k, v) in all_metadata {
-                let key = k.as_ref();
+                let key_str: &str = k.as_ref();
                 let included = self
                     .include_keys
-                    .map_or(true, |inc| inc.iter().any(|&ik| ik == key));
+                    .map_or(true, |keys| keys.contains(&key_str));
                 let excluded = self
                     .exclude_keys
-                    .map_or(false, |exc| exc.iter().any(|&ek| ek == key));
+                    .map_or(false, |keys| keys.contains(&key_str));
 
                 if included && !excluded {
                     metadata.push((k, v));
