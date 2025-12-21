@@ -224,6 +224,81 @@ where
     {
         AsyncErrorPipeline { future: self.future.with_ctx(f) }
     }
+
+    /// Transforms the success value using a mapping function.
+    #[inline]
+    pub fn map<U, F>(self, f: F) -> AsyncErrorPipeline<impl Future<Output = Result<U, E>>>
+    where
+        F: FnOnce(T) -> U + Send + 'static,
+        T: Send + 'static,
+        U: Send + 'static,
+        E: Send + 'static,
+    {
+        AsyncErrorPipeline { future: async move { self.future.await.map(f) } }
+    }
+
+    /// Transforms the pipeline using a fallible function.
+    ///
+    /// This is an alias for `and_then`.
+    #[inline]
+    pub fn step<U, F>(self, f: F) -> AsyncErrorPipeline<impl Future<Output = Result<U, E>>>
+    where
+        F: FnOnce(T) -> Result<U, E> + Send + 'static,
+        T: Send + 'static,
+        U: Send + 'static,
+        E: Send + 'static,
+    {
+        AsyncErrorPipeline {
+            future: async move {
+                let res = self.future.await;
+                res.and_then(f)
+            },
+        }
+    }
+
+    /// Attempts to recover from an error using a fallback value.
+    #[inline]
+    pub fn fallback(self, value: T) -> AsyncErrorPipeline<impl Future<Output = Result<T, E>>>
+    where
+        T: Send + 'static,
+        E: Send + 'static,
+    {
+        AsyncErrorPipeline { future: async move { self.future.await.or(Ok(value)) } }
+    }
+
+    /// Attempts to recover from an error using a safe recovery function.
+    #[inline]
+    pub fn recover_safe<F>(self, f: F) -> AsyncErrorPipeline<impl Future<Output = Result<T, E>>>
+    where
+        F: FnOnce(E) -> T + Send + 'static,
+        T: Send + 'static,
+        E: Send + 'static,
+    {
+        AsyncErrorPipeline {
+            future: async move {
+                match self.future.await {
+                    Ok(v) => Ok(v),
+                    Err(e) => Ok(f(e)),
+                }
+            },
+        }
+    }
+
+    /// Adds a tag indicating this error was retried.
+    #[inline]
+    pub fn with_retry_context(
+        self,
+        attempt: u32,
+    ) -> AsyncErrorPipeline<impl Future<Output = Result<T, ComposableError<E>>>> {
+        use crate::types::utils::u32_to_cow;
+        let attempt_str = u32_to_cow(attempt);
+
+        AsyncErrorPipeline {
+            future: self
+                .future
+                .with_ctx(move || crate::ErrorContext::metadata("retry_attempt", attempt_str)),
+        }
+    }
 }
 
 impl<Fut, T, E> AsyncErrorPipeline<Fut>

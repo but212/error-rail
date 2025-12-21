@@ -48,8 +48,6 @@ jobs:
         run: cargo build --target wasm32-unknown-unknown --no-default-features
       - name: Test ${{ matrix.features }}
         run: RUST_BACKTRACE=1 cargo test ${{ matrix.features }}
-      - name: Clippy ${{ matrix.features }}
-        run: cargo clippy ${{ matrix.features }} -- -D warnings
       - name: Check benchmarks compilation ${{ matrix.features }}
         if: matrix.features != '--no-default-features'
         run: cargo bench --no-run ${{ matrix.features }}

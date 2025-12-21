@@ -1,5 +1,33 @@
 # CHANGELOG
 
+## [0.10.0]
+
+### Added - 0.10.0
+
+- **Comprehensive README Refactoring**
+  - Reorganized documentation for a progressive learning curve (Simple -> Prelude -> Intermediate -> Advanced).
+  - Clarified context chaining patterns for both synchronous (`ResultExt` + `BoxedResultExt`) and asynchronous (`FutureResultExt`) operations.
+  - Added a new **Contributing** section with development guidelines.
+  - Verified all examples against `examples/readme_features.rs`.
+
+- **Benchmark Coverage Improvement**
+  - Added new benchmark suite for `ResultExt`, `BoxedResultExt`, and `WithError` traits.
+  - Added intensive benchmarks for `error_chain` and `ErrorFormatBuilder` formatting options.
+  - Added fingerprinting benchmarks covering `fingerprint()`, `fingerprint_hex()`, and `FingerprintConfig`.
+  - Added lazy evaluation benchmarks for `LazyContext` and `LazyGroupContext`.
+
+### Changed - 0.10.0
+
+- **Modularization of ComposableError**
+  - Split the 900+ line `src/types/composable_error.rs` into a directory-based module `src/types/composable_error/`.
+  - Separated core logic (`mod.rs`), fingerprinting (`fingerprint.rs`), trait implementations (`traits.rs`), and legacy formatters (`legacy.rs`).
+  - Improved maintainability and compilation isolation without breaking public API.
+
+- **Async Parity & API Polishing**
+  - Added `fallback`, `recover_safe`, `map`, `step`, and `with_retry_context` to `AsyncErrorPipeline` for parity with sync `ErrorPipeline`.
+  - Enhanced `FingerprintConfig` with `include_metadata_keys` and `exclude_metadata_keys` for fine-grained grouping control.
+  - Consolidated common utilities (like `u32_to_cow`) into `src/types/utils.rs` for internal consistency and performance.
+
 ## [0.9.3]
 
 ### Changed - 0.9.3

@@ -357,6 +357,58 @@ fn feature9_ctx_comparison() {
 }
 
 // =============================================================================
+// Feature 10: Context Chaining Patterns
+// =============================================================================
+
+/// Demonstrates the three context chaining patterns:
+/// 1. ErrorPipeline::with_context() - recommended for multiple contexts
+/// 2. ResultExt::ctx() + BoxedResultExt::ctx_boxed() - for sync function boundaries
+/// 3. (Async) FutureResultExt::ctx() - directly chainable
+fn feature10_context_chaining() {
+    println!("\n=== Feature 10: Context Chaining Patterns ===\n");
+
+    // Pattern 1: ErrorPipeline::with_context() - RECOMMENDED for multiple contexts
+    println!("1. ErrorPipeline::with_context() - Recommended for multiple contexts:");
+    let result = ErrorPipeline::<i32, &str>::new(Err("database error"))
+        .with_context("querying users table")
+        .with_context(group!(tag("db"), metadata("table", "users")))
+        .with_context(context!("user_id: {}", 42))
+        .finish_boxed();
+
+    if let Err(e) = result {
+        println!("   {}", e.error_chain());
+    }
+
+    // Pattern 2: ResultExt::ctx() returns BoxedResult, chain with ctx_boxed()
+    println!("\n2. ResultExt::ctx() + ctx_boxed() - Use at function boundaries:");
+
+    fn inner_fn() -> BoxedResult<i32, &'static str> {
+        Err("inner error").ctx("inner context")
+    }
+
+    fn outer_fn() -> BoxedResult<i32, &'static str> {
+        inner_fn().ctx_boxed("outer context")
+    }
+
+    if let Err(e) = outer_fn() {
+        println!("   {}", e.error_chain());
+    }
+
+    // Pattern 3: ComposableError::with_context() - directly on error
+    println!("\n3. ComposableError::with_context() - Direct error chaining:");
+    let err = ComposableError::<&str>::new("base error")
+        .with_context("context 1")
+        .with_context("context 2")
+        .with_context("context 3");
+    println!("   {}", err.error_chain());
+
+    println!("\n📊 Recommended Usage:");
+    println!("   ✅ Multiple contexts → ErrorPipeline::with_context()");
+    println!("   ✅ Single context → result.ctx(\"message\")");
+    println!("   ✅ Function chaining → inner().ctx_boxed(\"outer\")");
+}
+
+// =============================================================================
 // Main
 // =============================================================================
 
@@ -374,7 +426,8 @@ fn main() {
     feature7_transient_error();
     feature8_fingerprinting();
     feature9_ctx_comparison();
+    feature10_context_chaining();
 
-    println!("\n✓ All 9 README features demonstrated!");
+    println!("\n✓ All 10 README features demonstrated!");
     println!("✓ 100% README coverage achieved!");
 }

@@ -26,6 +26,7 @@ pub mod error_pipeline;
 pub mod lazy_context;
 pub mod marked_error;
 pub mod retry;
+pub(crate) mod utils;
 
 pub use alloc_type::*;
 pub use composable_error::{ComposableError, FingerprintConfig};

@@ -76,33 +76,48 @@ impl Default for ExponentialBackoff {
 
 impl ExponentialBackoff {
     /// Creates a new exponential backoff policy with default settings.
+    ///
+    /// The default configuration provides:
+    /// - Initial delay: 100 milliseconds
+    /// - Maximum delay: 30 seconds
+    /// - Maximum attempts: 5
+    /// - Multiplier: 2.0
     #[inline]
     pub fn new() -> Self {
         Self::default()
     }
 
-    /// Sets the initial delay.
+    /// Sets the initial delay duration for the first retry attempt.
+    ///
+    /// This serves as the base value for the exponential calculation.
     #[inline]
     pub fn with_initial_delay(mut self, delay: Duration) -> Self {
         self.initial_delay = delay;
         self
     }
 
-    /// Sets the maximum delay.
+    /// Sets the maximum duration allowed between retry attempts.
+    ///
+    /// The delay will never exceed this value regardless of the number of attempts
+    /// or the multiplier.
     #[inline]
     pub fn with_max_delay(mut self, delay: Duration) -> Self {
         self.max_delay = delay;
         self
     }
 
-    /// Sets the maximum number of attempts.
+    /// Sets the maximum number of retry attempts allowed.
+    ///
+    /// Once this number of retries is reached, the policy will stop suggesting delays.
     #[inline]
     pub fn with_max_attempts(mut self, attempts: u32) -> Self {
         self.max_attempts = attempts;
         self
     }
 
-    /// Sets the multiplier.
+    /// Sets the multiplier applied to the delay after each failed attempt.
+    ///
+    /// For example, a multiplier of `2.0` doubles the delay duration each time.
     #[inline]
     pub fn with_multiplier(mut self, multiplier: f64) -> Self {
         self.multiplier = multiplier;
