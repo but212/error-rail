@@ -130,29 +130,30 @@ impl<'a, E> FingerprintConfig<'a, E> {
                 .sum();
 
             let mut metadata = crate::types::alloc_type::Vec::with_capacity(meta_count);
-            for ctx in &self.error.context {
-                if let ErrorContext::Group(g) = ctx {
-                    for (k, v) in &g.metadata {
-                        // Filter metadata based on include/exclude keys
-                        let mut should_include = true;
-                        if let Some(inc) = self.include_keys {
-                            should_include = inc.iter().any(|&ik| ik == k.as_ref());
-                        }
-                        if should_include {
-                            if let Some(exc) = self.exclude_keys {
-                                if exc.iter().any(|&ek| ek == k.as_ref()) {
-                                    should_include = false;
-                                }
-                            }
-                        }
+            let all_metadata = self
+                .error
+                .context
+                .iter()
+                .filter_map(|ctx| match ctx {
+                    ErrorContext::Group(g) => Some(g.metadata.iter()),
+                    _ => None,
+                })
+                .flatten();
 
-                        if should_include {
-                            metadata.push((k, v));
-                        }
-                    }
+            for (k, v) in all_metadata {
+                let key = k.as_ref();
+                let included = self
+                    .include_keys
+                    .map_or(true, |inc| inc.iter().any(|&ik| ik == key));
+                let excluded = self
+                    .exclude_keys
+                    .map_or(false, |exc| exc.iter().any(|&ek| ek == key));
+
+                if included && !excluded {
+                    metadata.push((k, v));
                 }
             }
-            metadata.sort_unstable_by(|a, b| a.0.cmp(&b.0));
+            metadata.sort_unstable_by(|a, b| a.0.cmp(b.0));
 
             for (key, value) in metadata {
                 hash_bytes(&mut hash, b"meta:");
