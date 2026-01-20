@@ -30,8 +30,10 @@
 //! assert_eq!(msg.message(), "database connection failed");
 //! assert!(ctx.message().contains("[db]"));
 //! ```
-use crate::types::alloc_type::{Box, Cow, String};
-use core::fmt::{Display, Write};
+use crate::types::alloc_type::{Box, Cow};
+#[cfg(not(feature = "std"))]
+use alloc::string::ToString;
+use core::fmt::Display;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -222,105 +224,75 @@ impl ErrorContext {
     pub fn message(&self) -> Cow<'_, str> {
         match self {
             Self::Simple(s) => Cow::Borrowed(s.as_ref()),
-            Self::Group(g) => {
-                // Estimate capacity to avoid reallocations
-                let mut capacity = 0;
-
-                // Estimate tags capacity
-                if !g.tags.is_empty() {
-                    capacity += 2; // brackets
-                    capacity += g.tags.iter().map(|t| t.len()).sum::<usize>();
-                    capacity += (g.tags.len() - 1) * 2; // ", " separators
-                }
-
-                // Estimate location capacity
-                if let Some(loc) = &g.location {
-                    capacity += 3; // "at "
-                    capacity += loc.file.len();
-                    capacity += (loc.line.checked_ilog10().unwrap_or(0) + 1) as usize; // digits in line number
-                    capacity += 1; // ":"
-                }
-
-                // Estimate message capacity
-                if let Some(msg) = &g.message {
-                    capacity += msg.len();
-                    if g.location.is_some() {
-                        capacity += 2; // ": "
-                    }
-                }
-
-                // Estimate metadata capacity
-                if !g.metadata.is_empty() {
-                    capacity += 2; // parentheses
-                    for (k, v) in &g.metadata {
-                        capacity += k.len() + v.len() + 1; // "="
-                    }
-                    capacity += (g.metadata.len() - 1) * 2; // ", " separators
-                }
-
-                // Add space between sections
-                let non_empty_sections = [
-                    !g.tags.is_empty(),
-                    g.location.is_some(),
-                    g.message.is_some(),
-                    !g.metadata.is_empty(),
-                ]
-                .iter()
-                .filter(|&&x| x)
-                .count();
-                capacity += non_empty_sections.saturating_sub(1);
-
-                let mut result = String::with_capacity(capacity);
-
-                // Add tags if present
-                if let Some((first, rest)) = g.tags.split_first() {
-                    result.push('[');
-                    result.push_str(first.as_ref());
-                    for tag in rest {
-                        result.push_str(", ");
-                        result.push_str(tag.as_ref());
-                    }
-                    result.push(']');
-                }
-
-                // Add location if present
-                if let Some(loc) = &g.location {
-                    if !g.tags.is_empty() {
-                        result.push(' ');
-                    }
-                    result.push_str("at ");
-                    result.push_str(loc.file.as_ref());
-                    result.push(':');
-                    let _ = write!(&mut result, "{}", loc.line);
-                }
-
-                // Add message if present
-                if let Some(msg) = &g.message {
-                    if !g.tags.is_empty() || g.location.is_some() {
-                        if g.location.is_some() {
-                            result.push_str(": ");
-                        } else {
-                            result.push(' ');
-                        }
-                    }
-                    result.push_str(msg.as_ref());
-                }
-
-                // Add metadata if present
-                if let Some((first, rest)) = g.metadata.split_first() {
-                    if !g.tags.is_empty() || g.location.is_some() || g.message.is_some() {
-                        result.push(' ');
-                    }
-                    let _ = write!(&mut result, "({}={}", first.0, first.1);
-                    for (k, v) in rest {
-                        let _ = write!(&mut result, ", {}={}", k, v);
-                    }
-                    result.push(')');
-                }
-
-                Cow::Owned(result)
-            },
+            Self::Group(g) => Cow::Owned(ContextRenderer::new(g).to_string()),
         }
+    }
+}
+
+/// Private helper for unified context rendering.
+///
+/// This provides the "Bone Structure" for formatting GroupContext
+/// across both `message()` and `Display::fmt`.
+struct ContextRenderer<'a> {
+    group: &'a GroupContext,
+}
+
+impl<'a> ContextRenderer<'a> {
+    fn new(group: &'a GroupContext) -> Self {
+        Self { group }
+    }
+
+    fn render(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        let g = self.group;
+
+        // 1. Tags
+        if let Some((first, rest)) = g.tags.split_first() {
+            write!(f, "[{}", first.as_ref())?;
+            for tag in rest {
+                write!(f, ", {}", tag.as_ref())?;
+            }
+            write!(f, "]")?;
+        }
+
+        // 2. Location
+        if let Some(loc) = &g.location {
+            if !g.tags.is_empty() {
+                write!(f, " ")?;
+            }
+            write!(f, "at {}:{}", loc.file.as_ref(), loc.line)?;
+        }
+
+        // 3. Message
+        if let Some(msg) = &g.message {
+            if !g.tags.is_empty() || g.location.is_some() {
+                if g.location.is_some() {
+                    write!(f, ": ")?;
+                } else {
+                    write!(f, " ")?;
+                }
+            }
+            write!(f, "{}", msg.as_ref())?;
+        }
+
+        // 4. Metadata
+        if let Some((first, rest)) = g.metadata.split_first() {
+            if !g.tags.is_empty() || g.location.is_some() || g.message.is_some() {
+                write!(f, " ")?;
+            }
+            write!(f, "({}={}", first.0, first.1)?;
+            for (k, v) in rest {
+                write!(f, ", {}={}", k, v)?;
+            }
+            write!(f, ")")?;
+        }
+
+        Ok(())
+    }
+}
+
+impl core::fmt::Display for ContextRenderer<'_> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        self.render(f)
     }
 }
 
@@ -328,50 +300,7 @@ impl Display for ErrorContext {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::Simple(s) => write!(f, "{}", s.as_ref()),
-            Self::Group(g) => {
-                // Write tags if present
-                if let Some((first, rest)) = g.tags.split_first() {
-                    write!(f, "[{}", first.as_ref())?;
-                    for tag in rest {
-                        write!(f, ", {}", tag.as_ref())?;
-                    }
-                    write!(f, "]")?;
-                }
-
-                // Write location if present
-                if let Some(loc) = &g.location {
-                    if !g.tags.is_empty() {
-                        write!(f, " ")?;
-                    }
-                    write!(f, "at {}:{}", loc.file.as_ref(), loc.line)?;
-                }
-
-                // Write message if present
-                if let Some(msg) = &g.message {
-                    if !g.tags.is_empty() || g.location.is_some() {
-                        if g.location.is_some() {
-                            write!(f, ": ")?;
-                        } else {
-                            write!(f, " ")?;
-                        }
-                    }
-                    write!(f, "{}", msg.as_ref())?;
-                }
-
-                // Write metadata if present
-                if let Some((first, rest)) = g.metadata.split_first() {
-                    if !g.tags.is_empty() || g.location.is_some() || g.message.is_some() {
-                        write!(f, " ")?;
-                    }
-                    write!(f, "({}={}", first.0, first.1)?;
-                    for (k, v) in rest {
-                        write!(f, ", {}={}", k, v)?;
-                    }
-                    write!(f, ")")?;
-                }
-
-                Ok(())
-            },
+            Self::Group(g) => ContextRenderer::new(g).render(f),
         }
     }
 }

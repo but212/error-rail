@@ -12,8 +12,9 @@
 
 ### Changed
 
+- **Structural Refactoring**:
+  - **ErrorContext Rendering**: Unified the rendering logic of `ErrorContext` by extracting a private `ContextRenderer` struct. This eliminates code duplication between `message()` and `Display::fmt` and simplifies the implementation by removing manual capacity estimation and formatting logic.
 - **Performance Optimizations**:
-  - **ErrorContext Efficiency**: Refactored `ErrorContext::message()` and its `Display` implementation to write directly to strings/formatters, eliminating intermediate `ErrorVec` allocations and `join` calls.
   - **In-place Context Attachment**: Added `with_context_inplace` to `ComposableError` and updated `BoxedResultExt` to use it, preventing unnecessary reallocations when adding context to boxed errors.
   - **Async Validation Optimization**: `validate_all_async` and `Validation::from_iter` now leverage `size_hint` for pre-allocation and avoid redundant intermediate collections.
   - **Fingerprint Computation**: Refactored `FingerprintConfig` to use a dedicated `FnvHasher` and specialized hashing routines for tags, code, message, and metadata, significantly reducing overhead.
@@ -21,6 +22,7 @@
 - **Code Quality & Documentation**:
   - Improved docstring examples for `Accumulator`, `MarkedError`, and other internal types.
   - Consistent use of `Self` and simplified logic in conversion functions (`validation_to_result`, `flatten_composable_result`, etc.).
+  - Fixed `no_std` compilation in `error_context.rs` by correctly importing `String` and `ToString`.
 
 ## [0.10.0]
 
