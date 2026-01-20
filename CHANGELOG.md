@@ -22,7 +22,6 @@
 - **Code Quality & Documentation**:
   - Improved docstring examples for `Accumulator`, `MarkedError`, and other internal types.
   - Consistent use of `Self` and simplified logic in conversion functions (`validation_to_result`, `flatten_composable_result`, etc.).
-  - Fixed `no_std` compilation in `error_context.rs` by correctly importing `String` and `ToString`.
 
 ### Refactored
 
