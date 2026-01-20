@@ -24,6 +24,12 @@
   - Consistent use of `Self` and simplified logic in conversion functions (`validation_to_result`, `flatten_composable_result`, etc.).
   - Fixed `no_std` compilation in `error_context.rs` by correctly importing `String` and `ToString`.
 
+### Refactored
+
+- **ContextRenderer logic simplification**: Replaced repeated collection-state checks with a `has_content` state flag in `ContextRenderer::render()`. This reduces condition evaluation complexity and improves code clarity.
+- **ErrorContextBuilder inlining**: Added `#[inline]` annotations to all builder methods (`message`, `location`, `tag`, `metadata`, `build`) to enable compiler optimization for these frequently-called small functions.
+- **ComposableError::context() documentation**: Added performance note guiding users to the more efficient `context_iter()` alternative for zero-allocation iteration.
+
 ## [0.10.0]
 
 ### Added - 0.10.0

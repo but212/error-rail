@@ -70,7 +70,10 @@ impl<E> ComposableError<E> {
         &self.core_error
     }
 
-    /// Returns the context stack in LIFO order (most recent first).
+    /// Returns a cloned context stack in LIFO order (most recent first).
+    ///
+    /// **Performance Note**: This method clones all contexts. For iteration
+    /// without allocation, prefer [`context_iter()`](Self::context_iter).
     #[inline]
     pub fn context(&self) -> ErrorVec<ErrorContext> {
         let len = self.context.len();

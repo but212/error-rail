@@ -244,6 +244,7 @@ impl<'a> ContextRenderer<'a> {
 
     fn render(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let g = self.group;
+        let mut has_content = false;
 
         // 1. Tags
         if let Some((first, rest)) = g.tags.split_first() {
@@ -252,19 +253,21 @@ impl<'a> ContextRenderer<'a> {
                 write!(f, ", {}", tag.as_ref())?;
             }
             write!(f, "]")?;
+            has_content = true;
         }
 
         // 2. Location
         if let Some(loc) = &g.location {
-            if !g.tags.is_empty() {
+            if has_content {
                 write!(f, " ")?;
             }
             write!(f, "at {}:{}", loc.file.as_ref(), loc.line)?;
+            has_content = true;
         }
 
         // 3. Message
         if let Some(msg) = &g.message {
-            if !g.tags.is_empty() || g.location.is_some() {
+            if has_content {
                 if g.location.is_some() {
                     write!(f, ": ")?;
                 } else {
@@ -272,11 +275,12 @@ impl<'a> ContextRenderer<'a> {
                 }
             }
             write!(f, "{}", msg.as_ref())?;
+            has_content = true;
         }
 
         // 4. Metadata
         if let Some((first, rest)) = g.metadata.split_first() {
-            if !g.tags.is_empty() || g.location.is_some() || g.message.is_some() {
+            if has_content {
                 write!(f, " ")?;
             }
             write!(f, "({}={}", first.0, first.1)?;
@@ -357,6 +361,7 @@ impl ErrorContextBuilder {
     ///     .message("database query failed")
     ///     .build();
     /// ```
+    #[inline]
     pub fn message<S: Into<Cow<'static, str>>>(mut self, msg: S) -> Self {
         self.context.message = Some(msg.into());
         self
@@ -381,6 +386,7 @@ impl ErrorContextBuilder {
     ///     .location(file!(), line!())
     ///     .build();
     /// ```
+    #[inline]
     pub fn location<S: Into<Cow<'static, str>>>(mut self, file: S, line: u32) -> Self {
         self.context.location = Some(Location { file: file.into(), line });
         self
@@ -405,6 +411,7 @@ impl ErrorContextBuilder {
     ///     .tag("timeout")
     ///     .build();
     /// ```
+    #[inline]
     pub fn tag<S: Into<Cow<'static, str>>>(mut self, tag: S) -> Self {
         self.context.tags.push(tag.into());
         self
@@ -431,6 +438,7 @@ impl ErrorContextBuilder {
     ///     .metadata("request_id", "abc-def")
     ///     .build();
     /// ```
+    #[inline]
     pub fn metadata<K: Into<Cow<'static, str>>, V: Into<Cow<'static, str>>>(
         mut self,
         key: K,
@@ -456,6 +464,7 @@ impl ErrorContextBuilder {
     ///     .metadata("host", "localhost")
     ///     .build();
     /// ```
+    #[inline]
     pub fn build(self) -> ErrorContext {
         ErrorContext::Group(Box::new(self.context))
     }
