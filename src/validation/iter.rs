@@ -453,7 +453,7 @@ where
             let collected: C = values.into_iter().collect();
             Validation::Valid(collected)
         } else {
-            Validation::Invalid(errors.into())
+            Validation::Invalid(errors)
         }
     }
 }
@@ -491,7 +491,7 @@ where
         for item in iter {
             match item {
                 Validation::Valid(v) => values.push(v),
-                Validation::Invalid(es) => errors.extend(es.into_inner()),
+                Validation::Invalid(es) => errors.extend(es),
             }
         }
 
@@ -499,7 +499,7 @@ where
             let collected: C = values.into_iter().collect();
             Validation::Valid(collected)
         } else {
-            Validation::Invalid(errors.into())
+            Validation::Invalid(errors)
         }
     }
 }

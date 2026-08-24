@@ -298,6 +298,7 @@ fn test_recover_transient_failure() {
 }
 
 #[test]
+#[allow(deprecated)] // verifies the deprecated `context`/`step` aliases until removal in 0.12.0
 fn test_error_pipeline_aliases() {
     let p = ErrorPipeline::<i32, &str>::new(Err("e"))
         .context("ctx")

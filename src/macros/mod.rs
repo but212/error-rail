@@ -361,6 +361,12 @@ macro_rules! backtrace_force {
 ///
 /// `Validation<E, (T1, T2, ...)>` where `T1`, `T2` are the success types of the expressions.
 ///
+/// # Trait Bounds
+///
+/// Unlike [`Validation::zip`](crate::validation::Validation::zip), the error type `E`
+/// must implement `Clone`: when any validation is invalid, the accumulated errors are
+/// cloned out of each invalid branch to build the combined error.
+///
 /// # Examples
 ///
 /// ```

@@ -49,7 +49,7 @@ fn main() {
         },
         Validation::Invalid(errors) => {
             println!("✗ Validation errors:");
-            for err in errors.into_inner() {
+            for err in errors.iter() {
                 println!("  - {}", err);
             }
         },
@@ -72,7 +72,7 @@ fn main() {
         },
         Validation::Invalid(errors) => {
             println!("✗ Found {} validation errors:", errors.len());
-            for err in errors.into_inner() {
+            for err in errors.iter() {
                 println!("  - {}", err);
             }
         },
@@ -90,7 +90,7 @@ fn main() {
         Validation::Valid(_) => println!("✓ All valid!"),
         Validation::Invalid(errors) => {
             println!("✗ Found {} validation errors:", errors.len());
-            for err in errors.into_inner() {
+            for err in errors.iter() {
                 println!("  - {}", err);
             }
         },

@@ -14,12 +14,9 @@ use alloc::string::ToString;
 use serde::{Deserialize, Serialize};
 
 mod fingerprint;
-mod legacy;
 mod traits;
 
 pub use fingerprint::FingerprintConfig;
-#[allow(deprecated)]
-pub use legacy::LegacyErrorFormatter;
 
 /// Error wrapper that stores the original error plus structured contexts and an optional code.
 #[must_use]

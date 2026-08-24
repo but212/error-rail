@@ -1,5 +1,25 @@
 # CHANGELOG
 
+## [Unreleased]
+
+### Fixed
+
+- **`validation_to_result` Error Selection**: Now returns the **first** accumulated error (`into_iter().next()`), matching its documentation and `WithError::to_result_first()`. Previously it returned the last error via `pop()`, so `invalid_many(["a", "b"])` yielded `Err("b")` instead of `Err("a")`.
+- **Exponential Backoff Panic Safety**: `ExponentialBackoff::compute_delay` now clamps the computed delay to `[0, max_delay]` *before* converting to `Duration`. Previously, a negative multiplier (e.g. `with_multiplier(-1.0)`) panicked with "value is negative" and an extremely large multiplier panicked on overflow to infinity; both now clamp safely instead.
+
+### Removed
+
+- **Accumulator<T>**: Deleted the `types::accumulator` module and the `Accumulator` type. It was a pure forwarding wrapper over `ErrorVec<T>` (SmallVec) that added no invariants or behavior. `ErrorPipeline` now stores pending contexts as `ErrorVec<ErrorContext>` directly, and `Validation::Invalid` now holds `ErrorVec<E>` instead of `Accumulator<E>`. **Breaking change**: code pattern-matching on `Validation::Invalid(acc)` should use the `ErrorVec<E>` value directly (`acc.extend(...)`, iteration, etc.) — the previous `.into_inner()` / `.merge(...)` calls become unnecessary.
+- **LegacyErrorFormatter**: Deleted the deprecated formatter (`#[deprecated(since = "0.9.0")]`, scheduled for removal in 0.11.0). Use `ErrorFormatBuilder` via `ComposableError::fmt()` instead.
+
+### Deprecated
+
+- **ErrorPipeline alias methods**: `ErrorPipeline::context()` (use `with_context()`) and `ErrorPipeline::step()` (use `and_then()`) are now deprecated and will be removed in 0.12.0.
+
+### Documented
+
+- **`validate!` macro trait bounds**: Documented that the error type `E` must implement `Clone` when any validation is invalid, unlike `Validation::zip` which requires no `Clone`.
+
 ## [0.11.0]
 
 ### Added

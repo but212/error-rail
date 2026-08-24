@@ -69,7 +69,7 @@ fn process() -> BoxedResult<String, std::io::Error> {
 Most projects only need `simple` or `prelude`.
 
 | Module | When to Use | What's Included |
-|--------|------------|-----------------|
+| -------- | ------------ | ----------------- |
 | `simple` | Getting started | `BoxedResult`, `rail!`, `.ctx()`, `.error_chain()` |
 | `prelude` | When structured context is needed | + `context!`, `group!`, `ErrorPipeline` |
 | `intermediate` | Service development | + `TransientError`, `Fingerprint` |
@@ -253,19 +253,19 @@ fn good() -> BoxedResult<String, std::io::Error> {
 
 ```toml
 [dependencies]
-error-rail = "0.10"                                    # Core (no_std)
-error-rail = { version = "0.10", features = ["std"] }  # + backtraces
-error-rail = { version = "0.10", features = ["serde"] } # + serde support
-error-rail = { version = "0.10", features = ["async"] } # + async support
-error-rail = { version = "0.10", features = ["tokio"] } # + retry, timeout
-error-rail = { version = "0.10", features = ["tower"] } # + Tower middleware
-error-rail = { version = "0.10", features = ["full"] }  # Everything
+error-rail = "0.11"                                    # Core (no_std)
+error-rail = { version = "0.11", features = ["std"] }  # + backtraces
+error-rail = { version = "0.11", features = ["serde"] } # + serde support
+error-rail = { version = "0.11", features = ["async"] } # + async support
+error-rail = { version = "0.11", features = ["tokio"] } # + retry, timeout
+error-rail = { version = "0.11", features = ["tower"] } # + Tower middleware
+error-rail = { version = "0.11", features = ["full"] }  # Everything
 ```
 
 ## Documentation
 
 | Resource | Description |
-|----------|-------------|
+| ---------- | ------------- |
 | [Quick Start](docs/QUICK_START.md) | Step-by-step tutorial |
 | [Async Guide](docs/QUICK_START_ASYNC.md) | Async patterns |
 | [Patterns](docs/PATTERNS.md) | Real-world examples |
