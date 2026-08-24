@@ -11,6 +11,13 @@ fn validation_to_result_handles_both_variants() {
 }
 
 #[test]
+fn validation_to_result_returns_first_error() {
+    // Must agree with WithError::to_result_first: the first accumulated error wins.
+    let invalid = Validation::<&str, i32>::invalid_many(["first", "second"]);
+    assert_eq!(validation_to_result(invalid), Err("first"));
+}
+
+#[test]
 fn result_to_validation_preserves_state() {
     let ok: Result<i32, &str> = Ok(3);
     assert!(result_to_validation(ok).is_valid());
