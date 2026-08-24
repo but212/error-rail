@@ -37,6 +37,28 @@ fn exponential_backoff_caps_at_max() {
 }
 
 #[test]
+fn exponential_backoff_never_panics_on_invalid_multiplier() {
+    // Negative multiplier would produce a negative duration; must clamp to 0,
+    // not panic inside Duration::from_secs_f64.
+    let mut negative = ExponentialBackoff {
+        initial_delay: Duration::from_millis(100),
+        max_delay: Duration::from_secs(5),
+        max_attempts: 3,
+        multiplier: -1.0,
+    };
+    assert_eq!(negative.next_delay(1), Some(Duration::from_millis(0)));
+
+    // Huge multiplier overflows to infinity; must cap at max_delay, not panic.
+    let mut huge = ExponentialBackoff {
+        initial_delay: Duration::from_secs(1),
+        max_delay: Duration::from_secs(5),
+        max_attempts: 10,
+        multiplier: f64::MAX,
+    };
+    assert_eq!(huge.next_delay(2), Some(Duration::from_secs(5)));
+}
+
+#[test]
 fn fixed_delay_consistent() {
     let mut policy = FixedDelay::new(Duration::from_millis(500), 3);
 

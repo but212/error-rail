@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## [Unreleased]
+
+### Fixed
+
+- **Exponential Backoff Panic Safety**: `ExponentialBackoff::compute_delay` now clamps the computed delay to `[0, max_delay]` *before* converting to `Duration`. Previously, a negative multiplier (e.g. `with_multiplier(-1.0)`) panicked with "value is negative" and an extremely large multiplier panicked on overflow to infinity; both now clamp safely instead.
+
+### Removed
+
+- **LegacyErrorFormatter**: Deleted the deprecated formatter (`#[deprecated(since = "0.9.0")]`, scheduled for removal in 0.11.0). Use `ErrorFormatBuilder` via `ComposableError::fmt()` instead.
+
+### Deprecated
+
+- **ErrorPipeline alias methods**: `ErrorPipeline::context()` (use `with_context()`) and `ErrorPipeline::step()` (use `and_then()`) are now deprecated and will be removed in 0.12.0.
+
 ## [0.11.0]
 
 ### Added

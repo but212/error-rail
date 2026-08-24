@@ -132,15 +132,17 @@ impl ExponentialBackoff {
     }
 
     /// Computes the delay for a given attempt number.
+    ///
+    /// The result is clamped to `[0, max_delay]` before conversion so that an
+    /// invalid multiplier (negative, zero, or one large enough to overflow)
+    /// can never panic inside `Duration::from_secs_f64`.
     #[inline]
     fn compute_delay(&self, attempt: u32) -> Duration {
+        let max_secs = self.max_delay.as_secs_f64();
         let delay_secs = self.initial_delay.as_secs_f64() * self.multiplier.powi(attempt as i32);
-        let delay = Duration::from_secs_f64(delay_secs);
-        if delay > self.max_delay {
-            self.max_delay
-        } else {
-            delay
-        }
+        let clamped =
+            if delay_secs.is_finite() { delay_secs.clamp(0.0, max_secs) } else { max_secs };
+        Duration::from_secs_f64(clamped)
     }
 }
 

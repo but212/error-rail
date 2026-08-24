@@ -99,6 +99,10 @@ impl<T, E> ErrorPipeline<T, E> {
     /// Alias for `with_context`.
     ///
     /// Adds a context entry to the pending context stack.
+    #[deprecated(
+        since = "0.11.0",
+        note = "Use `with_context` instead. This alias will be removed in 0.12.0."
+    )]
     #[inline]
     pub fn context<C>(self, context: C) -> Self
     where
@@ -172,7 +176,10 @@ impl<T, E> ErrorPipeline<T, E> {
     /// Transforms the pipeline using a function.
     ///
     /// This is a generic step function that can be used for chaining operations.
-    /// Currently behaves like `and_then`.
+    #[deprecated(
+        since = "0.11.0",
+        note = "Use `and_then` instead. This alias will be removed in 0.12.0."
+    )]
     #[inline]
     pub fn step<U, F>(self, f: F) -> ErrorPipeline<U, E>
     where
