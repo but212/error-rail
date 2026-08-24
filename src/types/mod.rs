@@ -17,7 +17,6 @@
 //! ```
 use smallvec::SmallVec;
 
-pub mod accumulator;
 pub mod alloc_type;
 pub mod composable_error;
 pub mod error_context;

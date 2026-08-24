@@ -1,9 +1,9 @@
 use crate::traits::TransientError;
-use crate::types::accumulator::Accumulator;
 use crate::types::alloc_type::Box;
 use crate::types::composable_error::ComposableError;
 use crate::types::lazy_context::LazyGroupContext;
 use crate::types::marked_error::MarkedError;
+use crate::types::ErrorVec;
 use crate::{ComposableResult, ErrorContext, IntoErrorContext};
 
 use crate::types::utils::u32_to_cow;
@@ -37,7 +37,7 @@ use crate::types::utils::u32_to_cow;
 #[must_use]
 pub struct ErrorPipeline<T, E> {
     result: Result<T, E>,
-    pending_contexts: Accumulator<ErrorContext>,
+    pending_contexts: ErrorVec<ErrorContext>,
 }
 
 impl<T, E> ErrorPipeline<T, E> {
@@ -65,7 +65,7 @@ impl<T, E> ErrorPipeline<T, E> {
     /// ```
     #[inline]
     pub fn new(result: Result<T, E>) -> Self {
-        Self { result, pending_contexts: Accumulator::new() }
+        Self { result, pending_contexts: ErrorVec::new() }
     }
 
     /// Adds a context entry to the pending context stack.
@@ -223,7 +223,7 @@ impl<T, E> ErrorPipeline<T, E> {
         match result {
             Ok(v) => Self { result: Ok(v), pending_contexts },
             Err(e) => match recovery(e) {
-                Ok(v) => Self { result: Ok(v), pending_contexts: Accumulator::new() },
+                Ok(v) => Self { result: Ok(v), pending_contexts: ErrorVec::new() },
                 Err(e) => Self { result: Err(e), pending_contexts },
             },
         }
@@ -254,7 +254,7 @@ impl<T, E> ErrorPipeline<T, E> {
         let Self { result, pending_contexts } = self;
         match result {
             Ok(v) => Self { result: Ok(v), pending_contexts },
-            Err(_) => Self { result: Ok(value), pending_contexts: Accumulator::new() },
+            Err(_) => Self { result: Ok(value), pending_contexts: ErrorVec::new() },
         }
     }
 
@@ -283,7 +283,7 @@ impl<T, E> ErrorPipeline<T, E> {
         let Self { result, pending_contexts } = self;
         match result {
             Ok(v) => Self { result: Ok(v), pending_contexts },
-            Err(e) => Self { result: Ok(f(e)), pending_contexts: Accumulator::new() },
+            Err(e) => Self { result: Ok(f(e)), pending_contexts: ErrorVec::new() },
         }
     }
 
@@ -475,7 +475,7 @@ impl<T, E> ErrorPipeline<T, E> {
         match result {
             Ok(v) => Self { result: Ok(v), pending_contexts },
             Err(e) if e.is_transient() => match recovery(e) {
-                Ok(v) => Self { result: Ok(v), pending_contexts: Accumulator::new() },
+                Ok(v) => Self { result: Ok(v), pending_contexts: ErrorVec::new() },
                 Err(e) => Self { result: Err(e), pending_contexts },
             },
             Err(e) => Self { result: Err(e), pending_contexts },
